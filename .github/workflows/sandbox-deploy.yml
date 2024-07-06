@@ -14,7 +14,7 @@ jobs:
         uses: actions/checkout@v2
       
       - name: Build Docker Image
-        run: docker build . -t your-dockerhub-username/your-app-name:latest
+        run: docker build . -t Lash12/airline-test:latest
       
       - name: Log in to Docker Hub
         uses: docker/login-action@v1
@@ -23,7 +23,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
       
       - name: Push Docker Image to Docker Hub
-        run: docker push your-dockerhub-username/your-app-name:latest
+        run: docker push Lash12/airline-test:latest
       
       - name: Deploy to Server
         uses: appleboy/ssh-action@v0.1.10
@@ -33,7 +33,7 @@ jobs:
           password: ${{ secrets.sandbox_pass }}
           port: ${{ secrets.sandbox_port }}
           script: |
-            docker pull your-dockerhub-username/your-app-name:latest
+            docker pull Lash12/airline-test:latest
             docker stop my-app || true
             docker rm my-app || true
-            docker run -d --name my-app -p 80:80 your-dockerhub-username/your-app-name:latest
+            docker run -d --name my-app -p 80:80 Lash12/airline-test:latest
