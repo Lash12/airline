@@ -15,25 +15,26 @@ jobs:
       
       - name: Build Docker Image
         run: docker build . -t Lash12/airline-test:latest
-      
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v1
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       
       - name: Push Docker Image to Docker Hub
         run: docker push Lash12/airline-test:latest
       
-      - name: Deploy to Server
-        uses: appleboy/ssh-action@v0.1.10
-        with:
-          host: ${{ secrets.sandbox_host }}
-          username: ${{ secrets.sandbox_user }}
-          password: ${{ secrets.sandbox_pass }}
-          port: ${{ secrets.sandbox_port }}
-          script: |
-            docker pull Lash12/airline-test:latest
-            docker stop my-app || true
-            docker rm my-app || true
-            docker run -d --name my-app -p 80:80 Lash12/airline-test:latest
+        # Uncomment the following lines to deploy to a server - **need to solve this issue**
+      #- name: Deploy to Server
+        #uses: appleboy/ssh-action@v0.1.10
+        #with:
+          #host: ${{ secrets.sandbox_host }}
+          #username: ${{ secrets.sandbox_user }}
+          #password: ${{ secrets.sandbox_pass }}
+          #port: ${{ secrets.sandbox_port }}
+          #script: |
+            #docker pull Lash12/airline-test:latest
+            #docker stop my-app || true
+            #docker rm my-app || true
+            #docker run -d --name my-app -p 80:80 Lash12/airline-test:latest
