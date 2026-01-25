@@ -767,6 +767,8 @@ object LinkSource {
 
     try {
       connection.setAutoCommit(false)
+      val batchSize = 500
+      var count = 0
       linkConsumptions.foreach { linkConsumption =>
           preparedStatement.setInt(1, linkConsumption.link.id)
           preparedStatement.setInt(2, linkConsumption.link.price(ECONOMY))
@@ -809,8 +811,13 @@ object LinkSource {
           }
           preparedStatement.setDouble(35, linkConsumption.satisfaction)
           preparedStatement.setInt(36, linkConsumption.cycle)
-          preparedStatement.executeUpdate()
+          preparedStatement.addBatch()
+          count += 1
+          if (count % batchSize == 0) {
+            preparedStatement.executeBatch()
+          }
         }
+      preparedStatement.executeBatch() // Execute remaining batch
       preparedStatement.close()
       connection.commit
     } finally {
