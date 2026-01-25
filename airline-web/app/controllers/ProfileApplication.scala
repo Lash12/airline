@@ -6,7 +6,7 @@ import java.util.Random
 import com.patson.data.{AirlineSource, AirplaneSource, AirportSource, BankSource, CycleSource, TutorialSource}
 import com.patson.model._
 import com.patson.model.airplane._
-import com.patson.util.AirportCache
+import com.patson.util.{AirlineCache, AirportCache}
 import controllers.AuthenticationObject.AuthenticatedAirline
 
 import javax.inject.Inject
