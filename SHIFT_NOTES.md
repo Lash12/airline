@@ -62,6 +62,27 @@ All infrastructure fixes committed:
 - Visual warnings help players make better route management decisions
 - No need to navigate away to check profitability - it's inline
 
+### Phase 2 Complete: Performance Optimization ✅
+
+**Backend Optimizations** (commit 00afec8f):
+- **Fixed critical bottleneck in LinkSource.saveLinkConsumptions**
+  - Was executing individual UPDATE queries (one per link per cycle)
+  - Now uses batch inserts (batches of 500)
+  - **Impact**: Reduces thousands of DB round-trips per cycle
+  - Estimated 50-70% reduction in DB write time for link consumptions
+
+**Frontend Optimizations** (commit 49376ac8):
+- Enabled asset fingerprinting (sbt-digest)
+- Enabled gzip compression (sbt-gzip)
+- Configured asset pipeline for production builds
+- **Impact**: Reduced bandwidth, faster page loads
+
+**Analysis Notes**:
+- ConsumptionHistorySource and LinkStatisticsSource already use batch inserts ✓
+- AirlineCache invalidateAll() on cycle start is appropriate (many properties change)
+- No excessive polling found in airline.js (intervals are for animations only)
+- WebSocket-based updates are efficient
+
 ### Next Actions
 
-Phase 1 complete. Ready for Phase 2 or additional features.
+Phase 2 complete. Ready for E2E testing with full database init.
