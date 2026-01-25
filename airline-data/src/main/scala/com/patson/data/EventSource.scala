@@ -26,15 +26,16 @@ object EventSource {
           statement.setInt(1, eventId)
           statement.setInt(2, airline.id)
           statement.setInt(3, goal)
-          statement.executeUpdate()
+          statement.addBatch()
       }
-
+      statement.executeBatch()
       connection.commit()
     } finally {
       statement.close()
       connection.close()
     }
   }
+          
 
   def saveOlympicsCountryStats(eventId : Int, olympicsCountryStats: Map[String, PassengerTransportStats]) = {
     val connection = Meta.getConnection()
@@ -51,9 +52,9 @@ object EventSource {
             statement.setString(3, countryCode)
             statement.setInt(4, transported)
             statement.setInt(5, total)
-            statement.executeUpdate()
+            statement.addBatch()
       }
-
+      statement.executeBatch()
       connection.commit()
     } finally {
       statement.close()
@@ -80,10 +81,10 @@ object EventSource {
             statement.setInt(2, airport.id)
             statement.setInt(3, voteRound.round)
             statement.setInt(4, vote)
-            statement.executeUpdate()
+            statement.addBatch()
         }
       }
-
+      statement.executeBatch()
       connection.commit()
     } finally {
       purgeStatement.close()
@@ -106,9 +107,9 @@ object EventSource {
           statement.setInt(2, cycle)
           statement.setInt(3, airline.id)
           statement.setBigDecimal(4, score.bigDecimal)
-          statement.executeUpdate()
+          statement.addBatch()
       }
-
+      statement.executeBatch()
       connection.commit()
     } finally {
       statement.close()
@@ -175,12 +176,12 @@ object EventSource {
       airports.foreach { airport =>
         statement.setInt(1, eventId)
         statement.setInt(2, airport.id)
-
-        statement.executeUpdate()
+        statement.addBatch()
       }
-
+      statement.executeBatch()
       connection.commit()
     } finally {
+      purgeStatement.close()
       statement.close()
       connection.close()
     }
@@ -204,12 +205,14 @@ object EventSource {
             statement.setInt(1, eventId)
             statement.setInt(2, principalAirport.id)
             statement.setInt(3, affectedAirport.id)
-            statement.executeUpdate()
-          }
+            statement.addBatch()
+        }
      }
 
+      statement.executeBatch()
       connection.commit()
     } finally {
+      purgeStatement.close()
       statement.close()
       connection.close()
     }
@@ -227,7 +230,6 @@ object EventSource {
       statement.setInt(3, option.rewardCategory.id)
       statement.setInt(4, option.rewardOption.id)
       statement.executeUpdate()
-
       connection.commit()
     } finally {
       statement.close()

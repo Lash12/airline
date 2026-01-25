@@ -20,11 +20,11 @@ services:
       - "./.docker/web/start.sh:/home/airline/start-web.sh"
       - "./.docker/web/clean.sh:/home/airline/clean-web.sh"
     environment:
-      DB_HOST: airline-db
+      DB_HOST: airline-db:3306
       ES_HOST: airline-search
     entrypoint: ["tail", "-f", "/dev/null"]
-#    ports:
-#      - "9000:9000"
+    ports:
+      - "9000:9000"
     healthcheck:
       test: curl --fail http://localhost:9000/ || exit 1
       interval: 10s
@@ -35,15 +35,15 @@ services:
       - airline
 
   airline-db:
-    image: bitnami/mysql:8.0
+    image: mysql:8.0
     container_name: airline-db
     environment:
       MYSQL_DATABASE: airline
       MYSQL_USER: mfc01
       MYSQL_PASSWORD: ghEtmwBdnXYBQH4
+      MYSQL_ROOT_PASSWORD: root
       MYSQL_CHARACTER_SET: utf8mb4
       MYSQL_COLLATE: utf8mb4_unicode_ci
-      ALLOW_EMPTY_PASSWORD: yes
 #    ports:
 #      - "3306:3306"
     volumes:
