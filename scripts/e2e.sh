@@ -5,13 +5,13 @@ echo "[gate] Starting docker stack..."
 docker compose up -d
 
 echo "[gate] Waiting for MySQL to be ready..."
-for i in {1..30}; do
-  if docker exec airline-db mysqladmin ping -h localhost --silent; then
+for i in {1..60}; do
+  if docker exec airline-db mysqladmin ping -h localhost -proot --silent 2>/dev/null; then
     echo "[gate] MySQL is ready."
     break
   fi
   sleep 2
-  if [[ "$i" == "30" ]]; then
+  if [[ "$i" == "60" ]]; then
     echo "[gate] MySQL did not become ready in time."
     exit 1
   fi
