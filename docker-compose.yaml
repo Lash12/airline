@@ -23,8 +23,8 @@ services:
       DB_HOST: airline-db:3306
       ES_HOST: airline-search
     entrypoint: ["tail", "-f", "/dev/null"]
-#    ports:
-#      - "9000:9000"
+    ports:
+      - "9000:9000"
     healthcheck:
       test: curl --fail http://localhost:9000/ || exit 1
       interval: 10s
