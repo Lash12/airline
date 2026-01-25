@@ -41,9 +41,9 @@ services:
       MYSQL_DATABASE: airline
       MYSQL_USER: mfc01
       MYSQL_PASSWORD: ghEtmwBdnXYBQH4
+      MYSQL_ROOT_PASSWORD: root
       MYSQL_CHARACTER_SET: utf8mb4
       MYSQL_COLLATE: utf8mb4_unicode_ci
-      ALLOW_EMPTY_PASSWORD: yes
 #    ports:
 #      - "3306:3306"
     volumes:
