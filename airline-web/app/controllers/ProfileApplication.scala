@@ -215,9 +215,11 @@ class ProfileApplication @Inject()(cc: ControllerComponents) extends AbstractCon
         val targetQuality = profile.quality
 
         val base = AirlineBase(airline, airport, airport.countryCode, 1, cycle, true)
-        airline.airlineType = profile.airlineType
-        AirlineSource.updateAirlineType(airlineId, airline.airlineType.id)
-        AirlineSource.saveAirlineBase(base)
+                    airline.airlineType = profile.airlineType
+                    AirlineSource.updateAirlineType(airlineId, airline.airlineType.id)
+                    AirlineCache.invalidateAirline(airlineId) // Invalidate cache after update
+                    AirlineSource.saveAirlineBase(base)
+        
         airline.setCountryCode(airport.countryCode)
         airline.setReputation(profile.reputation)
         airline.setCurrentServiceQuality(profile.quality)

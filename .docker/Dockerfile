@@ -17,13 +17,18 @@ RUN mkdir -p /home/airline/bin \
     && chmod -vR 755 /home/airline
 USER airline
 ENV PATH="$PATH:/home/airline/bin"
+ENV SBT_CONFIG=/home/airline/.config/sbt
 
-RUN cd /tmp \
-    && curl -fL https://github.com/coursier/coursier/releases/latest/download/cs-x86_64-pc-linux.gz | gzip -d > cs \
-    && chmod +x cs \
-    && ./cs setup --yes --install-dir /home/airline/bin \
-    && ./cs version \
-    && sbt --version
+
+ENV COURSIER_VERSION="2.1.25-M23"
+# Using a specific version found in search results
+RUN mkdir -p /home/airline/.config/sbt && \
+    echo "--allow-empty" > /home/airline/.config/sbt/sbtopts && \
+    curl -fL "https://github.com/coursier/coursier/releases/download/v${COURSIER_VERSION}/coursier" -o /home/airline/bin/coursier && \
+    chmod +x /home/airline/bin/coursier && \
+    /home/airline/bin/coursier bootstrap org.scala-sbt:sbt-launch:1.9.7 --apps sbt --default-java-options "-Xmx1024m" && \
+    sbt --version --allow-empty
+
 
 WORKDIR /home/airline
 

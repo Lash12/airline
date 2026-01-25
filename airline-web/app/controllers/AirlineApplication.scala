@@ -950,6 +950,7 @@ class AirlineApplication @Inject()(cc: ControllerComponents) extends AbstractCon
         case Some(rejection) => Ok(Json.obj("rejection" -> rejection))
         case None =>
           AirlineSource.updateAirlineName(airlineId, request.user.name, newName)
+          AirlineCache.invalidateAirline(airlineId) // Invalidate cache after update
           SearchUtil.updateAirline(AirlineCache.getAirline(airlineId).get)
           Ok(Json.obj("ok" -> true))
       }

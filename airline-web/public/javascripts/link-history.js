@@ -38,6 +38,42 @@ function showLinkHistoryView() {
     $("#linkHistoryControlPanel").show()
 
     $('#linkHistoryControlPanel').data('cycleDelta', 0)
+
+    // Fetch link details including profitability for the advisor feature
+    $.ajax({
+        type: 'GET',
+        url: "airlines/" + activeAirline.id + "/links/" + selectedLink,
+        contentType: 'application/json; charset=utf-8',
+        dataType: 'json',
+        success: function(linkExtendedInfo) {
+            $("#linkHistoryControlPanel .routeList").empty()
+            var link = linkExtendedInfo // Now linkExtendedInfo contains profitability data
+            var forwardLinkDescription = "<div style='display: flex; align-items: center;' class='clickable selected' onclick='toggleLinkHistoryDirection(true, $(this))'>" + getAirportText(link.fromAirportCity, link.fromAirportCode) + "<img src='assets/images/icons/arrow.png'>" + getAirportText(link.toAirportCity, link.toAirportCode)
+            if (link.profit < 0) {
+                forwardLinkDescription += " <span style='color:red; font-weight: bold; margin-left: 5px;'>(-)'</span>"; // Profitability advisor: flag unprofitable routes
+            }
+            forwardLinkDescription += "</div>"
+
+            var backwardLinkDescription = "<div style='display: flex; align-items: center;' class='clickable' onclick='toggleLinkHistoryDirection(false, $(this))'>" + getAirportText(link.toAirportCity, link.toAirportCode) + "<img src='assets/images/icons/arrow.png'>" + getAirportText(link.fromAirportCity, link.fromAirportCode) + "</div>"
+            if (link.profit < 0) {
+                backwardLinkDescription += " <span style='color:red; font-weight: bold; margin-left: 5px;'>(-)'</span>"; // Profitability advisor: flag unprofitable routes
+            }
+            backwardLinkDescription += "</div>"
+
+            $("#linkHistoryControlPanel .routeList").append(forwardLinkDescription)
+            $("#linkHistoryControlPanel .routeList").append(backwardLinkDescription)
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+            console.log("AJAX error fetching link extended info: " + textStatus + ' : ' + errorThrown);
+            // Fallback to original link loading if extended info fails
+            var link = loadedLinksById[selectedLink]
+            var forwardLinkDescription = "<div style='display: flex; align-items: center;' class='clickable selected' onclick='toggleLinkHistoryDirection(true, $(this))'>" + getAirportText(link.fromAirportCity, link.fromAirportCode) + "<img src='assets/images/icons/arrow.png'>" + getAirportText(link.toAirportCity, link.toAirportCode) + "</div>"
+            var backwardLinkDescription = "<div style='display: flex; align-items: center;' class='clickable' onclick='toggleLinkHistoryDirection(false, $(this))'>" + getAirportText(link.toAirportCity, link.toAirportCode) + "<img src='assets/images/icons/arrow.png'>" + getAirportText(link.fromAirportCity, link.fromAirportCode) + "</div>"
+            $("#linkHistoryControlPanel .routeList").append(forwardLinkDescription)
+            $("#linkHistoryControlPanel .routeList").append(backwardLinkDescription)
+        }
+    })
+
 	loadLinkHistory(selectedLink)
 }
 
