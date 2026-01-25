@@ -10,13 +10,9 @@ ThisBuild / libraryDependencySchemes += "org.scala-lang.modules" %% "scala-xml" 
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-coffeescript" % "1.0.2")
 
-//addSbtPlugin("com.typesafe.sbt" % "sbt-jshint" % "1.0.3")
-//
-//addSbtPlugin("com.typesafe.sbt" % "sbt-rjs" % "1.0.7")
-//
-//addSbtPlugin("com.typesafe.sbt" % "sbt-digest" % "1.1.0")
-//
-//addSbtPlugin("com.typesafe.sbt" % "sbt-mocha" % "1.1.0")
+addSbtPlugin("com.github.sbt" % "sbt-digest" % "2.0.0")
+
+addSbtPlugin("com.github.sbt" % "sbt-gzip" % "2.0.0")
 
 // eclipse plugins
 //addSbtPlugin("com.typesafe.sbteclipse" % "sbteclipse-plugin" % "4.0.0")
