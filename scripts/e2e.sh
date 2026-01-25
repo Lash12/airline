@@ -4,6 +4,19 @@ set -euo pipefail
 echo "[gate] Starting docker stack..."
 docker compose up -d
 
+echo "[gate] Waiting for MySQL to be ready..."
+for i in {1..30}; do
+  if docker exec airline-db mysqladmin ping -h localhost --silent; then
+    echo "[gate] MySQL is ready."
+    break
+  fi
+  sleep 2
+  if [[ "$i" == "30" ]]; then
+    echo "[gate] MySQL did not become ready in time."
+    exit 1
+  fi
+done
+
 echo "[gate] Publishing sbt artifacts..."
 docker exec airline-app bash -lc 'cd /home/airline/airline/airline-data && sbt publishLocal'
 
