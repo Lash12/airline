@@ -5,7 +5,7 @@ import com.patson.model.UserStatus.UserStatus
 import com.patson.model.{Airline, AirlineModifier, AirlineModifierType, BannerLoyaltyAirlineModifier, User, UserModifier, UserStatus}
 import com.patson.util.{AirlineCache, AirportCache}
 import controllers.AuthenticationObject.Authenticated
-import controllers.GoogleImageUtil.{AirportKey, CityKey}
+import controllers.WikimediaImageUtil.{AirportKey, CityKey}
 import play.api.libs.json.{JsArray, JsObject, Json}
 import play.api.mvc.Security.AuthenticatedRequest
 import play.api.mvc._
@@ -263,13 +263,13 @@ class AdminApplication @Inject()(cc: ControllerComponents) extends AbstractContr
     if (request.user.isAdmin) {
       AirportCache.getAirport(airportId) match {
         case Some(airport) =>
-          val key : controllers.GoogleImageUtil.Key =
+          val key : controllers.WikimediaImageUtil.Key =
             if (imageType == "airport") {
-              new AirportKey(airport.id, airport.name, airport.latitude, airport.longitude)
+              new AirportKey(airport.id, airport.name)
             } else {
-              new CityKey(airport.id, airport.city, airport.latitude, airport.longitude)
+              new CityKey(airport.id, airport.city)
             }
-          GoogleImageUtil.invalidate(key)
+          WikimediaImageUtil.invalidate(key)
           Ok(Json.obj("result" -> airport))
         case None => NotFound(s"Airport $airportId not found")
       }

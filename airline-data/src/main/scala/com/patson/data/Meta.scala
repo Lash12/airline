@@ -298,7 +298,7 @@ object Meta {
     createAirplaneModelFavorite(connection)
     createAirplaneModelDiscount(connection)
     createLinkChangeHistory(connection)
-    createGoogleResource(connection)
+    createWikimediaResource(connection)
     createDelegate(connection)
     createAirportRunway(connection)
     createChatMessage(connection)
@@ -1581,12 +1581,12 @@ object Meta {
     statement.close()
   }
 
-  def createGoogleResource(connection: Connection) = {
-    var statement = connection.prepareStatement("DROP TABLE IF EXISTS " + GOOGLE_RESOURCE_TABLE)
+  def createWikimediaResource(connection: Connection) = {
+    var statement = connection.prepareStatement("DROP TABLE IF EXISTS " + WIKIMEDIA_RESOURCE_TABLE)
     statement.execute()
     statement.close()
 
-    statement = connection.prepareStatement("CREATE TABLE " + GOOGLE_RESOURCE_TABLE + "(" +
+    statement = connection.prepareStatement("CREATE TABLE " + WIKIMEDIA_RESOURCE_TABLE + "(" +
       "resource_id INTEGER," +
       "resource_type INTEGER, " +
       "url VARCHAR(1024)," +

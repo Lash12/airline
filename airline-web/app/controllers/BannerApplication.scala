@@ -15,7 +15,7 @@ class BannerApplication @Inject()(cc: ControllerComponents) extends AbstractCont
 
   def getBanner() = Action  {
     if (bannerEnabled) {
-      Ok(Json.obj("bannerUrl" -> GooglePhotoUtil.drawBannerUrl()))
+      Ok(Json.obj("bannerUrl" -> WikimediaPhotoUtil.drawBannerUrl()))
     } else {
       Ok(Json.obj())
     }

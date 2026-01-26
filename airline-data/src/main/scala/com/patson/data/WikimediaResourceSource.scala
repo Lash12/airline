@@ -3,16 +3,16 @@ package com.patson.data
 import java.sql.Types
 
 import com.patson.data.Constants._
-import com.patson.model.google._
+import com.patson.model.media._
 
 import scala.collection.mutable.ListBuffer
 
 
-object GoogleResourceSource {
-  val insertResource = (resource: GoogleResource) => {
+object WikimediaResourceSource {
+  val insertResource = (resource: WikimediaResource) => {
     val connection = Meta.getConnection()
     //case class Log(airline : Airline, message : String, cateogry : LogCategory.Value, severity : LogSeverity.Value, cycle : Int)
-    val statement = connection.prepareStatement("REPLACE INTO " + GOOGLE_RESOURCE_TABLE + "(resource_id, resource_type, url, max_age_deadline) VALUES(?,?,?,?)")
+    val statement = connection.prepareStatement("REPLACE INTO " + WIKIMEDIA_RESOURCE_TABLE + "(resource_id, resource_type, url, max_age_deadline) VALUES(?,?,?,?)")
 
 
     try {
@@ -33,7 +33,7 @@ object GoogleResourceSource {
   def deleteResource(resourceId : Int, resourceType : ResourceType.Value): Unit = {
     val connection = Meta.getConnection()
     //case class Log(airline : Airline, message : String, cateogry : LogCategory.Value, severity : LogSeverity.Value, cycle : Int)
-    val statement = connection.prepareStatement("DELETE FROM " + GOOGLE_RESOURCE_TABLE + " WHERE resource_id = ? AND resource_type = ?")
+    val statement = connection.prepareStatement("DELETE FROM " + WIKIMEDIA_RESOURCE_TABLE + " WHERE resource_id = ? AND resource_type = ?")
 
 
     try {
@@ -57,7 +57,7 @@ object GoogleResourceSource {
 
 
   def loadResourceByCriteria(criteria: List[(String, Any)]) = {
-    var queryString = "SELECT * FROM " + GOOGLE_RESOURCE_TABLE
+    var queryString = "SELECT * FROM " + WIKIMEDIA_RESOURCE_TABLE
 
     if (!criteria.isEmpty) {
       queryString += " WHERE "
@@ -69,7 +69,7 @@ object GoogleResourceSource {
     loadLogsByQueryString(queryString, criteria.map(_._2))
   }
 
-  private def loadLogsByQueryString(queryString: String, parameters: List[Any]): List[GoogleResource] = {
+  private def loadLogsByQueryString(queryString: String, parameters: List[Any]): List[WikimediaResource] = {
     val connection = Meta.getConnection()
     try {
       val preparedStatement = connection.prepareStatement(queryString)
@@ -80,7 +80,7 @@ object GoogleResourceSource {
 
       val resultSet = preparedStatement.executeQuery()
 
-      val result = ListBuffer[GoogleResource]()
+      val result = ListBuffer[WikimediaResource]()
 
       while (resultSet.next()) {
         val resourceId = resultSet.getInt("resource_id")
@@ -93,7 +93,7 @@ object GoogleResourceSource {
           } else {
             Some(deadlineValue)
           }
-        result += GoogleResource(resourceId, ResourceType(resourceType), url, deadline)
+        result += WikimediaResource(resourceId, ResourceType(resourceType), url, deadline)
       }
 
       resultSet.close()
