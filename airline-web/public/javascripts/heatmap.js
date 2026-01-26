@@ -49,6 +49,11 @@ function clearHeatmap() {
     }
     if (heatmapNegative) {
         removeHeatLayer(heatmapNegative)
+        map.removeLayer(heatmapPositive)
+        heatmapPositive = undefined
+    }
+    if (heatmapNegative) {
+        map.removeLayer(heatmapNegative)
         heatmapNegative = undefined
     }
 }
@@ -164,6 +169,9 @@ function updateHeatmap(airlineId) {
                 heatmapPositiveData.push([entry.lat, entry.lng, entry.weight])
               } else {
                 heatmapNegativeData.push([entry.lat, entry.lng, entry.weight * -1])
+                heatmapPositiveData.push(entry)
+              } else {
+                heatmapNegativeData.push({ lat: entry.lat, lng: entry.lng, weight: entry.weight * -1 })
               }
             })
 
@@ -194,6 +202,13 @@ function updateHeatmap(airlineId) {
                 })
 
                 addHeatLayer(heatmapNegative)
+                heatmapPositive = buildHeatmapLayer(heatmapPositiveData, heatmapPositiveGradient, result.maxIntensity)
+                heatmapPositive.addTo(map)
+            }
+
+            if (heatmapNegativeData.length > 0) {
+                heatmapNegative = buildHeatmapLayer(heatmapNegativeData, heatmapNegativeGradient, result.maxIntensity)
+                heatmapNegative.addTo(map)
             }
 
             updateHeatmapArrows(result.minDeltaCount, airlineId)
@@ -210,6 +225,31 @@ function updateHeatmap(airlineId) {
 //	    	$('body .loadingSpinner').hide()
 //	    }
     });
+}
+
+function buildHeatmapLayer(points, gradient, maxIntensity) {
+    var layerGroup = L.layerGroup()
+    var maxValue = maxIntensity || 1
+    $.each(points, function(index, entry) {
+        var intensity = Math.min(entry.weight, maxValue)
+        var color = getHeatmapColor(gradient, intensity, maxValue)
+        var opacity = Math.min(1, intensity / maxValue)
+        L.circle([entry.lat, entry.lng], {
+            radius: 30000,
+            color: color,
+            fillColor: color,
+            fillOpacity: opacity,
+            opacity: opacity,
+            weight: 0
+        }).addTo(layerGroup)
+    })
+    return layerGroup
+}
+
+function getHeatmapColor(gradient, intensity, maxIntensity) {
+    var ratio = maxIntensity > 0 ? intensity / maxIntensity : 0
+    var index = Math.min(gradient.length - 1, Math.floor(ratio * (gradient.length - 1)))
+    return gradient[index]
 }
 
 function updateHeatmapArrows(minDeltaCount, airlineId) {
