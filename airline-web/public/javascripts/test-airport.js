@@ -1,6 +1,28 @@
 var map
 var flightPaths
 var activeInput
+var markers
+
+$( document ).ready(function() {
+	flightPaths = []
+	markers = []
+	activeInput = $("#fromAirport")
+	loadAirlines()
+})
+
+function initMap() {
+  map = L.map('map', {
+	center: [20, 150.644],
+	zoom: 2,
+	minZoom: 2,
+	worldCopyJump: true
+  })
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+var map
+var flightPaths
+var activeInput
 
 $( document ).ready(function() {
 	flightPaths = []
@@ -28,6 +50,14 @@ function initMap() {
 function addMarkers(airports) {
 	for (i = 0; i < airports.length; i++) {
 		  var airportInfo = airports[i]
+		  var position = [airportInfo.latitude, airportInfo.longitude]
+		  var marker = L.marker(position, { title: airportInfo.name }).addTo(map)
+		  marker.airportCode = airportInfo.iata
+		  marker.airportId = airportInfo.id
+
+function addMarkers(airports) {
+	for (i = 0; i < airports.length; i++) {
+		  var airportInfo = airports[i]
 		  var marker = L.marker([airportInfo.latitude, airportInfo.longitude], {
 			    title: airportInfo.name
 			  })
@@ -40,6 +70,15 @@ function addMarkers(airports) {
 			  var airportId = this.airportId
 			  if (activeInput.is($("#fromAirport"))) {
 				  $("#fromAirport").val(airportId)
+				  activeInput = $("#toAirport")
+			  } else {
+				  $("#toAirport").val(airportId)
+				  activeInput = $("#fromAirport")
+			  }
+		  });
+		  markers.push(marker)
+	}
+}
 				  activeInput = $("#toAirport")
 			  } else {
 				  $("#toAirport").val(airportId)
@@ -132,6 +171,12 @@ function removeAllLinks() {
 function refreshLinks() {
 	//remove all links from UI first
 	$.each(flightPaths, function( key, value ) {
+		  if (map && value) {
+		  	map.removeLayer(value)
+		  }
+function refreshLinks() {
+	//remove all links from UI first
+	$.each(flightPaths, function( key, value ) {
 		  map.removeLayer(value)
 		});
 	flightPaths = []
@@ -154,6 +199,14 @@ function refreshLinks() {
 }
 
 function drawFlightPath(link) {
+   var flightPath = L.polyline(
+     [[link.fromLatitude, link.fromLongitude], [link.toLatitude, link.toLongitude]],
+     {
+       color: '#F2B022',
+       opacity: 1.0,
+       weight: 2
+     }
+   ).addTo(map)
    var flightPath = L.polyline([[link.fromLatitude, link.fromLongitude], [link.toLatitude, link.toLongitude]], {
        color: '#F2B022',
        opacity: 1.0,

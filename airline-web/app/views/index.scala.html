@@ -31,12 +31,20 @@
 	  <link rel="stylesheet" type="text/css" href='@routes.Assets.versioned("javascripts/emojify/emojify.min.css")'>
 	  <link rel="stylesheet" type="text/css" href='@routes.Assets.versioned("javascripts/splitting/splitting.css")'>
 	  <link rel="stylesheet" type="text/css" href='@routes.Assets.versioned("javascripts/splitting/splitting-cells.css")'>
+	  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+			integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+			crossorigin="anonymous">
+	  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 	  <link rel="stylesheet" type="text/css" href='/assets/stylesheets/classic.css' id="uiTheme">
 	  <link rel="stylesheet" type="text/css" href='@routes.Assets.versioned("stylesheets/mobile.css")'> <!-- this has to be last so it overrides the CSS if mobile-->
 
 
     
 	<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.4/angular.min.js" defer></script>
+	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+			integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+			crossorigin="anonymous"></script>
+	<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"
 			integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
 			crossorigin="anonymous"></script>
@@ -6064,6 +6072,13 @@
 
     <script src="@routes.Assets.versioned("javascripts/chat-popup.js")"></script>
 
+    <script>
+      window.addEventListener('load', function() {
+        if (typeof initMap === 'function') {
+          initMap();
+        }
+      });
+    </script>
     
 <!-- 	<script src="https://apis.google.com/js/platform.js"></script> -->
   <script src='/assets/firework/fscreen.js'></script>
