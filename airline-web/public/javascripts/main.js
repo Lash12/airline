@@ -13,6 +13,118 @@ var polylines = []
 var airports = undefined
 var gameConstants
 var notes = {}
+var mapControlContainers = {}
+
+function createLeafletIcon(iconUrl, options) {
+    if (!iconUrl) {
+        return undefined
+    }
+    var size = options && options.size ? options.size : [32, 37]
+    var anchor = options && options.anchor ? options.anchor : [size[0] / 2, size[1]]
+    var popupAnchor = options && options.popupAnchor ? options.popupAnchor : [0, -size[1] / 2]
+    return L.icon({
+        iconUrl: iconUrl,
+        iconSize: size,
+        iconAnchor: anchor,
+        popupAnchor: popupAnchor
+    })
+}
+
+function setLeafletLayerVisibility(layer, visible, mapInstance) {
+    if (!layer) {
+        return
+    }
+    var targetMap = mapInstance || layer.__mapRef || map
+    if (!targetMap) {
+        return
+    }
+    if (visible) {
+        if (!targetMap.hasLayer(layer)) {
+            layer.addTo(targetMap)
+        }
+    } else if (targetMap.hasLayer(layer)) {
+        targetMap.removeLayer(layer)
+    }
+}
+
+function getLeafletControlContainer(mapInstance, position) {
+    if (!mapInstance) {
+        return null
+    }
+    mapInstance._customControlContainers = mapInstance._customControlContainers || {}
+    if (mapInstance._customControlContainers[position]) {
+        return mapInstance._customControlContainers[position]
+    }
+
+    var container
+    if (position === "topcenter") {
+        container = L.DomUtil.create("div", "leaflet-control custom-map-controls")
+        container.style.position = "absolute"
+        container.style.top = "10px"
+        container.style.left = "50%"
+        container.style.transform = "translateX(-50%)"
+        mapInstance.getContainer().appendChild(container)
+        L.DomEvent.disableClickPropagation(container)
+    } else {
+        var control = L.control({ position: position })
+        control.onAdd = function() {
+            var innerContainer = L.DomUtil.create("div", "leaflet-control custom-map-controls")
+            L.DomEvent.disableClickPropagation(innerContainer)
+            return innerContainer
+        }
+        control.addTo(mapInstance)
+        container = control.getContainer()
+    }
+
+    mapInstance._customControlContainers[position] = container
+    return container
+}
+
+function clearLeafletControlContainer(mapInstance, position) {
+    var container = getLeafletControlContainer(mapInstance, position)
+    if (!container) {
+        return
+    }
+    while (container.firstChild) {
+        container.removeChild(container.firstChild)
+    }
+}
+
+function addLeafletControlElement(mapInstance, position, element, index) {
+    var container = getLeafletControlContainer(mapInstance, position)
+    if (!container || !element) {
+        return
+    }
+    if (index === undefined || index < 0 || index >= container.children.length) {
+        container.appendChild(element)
+        return
+    }
+    container.insertBefore(element, container.children[index])
+}
+
+function interpolateGreatCircle(from, to, fraction) {
+    var lat1 = (from.lat || from.lat()) * Math.PI / 180
+    var lon1 = (from.lng || from.lng()) * Math.PI / 180
+    var lat2 = (to.lat || to.lat()) * Math.PI / 180
+    var lon2 = (to.lng || to.lng()) * Math.PI / 180
+
+    var sinLatDiff = Math.sin((lat2 - lat1) / 2)
+    var sinLonDiff = Math.sin((lon2 - lon1) / 2)
+    var angularDistance = 2 * Math.asin(Math.sqrt(sinLatDiff * sinLatDiff + Math.cos(lat1) * Math.cos(lat2) * sinLonDiff * sinLonDiff))
+    if (!angularDistance) {
+        return L.latLng(from.lat || from.lat(), from.lng || from.lng())
+    }
+
+    var a = Math.sin((1 - fraction) * angularDistance) / Math.sin(angularDistance)
+    var b = Math.sin(fraction * angularDistance) / Math.sin(angularDistance)
+    var x = a * Math.cos(lat1) * Math.cos(lon1) + b * Math.cos(lat2) * Math.cos(lon2)
+    var y = a * Math.cos(lat1) * Math.sin(lon1) + b * Math.cos(lat2) * Math.sin(lon2)
+    var z = a * Math.sin(lat1) + b * Math.sin(lat2)
+
+    var lat = Math.atan2(z, Math.sqrt(x * x + y * y))
+    var lon = Math.atan2(y, x)
+    return L.latLng(lat * 180 / Math.PI, lon * 180 / Math.PI)
+}
 
 $( document ).ready(function() {
 	mobileCheck()
@@ -61,6 +173,10 @@ $( document ).ready(function() {
     if (isIe()) {
         //remove all laser elements, as IE cannot handle it
         $(".laser").hide()
+    }
+
+    if (document.getElementById('map')) {
+        initMap()
     }
 
 })
@@ -130,7 +246,9 @@ function refreshMobileLayout() {
     } else {
         $("#reputationLevel").show()
 	}
-	delete(map)
+	if (map) {
+	    map.invalidateSize()
+	}
 	//yike, what if we miss something...the list below is kinda random
 	//initMap()
 	if (airports) {
@@ -301,32 +419,30 @@ function hideUserSpecificElements() {
 
 function initMap() {
 	initStyles()
-  map = new google.maps.Map(document.getElementById('map'), {
-	center: {lat: 20, lng: 150.644},
-   	zoom : 2,
-   	minZoom : 2,
-   	gestureHandling: 'greedy',
-   	styles: getMapStyles(),
-	mapTypeId: getMapTypes(),
-   	restriction: {
-                latLngBounds: { north: 85, south: -85, west: -180, east: 180 },
-              }
-  });
-	
-  google.maps.event.addListener(map, 'zoom_changed', function() {
-	    var zoom = map.getZoom();
-	    // iterate over markers and call setVisible
-	    $.each(markers, function( key, marker ) {
-	        marker.setVisible(isShowMarker(marker, zoom));
-	    })
-  });
-  
-  google.maps.event.addListener(map, 'maptypeid_changed', function() { 
-		var mapType = map.getMapTypeId();
-		$.cookie('currentMapTypes', mapType);
-  });
+    var bounds = L.latLngBounds(L.latLng(-85, -180), L.latLng(85, 180))
+    map = L.map(document.getElementById('map'), {
+        center: [20, 150.644],
+        zoom: 2,
+        minZoom: 2,
+        maxBounds: bounds,
+        worldCopyJump: true,
+        zoomControl: true
+    })
 
-  addCustomMapControls(map)
+    applyMapStyle(map)
+
+    map.on('zoomend', function() {
+        var zoom = map.getZoom()
+        // iterate over markers and call setVisible
+        $.each(markers, function(key, marker) {
+            setLeafletLayerVisibility(marker, isShowMarker(marker, zoom))
+            if (marker.contestedMarker) {
+                setLeafletLayerVisibility(marker.contestedMarker, map.hasLayer(marker))
+            }
+        })
+    })
+
+    addCustomMapControls(map)
 }
 
 function addCustomMapControls(map) {
@@ -352,26 +468,26 @@ function addCustomMapControls(map) {
 
 
   if ($("#map").height() > 500) {
-    map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(toggleAllianceBaseMapViewButton[0]);
-    map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(toggleMapLightButton[0]);
-    map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(toggleMapAnimationButton[0]);
-    map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(toggleChampionButton[0])
-    //map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(toggleHeatmapButton[0])
+    addLeafletControlElement(map, "bottomright", toggleAllianceBaseMapViewButton[0])
+    addLeafletControlElement(map, "bottomright", toggleMapLightButton[0])
+    addLeafletControlElement(map, "bottomright", toggleMapAnimationButton[0])
+    addLeafletControlElement(map, "bottomright", toggleChampionButton[0])
+    //addLeafletControlElement(map, "bottomright", toggleHeatmapButton[0])
 
     if (christmasFlag) {
-       map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(toggleMapChristmasButton[0]);
+       addLeafletControlElement(map, "bottomright", toggleMapChristmasButton[0])
        toggleMapChristmasButton.show()
     }
 
   } else {
-    map.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(toggleAllianceBaseMapViewButton[0])
-    map.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(toggleMapLightButton[0]);
-    map.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(toggleMapAnimationButton[0]);
-    map.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(toggleChampionButton[0])
-    //map.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(toggleHeatmapButton[0])
+    addLeafletControlElement(map, "bottomleft", toggleAllianceBaseMapViewButton[0])
+    addLeafletControlElement(map, "bottomleft", toggleMapLightButton[0])
+    addLeafletControlElement(map, "bottomleft", toggleMapAnimationButton[0])
+    addLeafletControlElement(map, "bottomleft", toggleChampionButton[0])
+    //addLeafletControlElement(map, "bottomleft", toggleHeatmapButton[0])
 
     if (christmasFlag) {
-       map.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(toggleMapChristmasButton[0]);
+       addLeafletControlElement(map, "bottomleft", toggleMapChristmasButton[0])
     }
   }
 }
@@ -382,9 +498,9 @@ function addAirlineSpecificMapControls(map) {
     toggleHeatmapButton.index = 4
 
     if ($("#map").height() > 500) {
-        map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].insertAt(3, toggleHeatmapButton[0])
+        addLeafletControlElement(map, "bottomright", toggleHeatmapButton[0], 3)
      } else {
-        map.controls[google.maps.ControlPosition.LEFT_BOTTOM].insertAt(3, toggleHeatmapButton[0])
+        addLeafletControlElement(map, "bottomleft", toggleHeatmapButton[0], 3)
     }
 }
 
