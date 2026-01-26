@@ -283,7 +283,7 @@ function populateCityVoteModal(candidates, votes, votingActive) {
         })
     })
 
-    $.each(olympicsMapElements, function() { this.setMap(null)})
+    $.each(olympicsMapElements, function() { setLeafletLayerVisibility(this, false) })
     olympicsMapElements = []
 
     table.find(".number-button").each(function(index) {
@@ -337,60 +337,51 @@ function populateOlympicsCityMap(map, candidateInfo) {
     } else {
         map.setZoom(7)
     }
-    map.setCenter({lat: principalAirport.latitude, lng: principalAirport.longitude}); //this would eventually trigger an idle
+    map.setView([principalAirport.latitude, principalAirport.longitude], map.getZoom())
 
-    var airportMapCircle = new google.maps.Circle({
-                center: {lat: principalAirport.latitude, lng: principalAirport.longitude},
-                radius: 80000, //in meter
-                strokeColor: "#32CF47",
-                strokeOpacity: 0.2,
-                strokeWeight: 2,
-                fillColor: "#32CF47",
-                fillOpacity: 0.3,
-                map: map
-            });
+    var airportMapCircle = L.circle([principalAirport.latitude, principalAirport.longitude], {
+        radius: 80000, //in meter
+        color: "#32CF47",
+        opacity: 0.2,
+        weight: 2,
+        fillColor: "#32CF47",
+        fillOpacity: 0.3
+    })
+    airportMapCircle.__mapRef = map
+    airportMapCircle.addTo(map)
     olympicsMapElements.push(airportMapCircle)
 
     $.each(candidateInfo.affectedAirports, function(index, airport) {
         var icon = getAirportIcon(airport)
-        var position = {lat: airport.latitude, lng: airport.longitude};
-          var marker = new google.maps.Marker({
-                position: position,
-                map: map,
-                airport: airport,
-                icon : icon
-              });
+        var marker = L.marker([airport.latitude, airport.longitude], {
+            airport: airport,
+            icon: icon
+        })
+        marker.__mapRef = map
+        marker.addTo(map)
 
-            var infowindow
-           	marker.addListener('mouseover', function(event) {
-           		$("#olympicAirportPopup .airportName").text(airport.name + "(" + airport.iata + ")")
-           		infowindow = new google.maps.InfoWindow({
-           		       maxWidth : 800,
-                       disableAutoPan : true
-                 });
-                 var popup = $("#olympicAirportPopup").clone()
-                 popup.show()
-                 infowindow.setContent(popup[0])
-
-
-           		infowindow.open(map, marker);
-           	})
-           	marker.addListener('mouseout', function(event) {
-           		infowindow.close()
-           		infowindow.setMap(null)
-           	})
-           	olympicsMapElements.push(marker)
+        marker.on('mouseover', function(event) {
+            $("#olympicAirportPopup .airportName").text(airport.name + "(" + airport.iata + ")")
+            var popup = $("#olympicAirportPopup").clone()
+            popup.show()
+            this.bindPopup(popup[0], { maxWidth: 800, autoPan: false, closeButton: false })
+            this.openPopup()
+        })
+        marker.on('mouseout', function(event) {
+            this.closePopup()
+        })
+        olympicsMapElements.push(marker)
 
      })
 
 
 
-    google.maps.event.addListenerOnce(map, 'idle', function() {
+    map.whenReady(function() {
         setTimeout(function() { //set a timeout here, otherwise it might not render part of the map...
-            map.setCenter({lat: principalAirport.latitude, lng: principalAirport.longitude}); //this would eventually trigger an idle
-            google.maps.event.trigger(map, 'resize'); //this refreshes the map
-        }, 2000);
-    });
+            map.setView([principalAirport.latitude, principalAirport.longitude], map.getZoom())
+            map.invalidateSize()
+        }, 2000)
+    })
 }
 
 function voteOlympicsCity(numberButton) {
@@ -443,11 +434,16 @@ var olympicsVoteMaps
 function initOlympicsVoteMaps(mapDivs) { //only called once, see https://stackoverflow.com/questions/10485582/what-is-the-proper-way-to-destroy-a-map-instance
     olympicsVoteMaps = []
 //    for (i = 0 ; i < mapDivs.length; i ++) {
-//        olympicsVoteMaps.push(new google.maps.Map(mapDivs[i][0], {
-//                        gestureHandling: 'none',
-//                        disableDefaultUI: true,
-//                        styles: getMapStyles()
-//                    }))
+//        var mapInstance = L.map(mapDivs[i][0], {
+//            zoomControl: false,
+//            scrollWheelZoom: false,
+//            dragging: false,
+//            doubleClickZoom: false,
+//            boxZoom: false,
+//            keyboard: false
+//        })
+//        applyMapStyle(mapInstance)
+//        olympicsVoteMaps.push(mapInstance)
 //    }
 }
 
@@ -655,4 +651,3 @@ function getOlympicsCountryRankingRow(rank, entry) {
     row.append("<div class='cell' style='text-align: right;'>" + Math.round(entry.percentage) + "%</div>")
 	return row
 }
-
