@@ -53,7 +53,9 @@ function toggleMapLight() {
 	}
 	$.cookie('currentMapStyles', currentStyles);
 	console.log($.cookie('currentMapStyles'))
-	
+	if (!map || typeof map.setOptions !== 'function') {
+		return
+	}
 	map.setOptions({styles: getMapStyles()});
 	refreshLinks(false)
 }

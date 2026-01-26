@@ -1,4 +1,5 @@
 var map
+var baseTileLayer
 var airportMap
 var markers
 var baseMarkers = []
@@ -301,35 +302,37 @@ function hideUserSpecificElements() {
 
 function initMap() {
 	initStyles()
-  map = new google.maps.Map(document.getElementById('map'), {
-	center: {lat: 20, lng: 150.644},
-   	zoom : 2,
-   	minZoom : 2,
-   	gestureHandling: 'greedy',
-   	styles: getMapStyles(),
-	mapTypeId: getMapTypes(),
-   	restriction: {
-                latLngBounds: { north: 85, south: -85, west: -180, east: 180 },
-              }
-  });
-	
-  google.maps.event.addListener(map, 'zoom_changed', function() {
-	    var zoom = map.getZoom();
-	    // iterate over markers and call setVisible
-	    $.each(markers, function( key, marker ) {
-	        marker.setVisible(isShowMarker(marker, zoom));
-	    })
-  });
-  
-  google.maps.event.addListener(map, 'maptypeid_changed', function() { 
-		var mapType = map.getMapTypeId();
-		$.cookie('currentMapTypes', mapType);
-  });
+  map = L.map('map', {
+	center: [20, 150.644],
+	zoom: 2,
+	minZoom: 2,
+	maxBounds: [[-85, -180], [85, 180]],
+	worldCopyJump: true
+  })
+  baseTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map)
 
+  map.on('zoomend', function() {
+	var zoom = map.getZoom()
+	// iterate over markers and call setVisible if supported
+	$.each(markers, function(key, marker) {
+		if (marker && typeof marker.setVisible === 'function') {
+			marker.setVisible(isShowMarker(marker, zoom))
+		} else if (marker && typeof marker.setOpacity === 'function') {
+			marker.setOpacity(isShowMarker(marker, zoom) ? 1 : 0)
+		}
+	})
+  })
+	
   addCustomMapControls(map)
 }
 
 function addCustomMapControls(map) {
+  if (!map || !map.controls || !window.google || !window.google.maps || !window.google.maps.ControlPosition) {
+    return
+  }
 //			<div id="toggleMapChristmasButton" class="googleMapIcon" onclick="toggleChristmasMarker()" align="center" style="display: none; margin-bottom: 10px;"><span class="alignHelper"></span><img src='@routes.Assets.versioned("images/icons/bauble.png")' title='Merry Christmas!' style="vertical-align: middle;"/></div>-->
 //			<div id="toggleMapAnimationButton" class="googleMapIcon" onclick="toggleMapAnimation()" align="center" style="display: none; margin-bottom: 10px;"><span class="alignHelper"></span><img src='@routes.Assets.versioned("images/icons/arrow-step-over.png")' title='toggle flight marker animation' style="vertical-align: middle;"/></div>-->
 //			<div id="toggleMapLightButton" class="googleMapIcon" onclick="toggleMapLight()" align="center" style="display: none;"><span class="alignHelper"></span><img src='@routes.Assets.versioned("images/icons/switch.png")' title='toggle dark/light themed map' style="vertical-align: middle;"/></div>-->
