@@ -4,7 +4,7 @@ Then copy the credentials json and put it to `conf` folder with name `gmail-cred
 
 The banner fetcher uses Wikimedia Commons search. You can override the default search term with `wikimedia.bannerSearch` in `application.conf`.
 
-For google map usage, set `google.mapKey` in `application.conf`
+Maps use OpenStreetMap tiles by default. Adjust `map.provider.baseTileUrl` and `map.provider.attribution` in `application.conf` if you need a different tile service (some providers may require their own API keys).
 
 Cities datasource
 http://download.geonames.org/export/dump/cities500.zip
