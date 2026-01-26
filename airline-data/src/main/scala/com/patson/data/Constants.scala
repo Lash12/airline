@@ -143,7 +143,7 @@ object Constants {
   val EVENT_PICKED_REWARD_TABLE = "event_picked_reward"
   val LINK_CHANGE_HISTORY_TABLE ="link_change_history"
   val LINK_CHANGE_HISTORY_INDEX_PREFIX = "link_change_index_"
-  val GOOGLE_RESOURCE_TABLE ="google_resource"
+  val WIKIMEDIA_RESOURCE_TABLE ="wikimedia_resource"
   val BUSY_DELEGATE_TABLE = "busy_delegate"
   val COUNTRY_DELEGATE_TASK_TABLE = "country_delegate_task"
   val STRATEGY_DELEGATE_TASK_TABLE = "strategy_delegate_task"

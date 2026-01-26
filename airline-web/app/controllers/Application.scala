@@ -142,11 +142,11 @@ class Application @Inject()(cc: ControllerComponents, val configuration: play.ap
 //         result = result + ("linkCounts" -> linkCountJson)
 
          if (image) {
-           val cityImageUrl = GoogleImageUtil.getCityImageUrl(airport);
+           val cityImageUrl = WikimediaImageUtil.getCityImageUrl(airport);
            if (cityImageUrl != null) {
              result = result + ("cityImageUrl" -> JsString(cityImageUrl.toString))
            }
-           val airportImageUrl = GoogleImageUtil.getAirportImageUrl(airport);
+           val airportImageUrl = WikimediaImageUtil.getAirportImageUrl(airport);
            if (airportImageUrl != null) {
              result = result + ("airportImageUrl" -> JsString(airportImageUrl.toString))
            }
@@ -161,11 +161,11 @@ class Application @Inject()(cc: ControllerComponents, val configuration: play.ap
     AirportCache.getAirport(airportId, false) match {
       case Some(airport) =>
         var result = Json.obj()
-        val cityImageUrl = GoogleImageUtil.getCityImageUrl(airport);
+        val cityImageUrl = WikimediaImageUtil.getCityImageUrl(airport);
         if (cityImageUrl != null) {
           result = result + ("cityImageUrl" -> JsString(cityImageUrl.toString))
         }
-        val airportImageUrl = GoogleImageUtil.getAirportImageUrl(airport);
+        val airportImageUrl = WikimediaImageUtil.getAirportImageUrl(airport);
         if (airportImageUrl != null) {
           result = result + ("airportImageUrl" -> JsString(airportImageUrl.toString))
         }
