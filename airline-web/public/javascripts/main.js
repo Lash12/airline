@@ -377,6 +377,9 @@ function addCustomMapControls(map) {
 }
 
 function addAirlineSpecificMapControls(map) {
+    if (!window.L || typeof L.heatLayer !== 'function') {
+        return
+    }
     var toggleHeatmapButton = $('<div id="toggleMapHeatmapButton" class="googleMapIcon" onclick="toggleHeatmap()" align="center"  style="margin-bottom: 10px;"><span class="alignHelper"></span><img src="assets/images/icons/table-heatmap.png" title=\'toggle heatmap\' style="vertical-align: middle;"/></div>')
 
     toggleHeatmapButton.index = 4

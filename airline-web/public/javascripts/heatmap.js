@@ -44,12 +44,12 @@ function closeHeatmap() {
 
 function clearHeatmap() {
     if (heatmapPositive) {
-        heatmapPositive.setMap(null)
+        removeHeatLayer(heatmapPositive)
         heatmapPositive = undefined
     }
     if (heatmapNegative) {
-        heatmapNegative.setMap(null)
-        heatmapPositive = undefined
+        removeHeatLayer(heatmapNegative)
+        heatmapNegative = undefined
     }
 }
 
@@ -93,11 +93,57 @@ const loyalistTrendHeatmapNegativeGradient = [
   "rgba(255, 150, 80, 1)"
 ];
 
+function isLeafletHeatmapAvailable() {
+    return window.L && typeof L.heatLayer === 'function'
+}
+
+function buildLeafletGradient(gradientColors) {
+    if (!gradientColors || gradientColors.length === 0) {
+        return undefined
+    }
+    var gradient = {}
+    var maxIndex = gradientColors.length - 1
+    $.each(gradientColors, function(index, color) {
+        gradient[index / maxIndex] = color
+    })
+    return gradient
+}
+
+function addHeatLayer(layer) {
+    if (map && typeof map.addLayer === 'function') {
+        map.addLayer(layer)
+    } else if (layer && typeof layer.addTo === 'function' && map) {
+        layer.addTo(map)
+    }
+}
+
+function removeHeatLayer(layer) {
+    if (!layer) {
+        return
+    }
+    if (typeof layer.remove === 'function') {
+        layer.remove()
+        return
+    }
+    if (map && typeof map.removeLayer === 'function') {
+        map.removeLayer(layer)
+    }
+}
+
 function updateHeatmap(airlineId) {
 //    $.each(historyPaths, function(index, path) { //clear all history path
 //        path.setMap(null)
 //        path.shadowPath.setMap(null)
 //    })
+
+    if (!isLeafletHeatmapAvailable()) {
+        console.warn("Leaflet heatmap plugin is unavailable. Heatmap cannot be rendered.")
+        return
+    }
+    if (!map || typeof map.addLayer !== 'function') {
+        console.warn("Leaflet map instance is unavailable. Heatmap cannot be rendered.")
+        return
+    }
 
     var cycleDelta = $('#heatmapControlPanel').data('cycleDelta')
     var heatmapType = $('input[name=heatmapType]:checked', '#heatmapControlPanel').val()
@@ -115,9 +161,9 @@ function updateHeatmap(airlineId) {
             var heatmapNegativeData = []
             $.each(result.points, function(index, entry) {
               if (entry.weight >= 0) {
-                heatmapPositiveData.push({location: new google.maps.LatLng(entry.lat, entry.lng), weight: entry.weight})
+                heatmapPositiveData.push([entry.lat, entry.lng, entry.weight])
               } else {
-                heatmapNegativeData.push({location: new google.maps.LatLng(entry.lat, entry.lng), weight: entry.weight * -1})
+                heatmapNegativeData.push([entry.lat, entry.lng, entry.weight * -1])
               }
             })
 
@@ -131,27 +177,23 @@ function updateHeatmap(airlineId) {
             }
 
             if (heatmapPositiveData.length > 0) {
-                heatmapPositive = new google.maps.visualization.HeatmapLayer({
-                  data: heatmapPositiveData,
-                  dissipating: false,
-                  gradient: heatmapPositiveGradient,
-                  maxIntensity: result.maxIntensity,
+                heatmapPositive = L.heatLayer(heatmapPositiveData, {
+                  gradient: buildLeafletGradient(heatmapPositiveGradient),
+                  max: result.maxIntensity,
                   radius: 3
-                });
+                })
 
-                heatmapPositive.setMap(map);
+                addHeatLayer(heatmapPositive)
             }
 
             if (heatmapNegativeData.length > 0) {
-                heatmapNegative = new google.maps.visualization.HeatmapLayer({
-                  data: heatmapNegativeData,
-                  dissipating: false,
-                  gradient: heatmapNegativeGradient,
-                  maxIntensity: result.maxIntensity,
+                heatmapNegative = L.heatLayer(heatmapNegativeData, {
+                  gradient: buildLeafletGradient(heatmapNegativeGradient),
+                  max: result.maxIntensity,
                   radius: 3
-                });
+                })
 
-                heatmapNegative.setMap(map);
+                addHeatLayer(heatmapNegative)
             }
 
             updateHeatmapArrows(result.minDeltaCount, airlineId)
@@ -241,4 +283,3 @@ function updateHeatmapArrows(minDeltaCount, airlineId) {
             })
         }
 }
-
