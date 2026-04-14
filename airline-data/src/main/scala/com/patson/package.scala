@@ -6,7 +6,8 @@ import scala.concurrent.ExecutionContext
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 package object patson {
-  implicit val actorSystem : ActorSystem = ActorSystem("rabbit-akka-stream", None, None, Some(ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())))
+  private lazy val actorExecutor = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(RuntimeSettings.actorThreadPoolSize))
+  implicit lazy val actorSystem : ActorSystem = ActorSystem("rabbit-akka-stream", None, None, Some(actorExecutor))
 
   import actorSystem.dispatcher
 

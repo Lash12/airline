@@ -9,6 +9,8 @@ import com.patson.model.Airport;
 import com.patson.model.Alliance;
 import com.patson.model.Country;
 import com.patson.util.AirlineCache;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import org.apache.http.HttpHost;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.index.IndexRequest;
@@ -35,8 +37,16 @@ import java.util.regex.Pattern;
 
 public class SearchUtil {
 	private final static Logger logger = LoggerFactory.getLogger(SearchUtil.class);
+	private static final Config config = ConfigFactory.load();
+	private static final boolean localLite = booleanSetting("AIRLINE_LOCAL_LITE", "airline.local-lite", false);
+	private static final boolean elasticSearchEnabled = booleanSetting("AIRLINE_SEARCH_ELASTICSEARCH_ENABLED", "airline.search.elasticsearch.enabled", !localLite);
+	private static volatile boolean elasticSearchAvailable = elasticSearchEnabled;
 	static {
-		checkInit();
+		if (elasticSearchEnabled) {
+			checkInit();
+		} else {
+			logger.info("Elasticsearch-backed search is disabled. Using in-process fallback search.");
+		}
 	}
 
 	/**
@@ -65,7 +75,7 @@ public class SearchUtil {
 				initAlliances(client);
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
+			disableElasticSearch(e);
 		}
 		System.out.println("ES check finished");
 	}
@@ -77,6 +87,10 @@ public class SearchUtil {
 
 
 	public static void init() throws IOException {
+		if (!elasticSearchEnabled) {
+			logger.info("Skipping Elasticsearch initialization because search is disabled.");
+			return;
+		}
 		try (RestHighLevelClient client = getClient()) {
 			System.out.println("Initializing ES airports");
 			initAirports(client);
@@ -90,6 +104,31 @@ public class SearchUtil {
 			initAlliances(client);
 		}
 		System.out.println("ES DONE");
+	}
+
+	private static boolean booleanSetting(String envName, String configPath, boolean defaultValue) {
+		String envValue = System.getenv(envName);
+		if (envValue != null) {
+			String normalized = envValue.trim().toLowerCase(Locale.ROOT);
+			if (Arrays.asList("1", "true", "yes", "y", "on").contains(normalized)) {
+				return true;
+			}
+			if (Arrays.asList("0", "false", "no", "n", "off").contains(normalized)) {
+				return false;
+			}
+		}
+		return config.hasPath(configPath) ? config.getBoolean(configPath) : defaultValue;
+	}
+
+	private static boolean useElasticSearch() {
+		return elasticSearchEnabled && elasticSearchAvailable;
+	}
+
+	private static void disableElasticSearch(IOException exception) {
+		if (elasticSearchAvailable) {
+			logger.warn("Elasticsearch is unavailable. Falling back to in-process search.", exception);
+		}
+		elasticSearchAvailable = false;
 	}
 
 	private static boolean isIndexExist(RestHighLevelClient client, String indexName) throws IOException {
@@ -190,6 +229,9 @@ public class SearchUtil {
 	}
 
 	public static void addAirline(Airline airline) {
+		if (!useElasticSearch()) {
+			return;
+		}
 		try (RestHighLevelClient client = getClient()) {
 			Map<String, Object> jsonMap = new HashMap<>();
 			jsonMap.put("airlineId", airline.id());
@@ -200,12 +242,15 @@ public class SearchUtil {
 			logger.info("Indexing new doc " + jsonMap);
 			client.index(indexRequest, RequestOptions.DEFAULT);
 		} catch (IOException e) {
-			e.printStackTrace();
+			disableElasticSearch(e);
 		}
 		System.out.println("Added airline " + airline + " to ES");
 	}
 
 	public static void updateAirline(Airline airline) {
+		if (!useElasticSearch()) {
+			return;
+		}
 		try (RestHighLevelClient client = getClient()) {
 			SearchRequest searchRequest = new SearchRequest("airlines");
 			SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
@@ -229,7 +274,7 @@ public class SearchUtil {
 				}
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
+			disableElasticSearch(e);
 		}
 		System.out.println("Updated airline " + airline + " to ES");
 	}
@@ -256,6 +301,9 @@ public class SearchUtil {
 	}
 
 	public static void addAlliance(Alliance alliance) {
+		if (!useElasticSearch()) {
+			return;
+		}
 		try (RestHighLevelClient client = getClient()) {
 			Map<String, Object> jsonMap = new HashMap<>();
 			jsonMap.put("allianceId", alliance.id());
@@ -264,13 +312,16 @@ public class SearchUtil {
 			IndexRequest indexRequest = new IndexRequest("alliances").source(jsonMap);
 			client.index(indexRequest, RequestOptions.DEFAULT);
 		} catch (IOException e) {
-			e.printStackTrace();
+			disableElasticSearch(e);
 		}
 		System.out.println("Added alliance " + alliance + " to ES");
 
 	}
 
 	public static void removeAlliance(int allianceId) {
+		if (!useElasticSearch()) {
+			return;
+		}
 		try (RestHighLevelClient client = getClient()) {
 			DeleteByQueryRequest request =	new DeleteByQueryRequest("alliances");
 			request.setQuery(new TermQueryBuilder("allianceId", allianceId));
@@ -278,17 +329,20 @@ public class SearchUtil {
 
 			client.deleteByQuery(request, RequestOptions.DEFAULT);
 		} catch (IOException exception) {
-			exception.printStackTrace();
+			disableElasticSearch(exception);
 		}
 		System.out.println("Removed alliance with id " + allianceId + " from ES");
 	}
 
 	public static void refreshAlliances() {
+		if (!useElasticSearch()) {
+			return;
+		}
 		try (RestHighLevelClient client = getClient()) {
 			System.out.println("Refreshing ES alliances");
 			initAlliances(client);
 		} catch (IOException exception) {
-			exception.printStackTrace();
+			disableElasticSearch(exception);
 		}
 		System.out.println("Refreshed ES alliances");
 	}
@@ -299,6 +353,10 @@ public class SearchUtil {
 	public static List<AirportSearchResult> searchAirport(String input) {
 		if (!letterSpaceOnlyPattern.matcher(input).matches()) {
 			return Collections.emptyList();
+		}
+
+		if (!useElasticSearch()) {
+			return fallbackAirportSearch(input);
 		}
 
 		try (RestHighLevelClient client = getClient()) {
@@ -340,8 +398,8 @@ public class SearchUtil {
 			//System.out.println("done");
 			return result;
 		} catch (IOException e) {
-			e.printStackTrace();
-			return Collections.EMPTY_LIST;
+			disableElasticSearch(e);
+			return fallbackAirportSearch(input);
 		}
 
 	}
@@ -350,6 +408,10 @@ public class SearchUtil {
 	public static List<CountrySearchResult> searchCountry(String input) {
 		if (!letterSpaceOnlyPattern.matcher(input).matches()) {
 			return Collections.emptyList();
+		}
+
+		if (!useElasticSearch()) {
+			return fallbackCountrySearch(input);
 		}
 
 		try (RestHighLevelClient client = getClient()) {
@@ -388,8 +450,8 @@ public class SearchUtil {
 			//System.out.println("done");
 			return result;
 		} catch (IOException e) {
-			e.printStackTrace();
-			return Collections.EMPTY_LIST;
+			disableElasticSearch(e);
+			return fallbackCountrySearch(input);
 		}
 	}
 
@@ -444,6 +506,10 @@ public class SearchUtil {
 			return Collections.emptyList();
 		}
 
+		if (!useElasticSearch()) {
+			return fallbackAirlineSearch(input);
+		}
+
 		try (RestHighLevelClient client = getClient()) {
 			SearchRequest searchRequest = new SearchRequest("airlines");
 			SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
@@ -484,8 +550,8 @@ public class SearchUtil {
 			//System.out.println("done");
 			return result;
 		} catch (IOException e) {
-			e.printStackTrace();
-			return Collections.EMPTY_LIST;
+			disableElasticSearch(e);
+			return fallbackAirlineSearch(input);
 		}
 
 	}
@@ -493,6 +559,10 @@ public class SearchUtil {
 	public static List<AllianceSearchResult> searchAlliance(String input) {
 		if (!letterSpaceOnlyPattern.matcher(input).matches()) {
 			return Collections.emptyList();
+		}
+
+		if (!useElasticSearch()) {
+			return fallbackAllianceSearch(input);
 		}
 
 		try (RestHighLevelClient client = getClient()) {
@@ -530,9 +600,122 @@ public class SearchUtil {
 			//System.out.println("done");
 			return result;
 		} catch (IOException e) {
-			e.printStackTrace();
-			return Collections.EMPTY_LIST;
+			disableElasticSearch(e);
+			return fallbackAllianceSearch(input);
 		}
+	}
+
+	private static List<String> toTerms(String input) {
+		String normalized = input.trim().toLowerCase(Locale.ROOT);
+		if (normalized.isEmpty()) {
+			return Collections.emptyList();
+		}
+		return Arrays.asList(normalized.split("\\s+"));
+	}
+
+	private static boolean matchesAllTerms(List<String> terms, String... fields) {
+		for (String term : terms) {
+			boolean matched = false;
+			for (String field : fields) {
+				if (field != null && field.toLowerCase(Locale.ROOT).contains(term)) {
+					matched = true;
+					break;
+				}
+			}
+			if (!matched) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private static double matchScore(String normalizedInput, String... fields) {
+		double score = 0;
+		for (String field : fields) {
+			if (field == null || field.isEmpty()) {
+				continue;
+			}
+			String normalizedField = field.toLowerCase(Locale.ROOT);
+			if (normalizedField.equals(normalizedInput)) {
+				score = Math.max(score, 100d);
+			} else if (normalizedField.startsWith(normalizedInput)) {
+				score = Math.max(score, 75d);
+			} else if (normalizedField.contains(normalizedInput)) {
+				score = Math.max(score, 50d);
+			}
+		}
+		return score;
+	}
+
+	private static List<AirportSearchResult> fallbackAirportSearch(String input) {
+		List<String> terms = toTerms(input);
+		String normalizedInput = input.trim().toLowerCase(Locale.ROOT);
+		List<AirportSearchResult> result = new ArrayList<>();
+		for (Airport airport : JavaConverters.asJava(AirportSource.loadAllAirports(false, false))) {
+			if (matchesAllTerms(terms, airport.iata(), airport.name(), airport.city(), airport.countryCode())) {
+				double score = matchScore(normalizedInput, airport.iata(), airport.name(), airport.city()) + Math.min(airport.power() / 1_000_000_000d, 25d);
+				result.add(new AirportSearchResult(airport.id(), airport.iata(), airport.name(), airport.city(), airport.countryCode(), airport.power(), score));
+			}
+		}
+		Collections.sort(result);
+		Collections.reverse(result);
+		return result.size() > 100 ? new ArrayList<>(result.subList(0, 100)) : result;
+	}
+
+	private static List<CountrySearchResult> fallbackCountrySearch(String input) {
+		List<String> terms = toTerms(input);
+		String normalizedInput = input.trim().toLowerCase(Locale.ROOT);
+		List<CountrySearchResult> result = new ArrayList<>();
+		for (Country country : JavaConverters.asJava(CountrySource.loadAllCountries())) {
+			if (matchesAllTerms(terms, country.name(), country.countryCode())) {
+				double score = matchScore(normalizedInput, country.name(), country.countryCode()) + Math.min(country.airportPopulation() / 10_000_000d, 25d);
+				result.add(new CountrySearchResult(country.name(), country.countryCode(), country.airportPopulation(), score));
+			}
+		}
+		Collections.sort(result);
+		Collections.reverse(result);
+		return result.size() > 100 ? new ArrayList<>(result.subList(0, 100)) : result;
+	}
+
+	private static List<AirlineSearchResult> fallbackAirlineSearch(String input) {
+		List<String> terms = toTerms(input);
+		String normalizedInput = input.trim().toLowerCase(Locale.ROOT);
+		List<AirlineSearchResult> result = new ArrayList<>();
+		for (Airline airline : JavaConverters.asJava(AirlineSource.loadAllAirlines(false))) {
+			List<String> previousNames = JavaConverters.asJava(airline.previousNames());
+			boolean previousNameMatch = false;
+			for (String previousName : previousNames) {
+				if (previousName != null && previousName.toLowerCase(Locale.ROOT).contains(normalizedInput)) {
+					previousNameMatch = true;
+					break;
+				}
+			}
+			List<String> searchableFields = new ArrayList<>(previousNames);
+			searchableFields.add(airline.name());
+			searchableFields.add(airline.getAirlineCode());
+			if (matchesAllTerms(terms, searchableFields.toArray(new String[0]))) {
+				double score = matchScore(normalizedInput, airline.name(), airline.getAirlineCode()) + (previousNameMatch ? 10d : 0d);
+				result.add(new AirlineSearchResult(airline, score, previousNameMatch));
+			}
+		}
+		Collections.sort(result);
+		Collections.reverse(result);
+		return result.size() > 10 ? new ArrayList<>(result.subList(0, 10)) : result;
+	}
+
+	private static List<AllianceSearchResult> fallbackAllianceSearch(String input) {
+		List<String> terms = toTerms(input);
+		String normalizedInput = input.trim().toLowerCase(Locale.ROOT);
+		List<AllianceSearchResult> result = new ArrayList<>();
+		for (Alliance alliance : JavaConverters.asJava(AllianceSource.loadAllAlliances(false))) {
+			if (matchesAllTerms(terms, alliance.name())) {
+				double score = matchScore(normalizedInput, alliance.name());
+				result.add(new AllianceSearchResult(alliance.id(), alliance.name(), score));
+			}
+		}
+		Collections.sort(result);
+		Collections.reverse(result);
+		return result.size() > 10 ? new ArrayList<>(result.subList(0, 10)) : result;
 	}
 
 

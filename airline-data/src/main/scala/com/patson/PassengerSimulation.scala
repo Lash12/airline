@@ -9,6 +9,7 @@ import FlightPreferenceType._
 
 import java.util
 import scala.collection.mutable
+import scala.collection.concurrent.TrieMap
 import scala.collection.mutable.{ListBuffer, Set}
 import scala.util.Random
 import scala.collection.parallel.CollectionConverters._
@@ -24,6 +25,16 @@ object PassengerSimulation {
   
   val countryOpenness : Map[String, Int] = CountrySource.loadAllCountries().map( country => (country.countryCode, country.openness)).toMap
   
+  private def foreachDemandChunk[T](items: Seq[T])(block: T => Unit): Unit = {
+    if (RuntimeSettings.simulationParallelism <= 1 || items.size <= 1) {
+      items.foreach(block)
+    } else {
+      val parallelItems = items.par
+      parallelItems.tasksupport = RuntimeSettings.simulationTaskSupport
+      parallelItems.foreach(block)
+    }
+  }
+
   def testFlow() = {
 
     //val airportGroups = getAirportGroups(airportData)
@@ -167,7 +178,7 @@ object PassengerSimulation {
         if (consumptionCycleCount < 5) 3
         else if (consumptionCycleCount < 7) 4
         else 5
-      val allRoutesMap = mutable.HashMap[PassengerGroup, Map[Airport, Route]]()
+      val allRoutesMap = TrieMap[PassengerGroup, Map[Airport, Route]]()
 
       //start consuming routes
       //       println()
@@ -180,13 +191,20 @@ object PassengerSimulation {
       val progressCount = new AtomicInteger(0)
       val progressChunk = requiredRoutes.size / 100
 
-      filteredDemandChunks.par.foreach {
+      foreachDemandChunk(filteredDemandChunks) {
         case (passengerGroup, toAirport, chunkSize) =>
-          var hasComputedRouteMap = false
-          val toAirportRouteMap = allRoutesMap.getOrElseUpdate(passengerGroup, {
-            hasComputedRouteMap = true
-            findRoutesByPassengerGroup(passengerGroup, toAirports = requiredRoutes(passengerGroup), availableLinks, PassengerSimulation.countryOpenness, establishedAllianceIdByAirlineId, Some(externalCostModifier), iterationCount)
-          })
+          val (toAirportRouteMap, hasComputedRouteMap) =
+            if (RuntimeSettings.routeMemoizationEnabled) {
+              allRoutesMap.get(passengerGroup) match {
+                case Some(routeMap) => (routeMap, false)
+                case None =>
+                  val computedRouteMap = findRoutesByPassengerGroup(passengerGroup, toAirports = requiredRoutes(passengerGroup), availableLinks, PassengerSimulation.countryOpenness, establishedAllianceIdByAirlineId, Some(externalCostModifier), iterationCount)
+                  val existingRouteMap = allRoutesMap.putIfAbsent(passengerGroup, computedRouteMap)
+                  (existingRouteMap.getOrElse(computedRouteMap), true)
+              }
+            } else {
+              (findRoutesByPassengerGroup(passengerGroup, toAirports = requiredRoutes(passengerGroup), availableLinks, PassengerSimulation.countryOpenness, establishedAllianceIdByAirlineId, Some(externalCostModifier), iterationCount), true)
+            }
           //allRoutesMap.get(passengerGroup).foreach { toAirportRouteMap =>
           //             if (!toAirportRouteMap.isEmpty) {
           //               println("to airport route map" + toAirportRouteMap)

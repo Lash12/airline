@@ -238,11 +238,11 @@ abstract class ChatCommand(val command : String) {
 
 
 object ImgCommand extends ChatCommand("img") {
-  implicit val system : ActorSystem = ActorSystem()
-  val ws = StandaloneAhcWSClient()
+  implicit lazy val system : ActorSystem = websocket.actorSystem
+  lazy val ws = StandaloneAhcWSClient()
   val MAX_MESSAGE_SIZE = 8 * 1024 * 1024 //8M
   val TIME_OUT = 5 //wait max 5 seconds
-  implicit val executionContext : ExecutionContextExecutorService = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(1))
+  implicit lazy val executionContext : ExecutionContextExecutorService = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(1))
   override def execute(message: ChatMessage): ChatMessage = {
     val commandIndex = message.text.indexOf(commandToken)
 

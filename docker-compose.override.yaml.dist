@@ -1,9 +1,11 @@
 services:
   airline-app:
 #    environment:
-#      DB_NAME: other-db-name
-#      DB_USER: other-db-user
-#      DB_PASSWORD: other-db-pass
+#      AIRLINE_LOCAL_LITE: "true"
+#      AIRLINE_SEARCH_ELASTICSEARCH_ENABLED: "false"
+#      AIRLINE_DB_POOL_MAX_SIZE: "20"
+#      AIRLINE_SIMULATION_PARALLELISM: "2"
+#      AIRLINE_LOG_CYCLE_TIMINGS: "true"
     ports:
       - "9000:9000"
 

@@ -216,20 +216,27 @@ sealed class ReconnectActor(remoteActor : ActorSelection) extends Actor {
 object ActorCenter {
   val REMOTE_SYSTEM_NAME = "websocketActorSystem"
   val BRIDGE_ACTOR_NAME = "bridgeActor"
-  val configFactory = ConfigFactory.load()
-  val remoteConfig = configFactory.getConfig(REMOTE_SYSTEM_NAME)
-  val remoteSystem = ActorSystem(REMOTE_SYSTEM_NAME, remoteConfig)
+  lazy val configFactory = ConfigFactory.load()
+  lazy val remoteConfig = configFactory.getConfig(REMOTE_SYSTEM_NAME)
+  lazy val remoteSystem = ActorSystem(REMOTE_SYSTEM_NAME, remoteConfig)
 
-  val actorHost = if (configFactory.hasPath("sim.pekko-actor.host")) configFactory.getString("sim.pekko-actor.host") else "127.0.0.1"
+  lazy val actorHost = if (configFactory.hasPath("sim.pekko-actor.host")) configFactory.getString("sim.pekko-actor.host") else "127.0.0.1"
   println("!!!!!!!!!!!!!!!AKK ACTOR HOST IS " + actorHost)
 
-  val subscribers = mutable.HashSet[ActorRef]()
-  val remoteMainActor = remoteSystem.actorSelection("pekko://" + REMOTE_SYSTEM_NAME + "@" + actorHost + "/user/" + BRIDGE_ACTOR_NAME)
-  val localMainActor = remoteSystem.actorOf(Props(classOf[LocalMainActor], remoteMainActor), "local-main-actor")
+  lazy val subscribers = mutable.HashSet[ActorRef]()
+  lazy val remoteMainActor = remoteSystem.actorSelection("pekko://" + REMOTE_SYSTEM_NAME + "@" + actorHost + "/user/" + BRIDGE_ACTOR_NAME)
+  lazy val localMainActor = remoteSystem.actorOf(Props(classOf[LocalMainActor], remoteMainActor), "local-main-actor")
 
 
-  val reconnectActor = remoteSystem.actorOf(Props(classOf[ReconnectActor], remoteMainActor), "reconnect-actor")
-  reconnectActor ! remoteMainActor //why?
+  lazy val reconnectActor = {
+    val actor = remoteSystem.actorOf(Props(classOf[ReconnectActor], remoteMainActor), "reconnect-actor")
+    actor ! remoteMainActor //why?
+    actor
+  }
+  private val initialized = {
+    localMainActor
+    reconnectActor
+  }
 
 
 

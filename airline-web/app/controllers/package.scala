@@ -20,7 +20,7 @@ import scala.math.Ordering.Double
 
 package object controllers {
   implicit val ec: ExecutionContext = ExecutionContext.global
-  implicit val actorSystem : ActorSystem = ActorSystem("patson-web-app-system")
+  implicit lazy val actorSystem : ActorSystem = ActorSystem("patson-web-app-system")
   implicit val order : Double.IeeeOrdering.type = Ordering.Double.IeeeOrdering
 
   implicit object AirlineFormat extends Format[Airline] {

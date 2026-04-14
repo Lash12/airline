@@ -17,6 +17,16 @@ object MainSimulation extends App {
   val CYCLE_DURATION : Int = 60 * 29
   var currentWeek: Int = 0
 
+  private def timedStep[T](label: String)(block: => T): T = {
+    val startTime = System.nanoTime()
+    val result = block
+    if (RuntimeSettings.cycleTimingEnabled) {
+      val elapsedSeconds = (System.nanoTime() - startTime) / 1000000000d
+      println(f"[timing] $label took $elapsedSeconds%.2fs")
+    }
+    result
+  }
+
 //  implicit val actorSystem = ActorSystem("rabbit-akka-stream")
 
 //  import actorSystem.dispatcher
@@ -42,50 +52,50 @@ object MainSimulation extends App {
       val cycleStartTime = System.currentTimeMillis()
       println("cycle " + cycle + " starting!")
       if (cycle == 1) { //initialize it
-        OilSimulation.simulate(1)
-        LoanInterestRateSimulation.simulate(1)
+        timedStep("OilSimulation.bootstrap") { OilSimulation.simulate(1) }
+        timedStep("LoanInterestRateSimulation.bootstrap") { LoanInterestRateSimulation.simulate(1) }
       }
 
-      SimulationEventStream.publish(CycleStart(cycle, cycleStartTime), None)
-      invalidateCaches()
+      timedStep("SimulationEventStream.publishCycleStart") { SimulationEventStream.publish(CycleStart(cycle, cycleStartTime), None) }
+      timedStep("Cache invalidation") { invalidateCaches() }
 
-      UserSimulation.simulate(cycle)
+      timedStep("UserSimulation") { UserSimulation.simulate(cycle) }
       println("Event simulation")
-      EventSimulation.simulate(cycle)
+      timedStep("EventSimulation") { EventSimulation.simulate(cycle) }
 
-      val (flightLinkResult, loungeResult, linkRidershipDetails, airlineStats) = LinkSimulation.linkSimulation(cycle)
+      val (flightLinkResult, loungeResult, linkRidershipDetails, airlineStats) = timedStep("LinkSimulation") { LinkSimulation.linkSimulation(cycle) }
       println("Airport simulation")
-      val airportChampionInfo = AirportSimulation.airportSimulation(cycle, flightLinkResult, linkRidershipDetails)
+      val airportChampionInfo = timedStep("AirportSimulation") { AirportSimulation.airportSimulation(cycle, flightLinkResult, linkRidershipDetails) }
 
       println("Airport assets simulation")
-      AirportAssetSimulation.simulate(cycle, linkRidershipDetails)
+      timedStep("AirportAssetSimulation") { AirportAssetSimulation.simulate(cycle, linkRidershipDetails) }
 
       println("Airplane simulation")
-      val airplanes = AirplaneSimulation.airplaneSimulation(cycle)
+      val airplanes = timedStep("AirplaneSimulation") { AirplaneSimulation.airplaneSimulation(cycle) }
       println("Airline simulation")
-      AirlineSimulation.airlineSimulation(cycle, flightLinkResult, loungeResult, airplanes, airlineStats)
+      timedStep("AirlineSimulation") { AirlineSimulation.airlineSimulation(cycle, flightLinkResult, loungeResult, airplanes, airlineStats) }
       println("Country simulation")
-      val countryChampionInfo = CountrySimulation.simulate(cycle)
+      val countryChampionInfo = timedStep("CountrySimulation") { CountrySimulation.simulate(cycle) }
 
       println("Alliance simulation")
-      AllianceSimulation.simulate(cycle, flightLinkResult, loungeResult, airportChampionInfo, countryChampionInfo)
+      timedStep("AllianceSimulation") { AllianceSimulation.simulate(cycle, flightLinkResult, loungeResult, airportChampionInfo, countryChampionInfo) }
       println("Airplane model simulation")
-      AirplaneModelSimulation.simulate(cycle)
+      timedStep("AirplaneModelSimulation") { AirplaneModelSimulation.simulate(cycle) }
 
       //purge log
       println("Purging logs")
-      LogSource.deleteLogsBeforeCycle(cycle - com.patson.model.Log.RETENTION_CYCLE)
+      timedStep("Log purge") { LogSource.deleteLogsBeforeCycle(cycle - com.patson.model.Log.RETENTION_CYCLE) }
 
       //purge history
       println("Purging link history")
-      ChangeHistorySource.deleteLinkChangeByCriteria(List(("cycle", "<", cycle - 500)))
+      timedStep("Link history purge") { ChangeHistorySource.deleteLinkChangeByCriteria(List(("cycle", "<", cycle - 500))) }
 
       println("Purging Alliance Stats – remove if running AllianceSimulation")
-      AllianceSource.deleteAllianceStatsBeforeCutoff(cycle - 108)
+      timedStep("Alliance stats purge") { AllianceSource.deleteAllianceStatsBeforeCutoff(cycle - 108) }
 
       //purge airline modifier
       println("Purging airline modifier")
-      AirlineSource.deleteAirlineModifierByExpiry(cycle)
+      timedStep("Airline modifier purge") { AirlineSource.deleteAirlineModifierByExpiry(cycle) }
 
       val cycleEnd = System.currentTimeMillis()
       
@@ -99,15 +109,15 @@ object MainSimulation extends App {
     */
   def postCycle(currentCycle : Int) = {
     println("Oil simulation")
-    OilSimulation.simulate(currentCycle) //simulate at the beginning of a new cycle
+    timedStep("OilSimulation.postCycle") { OilSimulation.simulate(currentCycle) } //simulate at the beginning of a new cycle
     println("Loan simulation")
-    LoanInterestRateSimulation.simulate(currentCycle) //simulate at the beginning of a new cycle
+    timedStep("LoanInterestRateSimulation.postCycle") { LoanInterestRateSimulation.simulate(currentCycle) } //simulate at the beginning of a new cycle
     //refresh delegates
     println("Delegate simulation")
-    DelegateSimulation.simulate(currentCycle)
+    timedStep("DelegateSimulation") { DelegateSimulation.simulate(currentCycle) }
 
     println("Post cycle link simulation")
-    LinkSimulation.simulatePostCycle(currentCycle)
+    timedStep("LinkSimulation.postCycle") { LinkSimulation.simulatePostCycle(currentCycle) }
 
     println(s"Post cycle done $currentCycle")
   }

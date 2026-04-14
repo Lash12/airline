@@ -119,16 +119,26 @@ object DemandGenerator {
 
 
 
+  private def foreachAirport[T](items: Seq[T])(block: T => Unit): Unit = {
+    if (RuntimeSettings.simulationParallelism <= 1 || items.size <= 1) {
+      items.foreach(block)
+    } else {
+      val parallelItems = items.par
+      parallelItems.tasksupport = RuntimeSettings.simulationTaskSupport
+      parallelItems.foreach(block)
+    }
+  }
+
   def computeDemand(cycle: Int): List[(PassengerGroup, Airport, Int)] = {
     println("Loading airports")
-    val airports: List[Airport] = AirportSource.loadAllAirports(true).filter { airport => (airport.iata != "" || airport.popMiddleIncome > 0) && airport.power > 0 }
+    val airports: List[Airport] = AirportSource.loadAllAirports(RuntimeSettings.demandFullLoadAirports).filter { airport => (airport.iata != "" || airport.popMiddleIncome > 0) && airport.power > 0 }
     println("Loaded " + airports.size + " airports")
     
-    val allDemands = new ArrayList[(Airport, List[(Airport, (PassengerType.Value, LinkClassValues))])]()
+    val allDemands = Collections.synchronizedList(new ArrayList[(Airport, List[(Airport, (PassengerType.Value, LinkClassValues))])]())
 	  
 	  val countryRelationships = CountrySource.getCountryMutualRelationships()
     val destinationList = DestinationSource.loadAllEliteDestinations()
-	  airports.par.foreach {  fromAirport =>
+	  foreachAirport(airports) { fromAirport =>
 	    val demandList = Collections.synchronizedList(new ArrayList[(Airport, (PassengerType.Value, LinkClassValues))]())
       var hubAirports = List[Airport]()
 

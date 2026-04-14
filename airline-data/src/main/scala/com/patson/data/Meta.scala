@@ -3,6 +3,7 @@ package com.patson.data
 import java.sql.Connection
 import java.sql.DriverManager
 import java.sql.PreparedStatement
+import com.patson.RuntimeSettings
 import com.patson.data.Constants._
 import java.util.Properties
 import com.mchange.v2.c3p0.ComboPooledDataSource
@@ -20,8 +21,15 @@ object Meta {
   dataSource.setUser(DATABASE_USER)
   dataSource.setPassword(DATABASE_PASSWORD)
   dataSource.setJdbcUrl(DATABASE_CONNECTION)
-  dataSource.setMaxPoolSize(100)
-  dataSource.setTestConnectionOnCheckout(true)
+  dataSource.setMaxPoolSize(RuntimeSettings.dbPoolMaxSize)
+  dataSource.setMinPoolSize(1)
+  dataSource.setInitialPoolSize(Math.min(4, RuntimeSettings.dbPoolMaxSize))
+  dataSource.setAcquireIncrement(1)
+  dataSource.setCheckoutTimeout(5000)
+  dataSource.setPreferredTestQuery("SELECT 1")
+  dataSource.setIdleConnectionTestPeriod(120)
+  dataSource.setTestConnectionOnCheckout(!RuntimeSettings.localLite)
+  dataSource.setTestConnectionOnCheckin(false)
 
   def getConnection(enforceForeignKey: Boolean = true) = {
 
