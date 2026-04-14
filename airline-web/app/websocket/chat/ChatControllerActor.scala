@@ -2,7 +2,7 @@ package websocket.chat
 
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.{ConcurrentHashMap, Executors, TimeUnit}
+import java.util.concurrent.{ConcurrentHashMap, TimeUnit}
 import org.apache.pekko.actor._
 import org.apache.pekko.stream.ActorMaterializer
 import com.patson.data.{AllianceSource, ChatSource}
@@ -14,7 +14,7 @@ import play.api.libs.ws.ahc.StandaloneAhcWSClient
 import java.util.Date
 import scala.collection.mutable
 import scala.collection.mutable.{Map, Queue}
-import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutorService}
+import scala.concurrent.{Await, ExecutionContext}
 
 // our domain message protocol
 case class Join(user : User)
@@ -242,7 +242,7 @@ object ImgCommand extends ChatCommand("img") {
   lazy val ws = StandaloneAhcWSClient()
   val MAX_MESSAGE_SIZE = 8 * 1024 * 1024 //8M
   val TIME_OUT = 5 //wait max 5 seconds
-  implicit lazy val executionContext : ExecutionContextExecutorService = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(1))
+  implicit lazy val executionContext : ExecutionContext = websocket.executionContext
   override def execute(message: ChatMessage): ChatMessage = {
     val commandIndex = message.text.indexOf(commandToken)
 

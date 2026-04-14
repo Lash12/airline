@@ -33,7 +33,11 @@ jobs:
         run: npm ci --prefix e2e
 
       - name: Run Scala tests
-        run: sbt test
+        run: |
+          cd airline-data
+          sbt test
+          cd ../airline-web
+          sbt test
 
       - name: Verify Playwright suite discovery
         run: npm --prefix e2e run test:list

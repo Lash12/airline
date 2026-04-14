@@ -139,7 +139,7 @@ object DemandGenerator {
 	  val countryRelationships = CountrySource.getCountryMutualRelationships()
     val destinationList = DestinationSource.loadAllEliteDestinations()
 	  foreachAirport(airports) { fromAirport =>
-	    val demandList = Collections.synchronizedList(new ArrayList[(Airport, (PassengerType.Value, LinkClassValues))]())
+	    val demandList = new ArrayList[(Airport, (PassengerType.Value, LinkClassValues))]()
       var hubAirports = List[Airport]()
 
       airports.foreach { toAirport =>

@@ -40,7 +40,12 @@ public class SearchUtil {
 	private static final Config config = ConfigFactory.load();
 	private static final boolean localLite = booleanSetting("AIRLINE_LOCAL_LITE", "airline.local-lite", false);
 	private static final boolean elasticSearchEnabled = booleanSetting("AIRLINE_SEARCH_ELASTICSEARCH_ENABLED", "airline.search.elasticsearch.enabled", !localLite);
+	static final long FALLBACK_CACHE_TTL_MILLIS = 5 * 60 * 1000L;
 	private static volatile boolean elasticSearchAvailable = elasticSearchEnabled;
+	private static volatile CachedSnapshot<Airport> fallbackAirportCache = CachedSnapshot.empty();
+	private static volatile CachedSnapshot<Country> fallbackCountryCache = CachedSnapshot.empty();
+	private static volatile CachedSnapshot<Airline> fallbackAirlineCache = CachedSnapshot.empty();
+	private static volatile CachedSnapshot<Alliance> fallbackAllianceCache = CachedSnapshot.empty();
 	static {
 		if (elasticSearchEnabled) {
 			checkInit();
@@ -129,6 +134,14 @@ public class SearchUtil {
 			logger.warn("Elasticsearch is unavailable. Falling back to in-process search.", exception);
 		}
 		elasticSearchAvailable = false;
+	}
+
+	private static void invalidateFallbackAirlines() {
+		fallbackAirlineCache = CachedSnapshot.empty();
+	}
+
+	private static void invalidateFallbackAlliances() {
+		fallbackAllianceCache = CachedSnapshot.empty();
 	}
 
 	private static boolean isIndexExist(RestHighLevelClient client, String indexName) throws IOException {
@@ -229,6 +242,7 @@ public class SearchUtil {
 	}
 
 	public static void addAirline(Airline airline) {
+		invalidateFallbackAirlines();
 		if (!useElasticSearch()) {
 			return;
 		}
@@ -248,6 +262,7 @@ public class SearchUtil {
 	}
 
 	public static void updateAirline(Airline airline) {
+		invalidateFallbackAirlines();
 		if (!useElasticSearch()) {
 			return;
 		}
@@ -301,6 +316,7 @@ public class SearchUtil {
 	}
 
 	public static void addAlliance(Alliance alliance) {
+		invalidateFallbackAlliances();
 		if (!useElasticSearch()) {
 			return;
 		}
@@ -319,6 +335,7 @@ public class SearchUtil {
 	}
 
 	public static void removeAlliance(int allianceId) {
+		invalidateFallbackAlliances();
 		if (!useElasticSearch()) {
 			return;
 		}
@@ -335,6 +352,7 @@ public class SearchUtil {
 	}
 
 	public static void refreshAlliances() {
+		invalidateFallbackAlliances();
 		if (!useElasticSearch()) {
 			return;
 		}
@@ -647,11 +665,71 @@ public class SearchUtil {
 		return score;
 	}
 
+	private static List<Airport> getFallbackAirports() {
+		CachedSnapshot<Airport> snapshot = fallbackAirportCache;
+		if (snapshot.isFresh()) {
+			return snapshot.values;
+		}
+		synchronized (SearchUtil.class) {
+			snapshot = fallbackAirportCache;
+			if (snapshot.isFresh()) {
+				return snapshot.values;
+			}
+			fallbackAirportCache = CachedSnapshot.of(JavaConverters.asJava(AirportSource.loadAllAirports(false, false)));
+			return fallbackAirportCache.values;
+		}
+	}
+
+	private static List<Country> getFallbackCountries() {
+		CachedSnapshot<Country> snapshot = fallbackCountryCache;
+		if (snapshot.isFresh()) {
+			return snapshot.values;
+		}
+		synchronized (SearchUtil.class) {
+			snapshot = fallbackCountryCache;
+			if (snapshot.isFresh()) {
+				return snapshot.values;
+			}
+			fallbackCountryCache = CachedSnapshot.of(JavaConverters.asJava(CountrySource.loadAllCountries()));
+			return fallbackCountryCache.values;
+		}
+	}
+
+	private static List<Airline> getFallbackAirlines() {
+		CachedSnapshot<Airline> snapshot = fallbackAirlineCache;
+		if (snapshot.isFresh()) {
+			return snapshot.values;
+		}
+		synchronized (SearchUtil.class) {
+			snapshot = fallbackAirlineCache;
+			if (snapshot.isFresh()) {
+				return snapshot.values;
+			}
+			fallbackAirlineCache = CachedSnapshot.of(JavaConverters.asJava(AirlineSource.loadAllAirlines(false)));
+			return fallbackAirlineCache.values;
+		}
+	}
+
+	private static List<Alliance> getFallbackAlliances() {
+		CachedSnapshot<Alliance> snapshot = fallbackAllianceCache;
+		if (snapshot.isFresh()) {
+			return snapshot.values;
+		}
+		synchronized (SearchUtil.class) {
+			snapshot = fallbackAllianceCache;
+			if (snapshot.isFresh()) {
+				return snapshot.values;
+			}
+			fallbackAllianceCache = CachedSnapshot.of(JavaConverters.asJava(AllianceSource.loadAllAlliances(false)));
+			return fallbackAllianceCache.values;
+		}
+	}
+
 	private static List<AirportSearchResult> fallbackAirportSearch(String input) {
 		List<String> terms = toTerms(input);
 		String normalizedInput = input.trim().toLowerCase(Locale.ROOT);
 		List<AirportSearchResult> result = new ArrayList<>();
-		for (Airport airport : JavaConverters.asJava(AirportSource.loadAllAirports(false, false))) {
+		for (Airport airport : getFallbackAirports()) {
 			if (matchesAllTerms(terms, airport.iata(), airport.name(), airport.city(), airport.countryCode())) {
 				double score = matchScore(normalizedInput, airport.iata(), airport.name(), airport.city()) + Math.min(airport.power() / 1_000_000_000d, 25d);
 				result.add(new AirportSearchResult(airport.id(), airport.iata(), airport.name(), airport.city(), airport.countryCode(), airport.power(), score));
@@ -666,7 +744,7 @@ public class SearchUtil {
 		List<String> terms = toTerms(input);
 		String normalizedInput = input.trim().toLowerCase(Locale.ROOT);
 		List<CountrySearchResult> result = new ArrayList<>();
-		for (Country country : JavaConverters.asJava(CountrySource.loadAllCountries())) {
+		for (Country country : getFallbackCountries()) {
 			if (matchesAllTerms(terms, country.name(), country.countryCode())) {
 				double score = matchScore(normalizedInput, country.name(), country.countryCode()) + Math.min(country.airportPopulation() / 10_000_000d, 25d);
 				result.add(new CountrySearchResult(country.name(), country.countryCode(), country.airportPopulation(), score));
@@ -681,7 +759,7 @@ public class SearchUtil {
 		List<String> terms = toTerms(input);
 		String normalizedInput = input.trim().toLowerCase(Locale.ROOT);
 		List<AirlineSearchResult> result = new ArrayList<>();
-		for (Airline airline : JavaConverters.asJava(AirlineSource.loadAllAirlines(false))) {
+		for (Airline airline : getFallbackAirlines()) {
 			List<String> previousNames = JavaConverters.asJava(airline.previousNames());
 			boolean previousNameMatch = false;
 			for (String previousName : previousNames) {
@@ -707,7 +785,7 @@ public class SearchUtil {
 		List<String> terms = toTerms(input);
 		String normalizedInput = input.trim().toLowerCase(Locale.ROOT);
 		List<AllianceSearchResult> result = new ArrayList<>();
-		for (Alliance alliance : JavaConverters.asJava(AllianceSource.loadAllAlliances(false))) {
+		for (Alliance alliance : getFallbackAlliances()) {
 			if (matchesAllTerms(terms, alliance.name())) {
 				double score = matchScore(normalizedInput, alliance.name());
 				result.add(new AllianceSearchResult(alliance.id(), alliance.name(), score));
@@ -727,6 +805,28 @@ public class SearchUtil {
 						new HttpHost(esHost, 9200, "http"),
 						new HttpHost(esHost, 9201, "http")));
 		return client;
+	}
+}
+
+class CachedSnapshot<T> {
+	final List<T> values;
+	private final long loadedAt;
+
+	private CachedSnapshot(List<T> values, long loadedAt) {
+		this.values = values;
+		this.loadedAt = loadedAt;
+	}
+
+	static <T> CachedSnapshot<T> of(List<T> values) {
+		return new CachedSnapshot<>(new ArrayList<>(values), System.currentTimeMillis());
+	}
+
+	static <T> CachedSnapshot<T> empty() {
+		return new CachedSnapshot<>(Collections.emptyList(), 0);
+	}
+
+	boolean isFresh() {
+		return loadedAt > 0 && (System.currentTimeMillis() - loadedAt) < SearchUtil.FALLBACK_CACHE_TTL_MILLIS;
 	}
 }
 

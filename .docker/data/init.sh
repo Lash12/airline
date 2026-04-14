@@ -2,9 +2,12 @@
 echo "===== INITIALIZING (if this fails, run again until it works) ====="
 cd /home/airline/airline/airline-data
 DEFAULT_JAVA_OPTS="-Xmx1536M -Xms256M -XX:MaxMetaspaceSize=384M"
-if [ "${AIRLINE_LOCAL_LITE:-false}" = "true" ]; then
-  DEFAULT_JAVA_OPTS="-Xmx1024M -Xms256M -XX:MaxMetaspaceSize=320M -XX:+UseG1GC"
-fi
+AIRLINE_LOCAL_LITE_NORMALIZED=$(printf '%s' "${AIRLINE_LOCAL_LITE:-false}" | tr '[:upper:]' '[:lower:]')
+case "$AIRLINE_LOCAL_LITE_NORMALIZED" in
+  true|1|yes|on)
+    DEFAULT_JAVA_OPTS="-Xmx1024M -Xms256M -XX:MaxMetaspaceSize=320M -XX:+UseG1GC"
+    ;;
+esac
 SBT_OPTS="${AIRLINE_INIT_JAVA_OPTS:-$DEFAULT_JAVA_OPTS}" sbt publishLocal
 echo "===== STARTING MIGRATION ====="
 for i in `seq 1 5`

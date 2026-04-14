@@ -54,7 +54,11 @@ Effects:
 ## Development commands
 
 ```powershell
+Set-Location airline-data
 sbt test
+Set-Location ..\airline-web
+sbt test
+Set-Location ..
 npm --prefix e2e install
 npm --prefix e2e test:list
 ```
