@@ -13,8 +13,8 @@ import play.libs.Json;
 
 public class WeatherUtil {
 	private static final String APP_ID = "a73aa7c1bf75d7e3cb83d45a40d50c78";
-	private static LoadingCache<Coordinates, Weather> cache = Caffeine.newBuilder().maximumSize(1000)
-			.expireAfterWrite(10, TimeUnit.MINUTES).build(new CacheLoader<Coordinates, Weather>() {
+Caffeine.newBuilder().maximumSize(1000)
+			.expireAfterWrite(10, TimeUnit.MINUTES).recordStats().build(new CacheLoader<Coordinates, Weather>()
 				public Weather load(Coordinates coordinates) {
 					Weather result = loadWeather(coordinates);
 					System.out.println("loaded weather for  " + coordinates + " " + result);
