@@ -64,8 +64,6 @@ public class WeatherUtil {
 				return false;
 			return true;
 		}
-		
-		
 	}
 
 	public static class Weather {
@@ -82,7 +80,7 @@ public class WeatherUtil {
 			this.temperature = temperature;
 			this.windSpeed = windSpeed;
 		}
-		
+
 		@Override
 		public String toString() {
 			return "Weather [weatherId=" + weatherId + ", description=" + description + ", icon=" + icon
@@ -108,10 +106,8 @@ public class WeatherUtil {
 		public double getWindSpeed() {
 			return windSpeed;
 		}
-		
-		
 	}
-	
+
 	public static Weather getWeather(Coordinates coordinates) {
 		try {
 			return cache.get(coordinates);
@@ -120,8 +116,7 @@ public class WeatherUtil {
 			return null;
 		}
 	}
-	
-	
+
 	public static void main(String[] args) {
 		System.out.println(loadWeather(new Coordinates(100, 35)));
 	}
@@ -157,6 +152,5 @@ public class WeatherUtil {
 		}
 
 		return null;
-
 	}
 }
