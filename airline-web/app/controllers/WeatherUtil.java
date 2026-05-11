@@ -13,8 +13,8 @@ import play.libs.Json;
 
 public class WeatherUtil {
 	private static final String APP_ID = "a73aa7c1bf75d7e3cb83d45a40d50c78";
-Caffeine.newBuilder().maximumSize(1000)
-			.expireAfterWrite(10, TimeUnit.MINUTES).recordStats().build(new CacheLoader<Coordinates, Weather>()
+	private static LoadingCache<Coordinates, Weather> cache = Caffeine.newBuilder().maximumSize(1000)
+			.expireAfterWrite(10, TimeUnit.MINUTES).build(new CacheLoader<Coordinates, Weather>() {
 				public Weather load(Coordinates coordinates) {
 					Weather result = loadWeather(coordinates);
 					System.out.println("loaded weather for  " + coordinates + " " + result);
@@ -64,8 +64,6 @@ Caffeine.newBuilder().maximumSize(1000)
 				return false;
 			return true;
 		}
-		
-		
 	}
 
 	public static class Weather {
@@ -82,7 +80,7 @@ Caffeine.newBuilder().maximumSize(1000)
 			this.temperature = temperature;
 			this.windSpeed = windSpeed;
 		}
-		
+
 		@Override
 		public String toString() {
 			return "Weather [weatherId=" + weatherId + ", description=" + description + ", icon=" + icon
@@ -108,10 +106,8 @@ Caffeine.newBuilder().maximumSize(1000)
 		public double getWindSpeed() {
 			return windSpeed;
 		}
-		
-		
 	}
-	
+
 	public static Weather getWeather(Coordinates coordinates) {
 		try {
 			return cache.get(coordinates);
@@ -120,8 +116,7 @@ Caffeine.newBuilder().maximumSize(1000)
 			return null;
 		}
 	}
-	
-	
+
 	public static void main(String[] args) {
 		System.out.println(loadWeather(new Coordinates(100, 35)));
 	}
@@ -157,6 +152,5 @@ Caffeine.newBuilder().maximumSize(1000)
 		}
 
 		return null;
-
 	}
 }
