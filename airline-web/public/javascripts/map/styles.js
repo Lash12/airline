@@ -164,7 +164,7 @@ function createTheme(name) {
             protomaps: {
                 type: 'vector',
                 tiles: [
-                    'https://maps.myfly.club/mfc/{z}/{x}/{y}.mvt'
+                    'https://api.protomaps.com/tiles/v4/{z}/{x}/{y}.mvt?key=628d1d8c9eb71ab8'
                 ],
                 maxzoom: 11,
                 attribution: '<a href="https://protomaps.com">Protomaps</a> © <a href="https://openstreetmap.org">OpenStreetMap</a>'
