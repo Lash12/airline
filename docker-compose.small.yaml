@@ -1,0 +1,41 @@
+version: '3'
+
+services:
+  airline-db:
+    image: mysql:8
+    container_name: airline-db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: airline
+      MYSQL_USER: airline
+      MYSQL_PASSWORD: airlinepass
+    volumes:
+      - mysql-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - airline-network
+
+  airline-app:
+    build: .
+    container_name: airline-app
+    depends_on:
+      - airline-db
+    environment:
+      DB_HOST: airline-db
+      DB_USER: airline
+      DB_PASSWORD: airlinepass
+      DB_NAME: airline
+      # ES_HOST intentionally omitted to disable Elasticsearch features
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./app:/app
+    networks:
+      - airline-network
+
+volumes:
+  mysql-data:
+
+networks:
+  airline-network:
