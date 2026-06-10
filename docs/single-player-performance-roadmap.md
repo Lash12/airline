@@ -55,10 +55,13 @@ zero players (`MainSimulation.scala`, `CYCLE_DURATION = 60 * 29`).
 - **Per-phase cycle profiler**: log wall time of each phase in
   `MainSimulation.startCycle` (LinkSimulation, AirportSimulation,
   AirlineSimulation, ...) so optimization targets are measured, not guessed.
-- **Targeted cache invalidation**: `MainSimulation` calls `invalidateAll()` on
-  the caches every cycle; airports are effectively static — invalidate only what
-  the cycle actually mutates (statistics, ownership). Carries over the one
-  unfinished item from the old plan.
+- **Targeted cache invalidation — investigated and rejected.** Airports are NOT
+  static from the simulation's point of view: players mutate them (bases,
+  lounges) through the *web JVM*, which has its own cache instances, and the
+  sim's start-of-cycle `invalidateAll()` is what picks those cross-process
+  writes up. Skipping or deferring it would make the sim ignore player actions
+  taken between cycles. A correct fix needs cross-JVM cache invalidation
+  (event-driven over the existing pekko bridge) — deliberately out of scope.
 - **Demand memoization**: `DemandGenerator` recomputes demand from airport
   population/income data that rarely changes; cache the base demand model
   between cycles, recompute on data change only.
