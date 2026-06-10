@@ -18,6 +18,24 @@ object MainSimulation extends App {
   val SCHEDULE_OVERHEAD_FACTOR : Double = 1.1
   var currentWeek: Int = 0
 
+  //pause-when-idle: skip cycles while no player has been active (heartbeat written by the web app)
+  val pauseWhenIdle : Boolean = Constants.configFactory.hasPath("simulation.pauseWhenIdle") && Constants.configFactory.getBoolean("simulation.pauseWhenIdle")
+  val idleGraceMinutes : Long = if (Constants.configFactory.hasPath("simulation.idleGraceMinutes")) Constants.configFactory.getLong("simulation.idleGraceMinutes") else 60
+  val idleRecheckMinutes : Long = if (Constants.configFactory.hasPath("simulation.idleRecheckMinutes")) Constants.configFactory.getLong("simulation.idleRecheckMinutes") else 5
+
+  def isIdle() : Boolean = {
+    try {
+      HeartbeatSource.lastActiveMillis() match {
+        case Some(lastActive) => System.currentTimeMillis() - lastActive > idleGraceMinutes * 60000L
+        case None => true //no player has ever been active on this install
+      }
+    } catch {
+      case e : Exception =>
+        println(s"Failed to read activity heartbeat (${e.getMessage}), running the cycle anyway")
+        false
+    }
+  }
+
   mainFlow
 
   def mainFlow() = {
@@ -149,6 +167,11 @@ object MainSimulation extends App {
 
         println(s"Next cycle will wake up in ${delayUntilWakeUp / 1000}s (estimated exec: ${estimatedExecution / 1000}s)")
         context.system.scheduler.scheduleOnce(Duration(delayUntilWakeUp, TimeUnit.MILLISECONDS), self, ExecuteProcessing)
+
+      case ExecuteProcessing if pauseWhenIdle && isIdle() =>
+        status = SimulationStatus.WAITING_CYCLE_START
+        println(s"Simulation paused: no player activity within the last $idleGraceMinutes min. Rechecking in $idleRecheckMinutes min")
+        context.system.scheduler.scheduleOnce(Duration(idleRecheckMinutes, TimeUnit.MINUTES), self, ExecuteProcessing)
 
       case ExecuteProcessing =>
         status = SimulationStatus.IN_PROGRESS

@@ -7,7 +7,7 @@ import play.api.mvc._
 import play.api.libs.json.Writes
 import com.patson.model.{Airline, User, UserStatus}
 import play.api.libs.json._
-import com.patson.data.{AllianceSource, IpSource, UserSource, UserUuidSource}
+import com.patson.data.{AllianceSource, HeartbeatSource, IpSource, UserSource, UserUuidSource}
 import com.patson.util.AllianceCache
 
 import java.util.UUID
@@ -74,6 +74,11 @@ class UserApplication @Inject()(cc: ControllerComponents) extends AbstractContro
       IpSource.saveUserIp(request.user.id, request.remoteAddress)
 
       UserSource.updateUserLastActive(request.user)
+      try {
+        HeartbeatSource.touch() //wake the simulation if it is paused-when-idle
+      } catch {
+        case e : Exception => println(s"Failed to write activity heartbeat: ${e.getMessage}")
+      }
       if (request.user.status == UserStatus.INACTIVE) {
         UserSource.updateUser(request.user.copy(status = UserStatus.ACTIVE))
       }
