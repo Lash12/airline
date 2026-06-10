@@ -25,6 +25,11 @@ services:
     environment:
       DB_HOST: airline-db
     entrypoint: ["tail", "-f", "/dev/null"]
+    # Required for docker inside an unprivileged LXC, where securityfs is
+    # unreadable and the docker-default AppArmor profile can never load.
+    # No-op on hosts without AppArmor.
+    security_opt:
+      - apparmor=unconfined
     mem_limit: 3500m
     ports:
       - "9000:9000"
@@ -42,6 +47,8 @@ services:
     # the frozen archive of the same image.
     image: bitnamilegacy/mysql:8.0
     container_name: airline-db
+    security_opt:
+      - apparmor=unconfined
     environment:
       MYSQL_DATABASE: airline
       MYSQL_USER: mfc01
