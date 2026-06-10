@@ -1,0 +1,13 @@
+# MySQL tuning for small single-player hosts (8 GB RAM class).
+# Mounted into the mysql container by docker-compose.small.yaml.
+
+[mysqld]
+innodb_buffer_pool_size = 768M
+performance_schema = OFF
+skip-log-bin
+innodb_flush_log_at_trx_commit = 2
+max_connections = 60
+
+# Capture slow queries as evidence for index work (see roadmap Phase 4)
+slow_query_log = ON
+long_query_time = 0.5

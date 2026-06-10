@@ -1,36 +1,45 @@
 # Small Server Deployment Guide
 
-This document covers the steps to deploy the airline application in a small-server environment using Docker Compose.
+Deploy the game on a small single-player host (8 GB RAM / 4 cores class, e.g. a Dell
+OptiPlex Micro) using the `docker-compose.small.yaml` profile. It uses the same image
+and mounts as the full `docker-compose.yaml`, with memory limits, a tuned MySQL
+(`.docker/db/small.cnf`), and no Elasticsearch.
 
 ## Prerequisites
-- Docker installed
-- Docker Compose installed
+- Docker with the compose plugin
 
-## Deployment Steps
+## First-time setup
 
-1. **Navigate to project directory**
+1. **Start the stack**
    ```bash
-   cd /path/to/airline-project
+   docker compose -f docker-compose.small.yaml up -d
    ```
 
-2. **Start the application**
+2. **Initialize the database** (first run only; loads airports/cities/routes —
+   takes a while)
    ```bash
-   docker-compose -f docker-compose.small.yaml up -d
+   docker exec -it airline-app sh /home/airline/init-data.sh
    ```
 
-3. **Verify startup**
+3. **Start the simulation and the web app**
    ```bash
-   docker logs airline-app
-   ```
-   Look for the message: `Server started on port 9000`
-
-4. **Check MySQL connection**
-   ```bash
-   docker exec -it airline-db mysql -uairline -pairlinepass airline -e "SHOW TABLES;"
+   docker exec -d airline-app sh /home/airline/start-data.sh
+   docker exec -d airline-app sh /home/airline/start-web.sh
    ```
 
-## Important Notes
+4. **Verify** — `docker logs airline-app`, then open http://localhost:9000
 
-- Elasticsearch is not included in this configuration
-- Features requiring Elasticsearch will be disabled
-- The app is exposed on port 9000
+## Resource budget (8 GB host)
+
+| Component | Limit / setting |
+|---|---|
+| MySQL container | 1.5 GB `mem_limit`, 768M InnoDB buffer pool, performance_schema off, binlog off |
+| App container (both JVMs) | 3.5 GB `mem_limit`; sim `-Xmx1536M`, web `-Xmx1G` (`.docker/*/start.sh`) |
+| DB connections | sim pool 8, web pool 10 (`hikari.*` settings) |
+
+## Notes
+
+- Elasticsearch is not part of this profile (no code depends on it).
+- The MySQL slow-query log is enabled (`long_query_time=0.5`) to collect evidence
+  for index tuning; see `docs/single-player-performance-roadmap.md`.
+- The app is exposed on port 9000.

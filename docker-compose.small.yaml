@@ -1,41 +1,55 @@
-version: '3'
-
-services:
-  airline-db:
-    image: mysql:8
-    container_name: airline-db
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpass
-      MYSQL_DATABASE: airline
-      MYSQL_USER: airline
-      MYSQL_PASSWORD: airlinepass
-    volumes:
-      - mysql-data:/var/lib/mysql
-    ports:
-      - "3306:3306"
-    networks:
-      - airline-network
-
-  airline-app:
-    build: .
-    container_name: airline-app
-    depends_on:
-      - airline-db
-    environment:
-      DB_HOST: airline-db
-      DB_USER: airline
-      DB_PASSWORD: airlinepass
-      DB_NAME: airline
-      # ES_HOST intentionally omitted to disable Elasticsearch features
-    ports:
-      - "9000:9000"
-    volumes:
-      - ./app:/app
-    networks:
-      - airline-network
-
-volumes:
-  mysql-data:
+# Single-player / small-server profile (8 GB RAM class host).
+# Same image and mounts as docker-compose.yaml, with memory limits,
+# tuned MySQL, and no Elasticsearch. See SMALL_SERVER.md for usage.
 
 networks:
-  airline-network:
+  airline: {}
+
+volumes:
+  mysql-data: {}
+
+services:
+  airline-app:
+    container_name: airline-app
+    build:
+      context: .
+      dockerfile: .docker/Dockerfile
+    depends_on:
+      - airline-db
+    volumes:
+      - ".:/home/airline/airline"
+      - "./.docker/data/init.sh:/home/airline/init-data.sh"
+      - "./.docker/data/start.sh:/home/airline/start-data.sh"
+      - "./.docker/web/start.sh:/home/airline/start-web.sh"
+      - "./.docker/web/clean.sh:/home/airline/clean-web.sh"
+    environment:
+      DB_HOST: airline-db
+    entrypoint: ["tail", "-f", "/dev/null"]
+    mem_limit: 3500m
+    ports:
+      - "9000:9000"
+    healthcheck:
+      test: curl --fail http://localhost:9000/ || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    networks:
+      - airline
+
+  airline-db:
+    image: bitnami/mysql:8.0
+    container_name: airline-db
+    environment:
+      MYSQL_DATABASE: airline
+      MYSQL_USER: mfc01
+      MYSQL_PASSWORD: ghEtmwBdnXYBQH4
+      MYSQL_CHARACTER_SET: utf8mb4
+      MYSQL_COLLATE: utf8mb4_unicode_ci
+      ALLOW_EMPTY_PASSWORD: yes
+    mem_limit: 1500m
+    volumes:
+      - "mysql-data:/var/lib/mysql"
+      - "./.docker/db/small.cnf:/opt/bitnami/mysql/conf/my_custom.cnf:ro"
+    networks:
+      - airline
