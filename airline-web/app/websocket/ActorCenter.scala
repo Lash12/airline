@@ -3,6 +3,7 @@ package websocket
 import org.apache.pekko.actor.{Actor, ActorRef, ActorSelection, ActorSystem, Cancellable, Props, Terminated}
 import org.apache.pekko.pattern.after
 import org.apache.pekko.remote.{AssociatedEvent, DisassociatedEvent, RemotingLifecycleEvent}
+import com.patson.data.HeartbeatSource
 import com.patson.model.{Airline, NotificationCategory}
 import com.patson.stream.{CycleCompleted, CycleInfo, KeepAlivePing, KeepAlivePong, ReconnectPing, SimulationEvent}
 import com.patson.util.{AirlineCache, AirplaneOwnershipCache, AirportCache, AirportStatisticsCache}
@@ -250,6 +251,18 @@ object ActorCenter {
   val remoteMainActor = remoteSystem.actorSelection("pekko://" + REMOTE_SYSTEM_NAME + "@" + actorHost + "/user/" + BRIDGE_ACTOR_NAME)
   val localMainActor = remoteSystem.actorOf(Props(classOf[LocalMainActor], remoteMainActor), "local-main-actor")
   val reconnectActor = remoteSystem.actorOf(Props(classOf[ReconnectActor], remoteMainActor), "reconnect-actor")
+
+  //record player activity while sessions are connected, so the simulation's
+  //pause-when-idle check (simulation.pauseWhenIdle) sees the server as active
+  remoteSystem.scheduler.scheduleWithFixedDelay(1.minute, 1.minute)(() =>
+    if (chat.ChatControllerActor.getActiveUsers().nonEmpty) {
+      try {
+        HeartbeatSource.touch()
+      } catch {
+        case e : Exception => println(s"Failed to write activity heartbeat: ${e.getMessage}")
+      }
+    }
+  )(remoteSystem.dispatcher)
 
   def getLocalSubscriberName(subscriberId: String): String = {
     "local-subscriber-" + subscriberId
