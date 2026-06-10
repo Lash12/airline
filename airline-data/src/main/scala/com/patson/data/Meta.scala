@@ -6,23 +6,27 @@ import com.patson.data.Constants._
 import com.zaxxer.hikari.{HikariConfig, HikariDataSource}
 
 object Meta {
+  private def intConfig(path : String, default : Int) : Int =
+    if (Constants.configFactory.hasPath(path)) Constants.configFactory.getInt(path) else default
+  private def longConfig(path : String, default : Long) : Long =
+    if (Constants.configFactory.hasPath(path)) Constants.configFactory.getLong(path) else default
+  private def stringConfig(path : String, default : String) : String =
+    if (Constants.configFactory.hasPath(path)) Constants.configFactory.getString(path) else default
+
   private val hikariConfig = new HikariConfig()
   hikariConfig.setJdbcUrl(DATABASE_CONNECTION)
   hikariConfig.setUsername(DATABASE_USER)
   hikariConfig.setPassword(DATABASE_PASSWORD)
-  hikariConfig.setMaximumPoolSize(
-    if (Constants.configFactory.hasPath("hikari.maxPoolSize"))
-      Constants.configFactory.getInt("hikari.maxPoolSize")
-    else 20
-  )
-  hikariConfig.setIdleTimeout(300_000)
-  hikariConfig.setMaxLifetime(3_600_000)
-  hikariConfig.setConnectionTimeout(
-    if (Constants.configFactory.hasPath("hikari.connectionTimeout"))
-      Constants.configFactory.getLong("hikari.connectionTimeout")
-    else 10_000
-  )
-  hikariConfig.setLeakDetectionThreshold(30000)
+  hikariConfig.setPoolName(stringConfig("hikari.poolName", "airline-data-pool"))
+  hikariConfig.setMaximumPoolSize(intConfig("hikari.maxPoolSize", 20))
+  //minimumIdle falls back to the Hikari default (= maximumPoolSize) unless explicitly configured
+  if (Constants.configFactory.hasPath("hikari.minimumIdle")) {
+    hikariConfig.setMinimumIdle(Constants.configFactory.getInt("hikari.minimumIdle"))
+  }
+  hikariConfig.setIdleTimeout(longConfig("hikari.idleTimeout", 300_000))
+  hikariConfig.setMaxLifetime(longConfig("hikari.maxLifetime", 3_600_000))
+  hikariConfig.setConnectionTimeout(longConfig("hikari.connectionTimeout", 10_000))
+  hikariConfig.setLeakDetectionThreshold(longConfig("hikari.leakDetectionThreshold", 30_000))
 
   val dataSource = new HikariDataSource(hikariConfig)
 
