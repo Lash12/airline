@@ -38,7 +38,9 @@ services:
       - airline
 
   airline-db:
-    image: bitnami/mysql:8.0
+    # bitnami/ images were removed from Docker Hub in 2025; bitnamilegacy is
+    # the frozen archive of the same image.
+    image: bitnamilegacy/mysql:8.0
     container_name: airline-db
     environment:
       MYSQL_DATABASE: airline
