@@ -1,0 +1,62 @@
+name: OptiPlex Deploy & Verify
+
+# workflow_dispatch only until the first successful run; then add
+#   push: { branches: [master] }
+# per docs/optiplex-ci-plan.md. Never trigger on pull_request — this runs
+# on a self-hosted runner.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: optiplex-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, optiplex]
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Keep sbt/ivy build artifacts between runs for faster deploys.
+          clean: false
+
+      - name: Deploy stack
+        env:
+          SIM_EXTRA_OPTS: -Dsimulation.pauseWhenIdle=true
+        run: bash scripts/optiplex-deploy.sh
+
+      - name: Install e2e dependencies
+        run: |
+          npm ci --prefix e2e
+          npx --prefix e2e playwright install chromium
+
+      - name: Run Playwright tests
+        run: npm test --prefix e2e
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: |
+            e2e/test-results
+            e2e/playwright-report
+          if-no-files-found: ignore
+
+      - name: Collect logs and job summary
+        if: always()
+        run: |
+          {
+            echo "## Container resource usage"
+            echo '```'
+            docker stats --no-stream || true
+            echo '```'
+            echo "## Simulation log (cycle timings, last 40 lines)"
+            echo '```'
+            docker exec airline-app sh -c 'grep -i cycle /home/airline/sim.log | tail -40' \
+              || docker exec airline-app sh -c 'tail -40 /home/airline/sim.log' \
+              || echo "no sim log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
