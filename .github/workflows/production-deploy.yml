@@ -1,9 +1,10 @@
 name: Production Deploy
 run-name: ${{ github.actor }} prod deploy 🚀
+# The deploy target server no longer exists in this fork's environment;
+# keep the workflow available for manual runs only instead of failing
+# on every master push.
 on:
-  push:
-    branches:
-      - master
+  workflow_dispatch:
 
 jobs:
   build:
