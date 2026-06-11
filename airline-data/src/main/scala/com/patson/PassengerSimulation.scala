@@ -95,7 +95,11 @@ object PassengerSimulation {
 
     val externalCostModifier = ExternalCostModifier(airlineCostModifiers, specializationCostModifiers)
 
-    while (consumptionCycleCount <= consumptionCycleMax) {
+    // Once demandChunks is exhausted, every remaining iteration just re-partitions
+    // an empty list into empty results (a no-op), so exit early. missedDemandChunks
+    // is tracked separately and never re-enters demandChunks, so this is behavior-
+    // preserving — it only skips wasted passes when there is nothing left to place.
+    while (consumptionCycleCount <= consumptionCycleMax && demandChunks.nonEmpty) {
       println(s"Run loop $consumptionCycleCount for ${demandChunks.size} demand chunks")
 
       //using minSeats to have pax book together and decrease consumptions
