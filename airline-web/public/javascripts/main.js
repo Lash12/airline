@@ -159,6 +159,46 @@ var days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 var currentTickTimer
 var tickTimerCreator
 
+function promptSimSpeed() {
+	$.ajax({
+		type: 'GET',
+		url: "sim-control",
+		dataType: 'json',
+		success: function(control) {
+			var input = prompt("Minutes per game week (" + control.minCycleMinutes + " - " + control.maxCycleMinutes + ", default " + control.defaultCycleMinutes + "):", control.cycleMinutes)
+			if (input === null) { return }
+			var minutes = parseInt(input)
+			if (isNaN(minutes)) { return }
+			$.ajax({
+				type: 'PUT',
+				url: "sim-control/cycle-minutes/" + minutes,
+				dataType: 'json',
+				success: function(result) {
+					alert("Simulation speed set to " + result.cycleMinutes + " minutes per week (takes effect after the current week)")
+				},
+				error: function() { alert("Please log in to change the simulation speed") }
+			})
+		},
+		error: function() { alert("Please log in to change the simulation speed") }
+	})
+}
+
+function promptFastForward() {
+	var input = prompt("Fast-forward how many weeks (run back-to-back, 1 - 52)?", "1")
+	if (input === null) { return }
+	var cycles = parseInt(input)
+	if (isNaN(cycles)) { return }
+	$.ajax({
+		type: 'PUT',
+		url: "sim-control/fast-forward/" + cycles,
+		dataType: 'json',
+		success: function(result) {
+			alert("Fast-forwarding " + result.fastForward + " week(s) starting after the current week completes")
+		},
+		error: function() { alert("Please log in to fast-forward the simulation") }
+	})
+}
+
 function updateTime(cycle, fraction, cycleDurationEstimation) {
 	$(".currentTime").attr("data-tooltip", "Week " + cycle % 48 + " & Year " + Math.floor(cycle / 48) + " | One week lasts ~ 30min and one year is 48 weeks or 24 hours in realtime.")
 	gameTimeStart = (cycle + fraction) * totalmillisecPerWeek
