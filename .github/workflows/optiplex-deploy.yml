@@ -37,6 +37,7 @@ jobs:
             -Dsolo.bankruptcy.assetsThreshold=-150000000
             -Dsolo.notify.enabled=true
             -Dsolo.ai.enabled=true
+            -Dsolo.demand.profile=true
           # Web process (sign-up + tooltips): starting capital and the same
           # economy display values so tooltips match the simulation.
           WEB_SOLO_OPTS: >-

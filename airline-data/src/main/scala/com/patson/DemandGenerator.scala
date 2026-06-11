@@ -186,6 +186,9 @@ object DemandGenerator {
     val profileDemand = SoloConfig.demandProfile
     val baseDemandNanos = new java.util.concurrent.atomic.AtomicLong(0)
     val chunkGenNanos = new java.util.concurrent.atomic.AtomicLong(0)
+    // Step E-0: count the pairs a base-demand cache would hold so we can size it
+    // against the sim heap before committing to memoization (solo.demand.memoize).
+    val validPairCount = new java.util.concurrent.atomic.AtomicLong(0)
     def timedProfile[T](acc : java.util.concurrent.atomic.AtomicLong)(block : => T) : T =
       if (profileDemand) { val t0 = System.nanoTime(); try block finally acc.addAndGet(System.nanoTime() - t0) } else block
 
@@ -197,6 +200,7 @@ object DemandGenerator {
       val regularDemandChunks = airports.flatMap { toAirport =>
         val distance = Computation.calculateDistance(fromAirport, toAirport)
         if (canHaveDemand(fromAirport, toAirport, distance)) {
+          if (profileDemand) validPairCount.incrementAndGet()
           val relationship = countryRelationships.getOrElse((fromAirport.countryCode, toAirport.countryCode), 0)
           val affinity = Computation.calculateAffinityValue(fromAirport.zone, toAirport.zone, relationship)
           
@@ -228,6 +232,11 @@ object DemandGenerator {
     println(s"Generated ${computedDemandChunks.length} demand chunks from regular/elite demand")
     if (profileDemand) {
       println(s"[demand-profile] base-demand total ${baseDemandNanos.get / 1000000}ms vs chunk-generation total ${chunkGenNanos.get / 1000000}ms (regular demand, summed across threads)")
+      // Step E-0: cache-sizing. A base-demand entry is a Demand (3 x LinkClassValues =
+      // 12 ints ~48B) plus per-entry map overhead; ~64B/entry is a conservative estimate.
+      val pairs = validPairCount.get
+      val estBytes = pairs * 64
+      println(s"[demand-cache-size] airports=${airports.size} validPairs=$pairs estCacheBytes=$estBytes (~${estBytes / 1024 / 1024}MB at ~64B/entry)")
     }
 
     // Event Demand (can be handled separately as it's smaller) ---
