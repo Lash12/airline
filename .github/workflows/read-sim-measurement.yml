@@ -1,0 +1,29 @@
+name: Read Sim Measurement
+
+# Manual helper: reads the latest demand-profile / demand-cache-size lines from
+# the running sim's log on the self-hosted runner (co-located with the container)
+# and prints them to the job summary. Does NOT restart the sim — safe to run while
+# a cycle is in progress. Used to capture the Step E-0 cache-sizing numbers without
+# needing LAN/SSH access to the box.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: optiplex-deploy
+  cancel-in-progress: false
+
+jobs:
+  read:
+    runs-on: [self-hosted, optiplex]
+    timeout-minutes: 5
+    steps:
+      - name: Tail demand measurement lines from sim.log
+        run: |
+          {
+            echo "## Demand measurement (latest matches in sim.log)"
+            echo '```'
+            docker exec airline-app sh -c \
+              'grep -aE "demand-cache-size|demand-profile|Loaded .* airports" /home/airline/sim.log | tail -20' \
+              || echo "no matching lines yet (cycle may not have reached demand generation)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
