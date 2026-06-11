@@ -24,6 +24,9 @@ jobs:
           clean: false
 
       - name: Deploy stack
+        env:
+          # Full-dataset cycles need more than the start script's 1.5G default.
+          SIM_EXTRA_OPTS: -Xmx2048M
         run: bash scripts/optiplex-deploy.sh
 
       - name: Install e2e dependencies

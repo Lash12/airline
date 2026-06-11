@@ -34,7 +34,8 @@ services:
     # No-op on hosts without AppArmor.
     security_opt:
       - apparmor=unconfined
-    mem_limit: 3500m
+    # Holds both the simulation JVM (~2G heap) and the web JVM (~1G heap).
+    mem_limit: 4096m
     ports:
       - "9000:9000"
     healthcheck:
