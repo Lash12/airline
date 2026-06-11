@@ -15,6 +15,7 @@ object SoloConfig {
   private def longAt(path : String, default : Long) : Long = if (config.hasPath(path)) config.getLong(path) else default
   private def intAt(path : String, default : Int) : Int = if (config.hasPath(path)) config.getInt(path) else default
   private def doubleAt(path : String, default : Double) : Double = if (config.hasPath(path)) config.getDouble(path) else default
+  private def boolAt(path : String, default : Boolean) : Boolean = if (config.hasPath(path)) config.getBoolean(path) else default
 
   // New-player economy (consumed by airline-web SignUp)
   val startingBalance : Long = longAt("solo.startingBalance", 0L)
@@ -30,4 +31,11 @@ object SoloConfig {
   // Bankruptcy thresholds (GameConstants / AirlineSimulation)
   val bankruptcyCashThreshold : Int = intAt("solo.bankruptcy.cashThreshold", -10_000_000)
   val bankruptcyAssetsThreshold : Int = intAt("solo.bankruptcy.assetsThreshold", -100_000_000)
+
+  // Financial notifications for player airlines (AirlineSimulation). Off by
+  // default so multiplayer deploys are unchanged. Throttled by intervalCycles.
+  val notifyEnabled : Boolean = boolAt("solo.notify.enabled", false)
+  val notifyCashWarningThreshold : Long = longAt("solo.notify.cashWarningThreshold", 5_000_000L)
+  val notifyProfitMilestone : Long = longAt("solo.notify.profitMilestone", 10_000_000L)
+  val notifyIntervalCycles : Int = intAt("solo.notify.intervalCycles", 4)
 }
