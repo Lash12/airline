@@ -1,6 +1,6 @@
 package com.patson
 
-import com.patson.data.{AirportSource, CountrySource, CycleSource, DestinationSource, EventSource, GameConstants}
+import com.patson.data.{AirportSource, CountrySource, CycleSource, DestinationSource, EventSource, GameConstants, SoloConfig}
 import com.patson.model.event.{EventType, Olympics}
 import com.patson.model.{PassengerType, _}
 import com.patson.util.AirportCache
@@ -181,6 +181,14 @@ object DemandGenerator {
     val countryRelationships = CountrySource.getCountryMutualRelationships()
     val destinationList = DestinationSource.loadAllEliteDestinations()
 
+    // Diagnostic (solo.demand.profile): measure base-demand vs chunk-generation
+    // cost to decide if memoizing the base layer is worthwhile. Zero overhead off.
+    val profileDemand = SoloConfig.demandProfile
+    val baseDemandNanos = new java.util.concurrent.atomic.AtomicLong(0)
+    val chunkGenNanos = new java.util.concurrent.atomic.AtomicLong(0)
+    def timedProfile[T](acc : java.util.concurrent.atomic.AtomicLong)(block : => T) : T =
+      if (profileDemand) { val t0 = System.nanoTime(); try block finally acc.addAndGet(System.nanoTime() - t0) } else block
+
     val computedDemandChunks = airports.par.flatMap { fromAirport =>
       val flightPreferencesPool = getFlightPreferencePoolOnAirport(fromAirport)
       val hubAirportsDemands = generateHubAirportDemand(fromAirport, cycle)
@@ -192,14 +200,14 @@ object DemandGenerator {
           val relationship = countryRelationships.getOrElse((fromAirport.countryCode, toAirport.countryCode), 0)
           val affinity = Computation.calculateAffinityValue(fromAirport.zone, toAirport.zone, relationship)
           
-          val demand = computeBaseDemandBetweenAirports(fromAirport, toAirport, affinity, distance)
+          val demand = timedProfile(baseDemandNanos)(computeBaseDemandBetweenAirports(fromAirport, toAirport, affinity, distance))
 
           // Combine all chunks for this airport pair
           val travelerDemandValue = demand.travelerDemand + hubAirportsDemands.getOrElse(toAirport.iata, LinkClassValues.empty)
           val travelerType = if (fromAirport.population > PassengerType.TRAVELER_SMALL_TOWN_CEILING) PassengerType.TRAVELER else PassengerType.TRAVELER_SMALL_TOWN
-          val travelerChunks = generateChunksForPassengerType(travelerDemandValue, fromAirport, toAirport, travelerType, flightPreferencesPool, airportStats, cycle, cyclePhaseLength)
-          val businessChunks = generateChunksForPassengerType(demand.businessDemand, fromAirport, toAirport, PassengerType.BUSINESS, flightPreferencesPool, airportStats, cycle, cyclePhaseLength)
-          val touristChunks = generateChunksForPassengerType(demand.touristDemand, fromAirport, toAirport, PassengerType.TOURIST, flightPreferencesPool, airportStats, cycle, cyclePhaseLength)
+          val travelerChunks = timedProfile(chunkGenNanos)(generateChunksForPassengerType(travelerDemandValue, fromAirport, toAirport, travelerType, flightPreferencesPool, airportStats, cycle, cyclePhaseLength))
+          val businessChunks = timedProfile(chunkGenNanos)(generateChunksForPassengerType(demand.businessDemand, fromAirport, toAirport, PassengerType.BUSINESS, flightPreferencesPool, airportStats, cycle, cyclePhaseLength))
+          val touristChunks = timedProfile(chunkGenNanos)(generateChunksForPassengerType(demand.touristDemand, fromAirport, toAirport, PassengerType.TOURIST, flightPreferencesPool, airportStats, cycle, cyclePhaseLength))
 
           travelerChunks ++ businessChunks ++ touristChunks
         } else {
@@ -218,6 +226,9 @@ object DemandGenerator {
     }.toList // .toList converts the parallel collection back to a standard List
 
     println(s"Generated ${computedDemandChunks.length} demand chunks from regular/elite demand")
+    if (profileDemand) {
+      println(s"[demand-profile] base-demand total ${baseDemandNanos.get / 1000000}ms vs chunk-generation total ${chunkGenNanos.get / 1000000}ms (regular demand, summed across threads)")
+    }
 
     // Event Demand (can be handled separately as it's smaller) ---
     val eventDemand = generateEventDemand(cycle, airports)
