@@ -24,8 +24,6 @@ jobs:
           clean: false
 
       - name: Deploy stack
-        env:
-          SIM_EXTRA_OPTS: -Dsimulation.pauseWhenIdle=true
         run: bash scripts/optiplex-deploy.sh
 
       - name: Install e2e dependencies
