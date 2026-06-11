@@ -3,9 +3,10 @@
 -J-Xmx8G
 -J-Xms8G
 
-# GC Settings for Max Throughput (Parallel Collector)
--J-XX:+UseParallelGC
--J-XX:ParallelGCThreads=8
+# GC: G1 keeps pauses bounded and, unlike the parallel collector, degrades
+# gracefully instead of entering a full-GC death spiral when the heap is
+# constrained (e.g. the small-server profile overrides Xmx down to ~2G).
+-J-XX:+UseG1GC
 
 # Metaspace
 -J-XX:MetaspaceSize=256M
