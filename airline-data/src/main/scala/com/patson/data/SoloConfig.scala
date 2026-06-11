@@ -42,4 +42,13 @@ object SoloConfig {
   // Diagnostic: split DemandGenerator timing into base-demand vs chunk-generation
   // to decide whether memoizing the base layer is worthwhile (off by default).
   val demandProfile : Boolean = boolAt("solo.demand.profile", false)
+
+  // Living-world dynamic AI (ComputerAirlineSimulation). Off by default. MVP is
+  // drop-only: NPC airlines cancel persistently money-losing routes. Bounded per
+  // cycle so it cannot destabilize the economy or blow the cycle budget.
+  val aiEnabled : Boolean = boolAt("solo.ai.enabled", false)
+  val aiAirlinesPerCycle : Int = intAt("solo.ai.airlinesPerCycle", 10)
+  val aiMaxDropsPerAirline : Int = intAt("solo.ai.maxDropsPerAirline", 1)
+  val aiLossLookbackCycles : Int = intAt("solo.ai.lossLookbackCycles", 4)
+  val aiDropProfitThreshold : Long = longAt("solo.ai.dropProfitThreshold", -500000L)
 }
