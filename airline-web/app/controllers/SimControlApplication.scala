@@ -17,9 +17,11 @@ class SimControlApplication @Inject()(cc: ControllerComponents) extends Abstract
   val MAX_FAST_FORWARD = 52
 
   def getSimControl() = Authenticated { implicit request =>
+    val defaultCycleMinutes : Int = MainSimulation.CYCLE_DURATION / 60
+    val cycleMinutes : Int = SimControlSource.loadCycleMinutes().getOrElse(defaultCycleMinutes)
     Ok(Json.obj(
-      "cycleMinutes" -> SimControlSource.loadCycleMinutes().getOrElse(MainSimulation.CYCLE_DURATION / 60),
-      "defaultCycleMinutes" -> MainSimulation.CYCLE_DURATION / 60,
+      "cycleMinutes" -> cycleMinutes,
+      "defaultCycleMinutes" -> defaultCycleMinutes,
       "minCycleMinutes" -> MainSimulation.MIN_CYCLE_MINUTES,
       "maxCycleMinutes" -> MainSimulation.MAX_CYCLE_MINUTES,
       "fastForward" -> SimControlSource.loadFastForward(),
