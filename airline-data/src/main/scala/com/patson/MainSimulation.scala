@@ -162,6 +162,14 @@ object MainSimulation extends App {
     }
     println("Airplane model simulation done")
 
+    // Living-world AI (single-player, gated by solo.ai.enabled). Runs after the
+    // economic sims so this cycle's link profit data is fresh.
+    println("Computer airline simulation")
+    timed("computerAirline") {
+      ComputerAirlineSimulation.simulate(cycle)
+    }
+    println("Computer airline simulation done")
+
     timed("purge") {
       //purge history
       println("Purging link history")
