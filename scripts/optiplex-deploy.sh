@@ -43,16 +43,19 @@ if [ -z "$db_ready" ]; then
 fi
 
 echo "==> Stopping any prior simulation/web processes"
+# The matcher script's own cmdline contains the pattern strings, so it
+# must skip itself or it commits suicide (exit 143).
 docker exec airline-app sh -c '
   for p in /proc/[0-9]*; do
     pid=${p#/proc/}
     [ "$pid" = 1 ] && continue
+    [ "$pid" = "$$" ] && continue
     cmd=$(tr "\0" " " < "$p/cmdline" 2>/dev/null || true)
     case "$cmd" in
       *sbt*|*java*) kill "$pid" 2>/dev/null || true ;;
     esac
   done
-  true'
+  true' || true
 sleep 3
 
 # Credentials come from the compose file via the running container's env.
