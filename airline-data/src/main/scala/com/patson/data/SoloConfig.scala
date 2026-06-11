@@ -38,4 +38,8 @@ object SoloConfig {
   val notifyCashWarningThreshold : Long = longAt("solo.notify.cashWarningThreshold", 5_000_000L)
   val notifyProfitMilestone : Long = longAt("solo.notify.profitMilestone", 10_000_000L)
   val notifyIntervalCycles : Int = intAt("solo.notify.intervalCycles", 4)
+
+  // Diagnostic: split DemandGenerator timing into base-demand vs chunk-generation
+  // to decide whether memoizing the base layer is worthwhile (off by default).
+  val demandProfile : Boolean = boolAt("solo.demand.profile", false)
 }
