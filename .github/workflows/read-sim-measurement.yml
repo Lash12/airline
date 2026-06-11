@@ -19,11 +19,18 @@ jobs:
     steps:
       - name: Tail demand measurement lines from sim.log
         run: |
+          # Print to stdout (captured headlessly by `gh run view --log`) AND to the
+          # job summary. The MEASUREMENT markers make the lines easy to extract.
+          echo "=== MEASUREMENT-BEGIN ==="
+          docker exec airline-app sh -c \
+            'grep -aE "demand-cache-size|demand-profile|Loaded .* airports" /home/airline/sim.log | tail -20' \
+            || echo "no matching lines yet (cycle may not have reached demand generation)"
+          echo "=== MEASUREMENT-END ==="
           {
             echo "## Demand measurement (latest matches in sim.log)"
             echo '```'
             docker exec airline-app sh -c \
               'grep -aE "demand-cache-size|demand-profile|Loaded .* airports" /home/airline/sim.log | tail -20' \
-              || echo "no matching lines yet (cycle may not have reached demand generation)"
+              || echo "no matching lines yet"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
