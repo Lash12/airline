@@ -15,6 +15,8 @@ import scala.concurrent.duration.Duration
 
 object MainSimulation extends App {
   val CYCLE_DURATION : Int = 60 * 29
+  val MIN_CYCLE_MINUTES : Int = 5 //roughly cycle compute time + DB rest buffer
+  val MAX_CYCLE_MINUTES : Int = 24 * 60
   val SCHEDULE_BUFFER_SECS : Int = 30
   val SCHEDULE_OVERHEAD_FACTOR : Double = 1.1
   var currentWeek: Int = 0
@@ -23,6 +25,38 @@ object MainSimulation extends App {
   val pauseWhenIdle : Boolean = Constants.configFactory.hasPath("simulation.pauseWhenIdle") && Constants.configFactory.getBoolean("simulation.pauseWhenIdle")
   val idleGraceMinutes : Long = if (Constants.configFactory.hasPath("simulation.idleGraceMinutes")) Constants.configFactory.getLong("simulation.idleGraceMinutes") else 60
   val idleRecheckMinutes : Long = if (Constants.configFactory.hasPath("simulation.idleRecheckMinutes")) Constants.configFactory.getLong("simulation.idleRecheckMinutes") else 5
+
+  //player-adjustable pacing (written by the web app into the sim_control table)
+  def configuredCycleIntervalMs() : Long = {
+    try {
+      SimControlSource.loadCycleMinutes() match {
+        case Some(minutes) => Math.max(MIN_CYCLE_MINUTES, Math.min(MAX_CYCLE_MINUTES, minutes)) * 60000L
+        case None => CYCLE_DURATION * 1000L
+      }
+    } catch {
+      case e : Exception =>
+        println(s"Failed to read sim control (${e.getMessage}), using default cycle duration")
+        CYCLE_DURATION * 1000L
+    }
+  }
+
+  def consumeFastForward() : Boolean = {
+    try {
+      SimControlSource.consumeFastForward()
+    } catch {
+      case e : Exception =>
+        println(s"Failed to read fast-forward request (${e.getMessage})")
+        false
+    }
+  }
+
+  def fastForwardPending() : Boolean = {
+    try {
+      SimControlSource.loadFastForward() > 0
+    } catch {
+      case _ : Exception => false
+    }
+  }
 
   def isIdle() : Boolean = {
     try {
@@ -166,6 +200,7 @@ object MainSimulation extends App {
   case object ExecuteProcessing
   case object BroadcastAndAdvance
   case object ScheduleNext
+  case object CheckFastForward
 
   /**
     * The simulation can be seen like this:
@@ -175,34 +210,55 @@ object MainSimulation extends App {
     *
     */
   class MainSimulationActor extends Actor {
-    val CYCLE_INTERVAL_MS = CYCLE_DURATION * 1000L
     val DB_REST_BUFFER_MS = SCHEDULE_BUFFER_SECS * 1000L
 
     var currentWeek = CycleSource.loadCycle()
     var lastExecutionMs: Long = 0L
     var targetDeadline: Long = 0L // In-memory dynamic deadline
+    var scheduledWakeUp: Option[org.apache.pekko.actor.Cancellable] = None
+
+    private def scheduleExecution(delayMs : Long) : Unit = {
+      scheduledWakeUp.foreach(_.cancel())
+      scheduledWakeUp = Some(context.system.scheduler.scheduleOnce(Duration(delayMs, TimeUnit.MILLISECONDS), self, ExecuteProcessing))
+    }
 
     override def preStart(): Unit = {
       // First run executes immediately to update users ASAP
-      context.system.scheduler.scheduleOnce(Duration.Zero, self, ExecuteProcessing)
+      scheduleExecution(0L)
+      // While waiting for the next deadline, notice player fast-forward requests promptly
+      context.system.scheduler.scheduleWithFixedDelay(Duration(30, TimeUnit.SECONDS), Duration(30, TimeUnit.SECONDS), self, CheckFastForward)
     }
 
     def receive = {
       case ScheduleNext =>
         status = SimulationStatus.WAITING_CYCLE_START
-        val estimatedExecution = (lastExecutionMs * SCHEDULE_OVERHEAD_FACTOR).toLong
-        val leadTime = estimatedExecution + DB_REST_BUFFER_MS
+        if (consumeFastForward()) {
+          println("Fast-forward requested: starting next cycle immediately")
+          targetDeadline = System.currentTimeMillis() //broadcast right after compute instead of waiting for the deadline
+          scheduleExecution(DB_REST_BUFFER_MS)
+        } else {
+          val estimatedExecution = (lastExecutionMs * SCHEDULE_OVERHEAD_FACTOR).toLong
+          val leadTime = estimatedExecution + DB_REST_BUFFER_MS
 
-        val wakeUpTime = targetDeadline - leadTime
-        val delayUntilWakeUp = Math.max(0L, wakeUpTime - System.currentTimeMillis())
+          val wakeUpTime = targetDeadline - leadTime
+          val delayUntilWakeUp = Math.max(0L, wakeUpTime - System.currentTimeMillis())
 
-        println(s"Next cycle will wake up in ${delayUntilWakeUp / 1000}s (estimated exec: ${estimatedExecution / 1000}s)")
-        context.system.scheduler.scheduleOnce(Duration(delayUntilWakeUp, TimeUnit.MILLISECONDS), self, ExecuteProcessing)
+          println(s"Next cycle will wake up in ${delayUntilWakeUp / 1000}s (estimated exec: ${estimatedExecution / 1000}s)")
+          scheduleExecution(delayUntilWakeUp)
+        }
 
-      case ExecuteProcessing if pauseWhenIdle && isIdle() =>
+      case CheckFastForward =>
+        //a player asked to fast-forward while we are waiting for the next deadline: run now instead
+        if (status == SimulationStatus.WAITING_CYCLE_START && consumeFastForward()) {
+          println("Fast-forward requested: cancelling scheduled wait and starting cycle now")
+          targetDeadline = System.currentTimeMillis() //broadcast right after compute instead of waiting for the deadline
+          scheduleExecution(0L)
+        }
+
+      case ExecuteProcessing if pauseWhenIdle && isIdle() && !fastForwardPending() =>
         status = SimulationStatus.WAITING_CYCLE_START
         println(s"Simulation paused: no player activity within the last $idleGraceMinutes min. Rechecking in $idleRecheckMinutes min")
-        context.system.scheduler.scheduleOnce(Duration(idleRecheckMinutes, TimeUnit.MINUTES), self, ExecuteProcessing)
+        scheduleExecution(idleRecheckMinutes * 60000L)
 
       case ExecuteProcessing =>
         status = SimulationStatus.IN_PROGRESS
@@ -229,7 +285,7 @@ object MainSimulation extends App {
           case e : Exception =>
             println(s"!!!!!!! Cycle $currentWeek failed with exception: ${e.getClass.getSimpleName}: ${e.getMessage}. Retrying in 60s.")
             status = SimulationStatus.WAITING_CYCLE_START
-            context.system.scheduler.scheduleOnce(Duration(60, TimeUnit.SECONDS), self, ExecuteProcessing)
+            scheduleExecution(60000L)
         }
 
       case BroadcastAndAdvance =>
@@ -240,7 +296,7 @@ object MainSimulation extends App {
         currentWeek += 1
         CycleSource.setCycle(currentWeek)
 
-        targetDeadline = System.currentTimeMillis() + CYCLE_INTERVAL_MS
+        targetDeadline = System.currentTimeMillis() + configuredCycleIntervalMs()
         self ! ScheduleNext
     }
   }

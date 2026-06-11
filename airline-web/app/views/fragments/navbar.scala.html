@@ -20,6 +20,7 @@
         <div class="topBarDetails">
             <p class="currentTime label tooltip-attr tooltip-attr-bottom desktopOnly" data-tooltip="One week lasts ~ 30min and one year is 48 weeks or 24 hours in realtime. "></p>
             <p class="tooltip-attr tooltip-attr-bottom desktopOnly" data-tooltip="An estimate of how long until next week."><img src='@routes.Assets.versioned("/images/icons/clock-moon-phase.png")' style="vertical-align: middle;"><span class="nextTickEstimation label" style="font-weight: bold;">Estimating...</span></p>
+            <p class="desktopOnly"><span class="clickable label tooltip-attr tooltip-attr-bottom" data-tooltip="Change simulation speed (minutes per game week)" onclick="promptSimSpeed()">&#9881;</span> <span class="clickable label tooltip-attr tooltip-attr-bottom" data-tooltip="Fast-forward: run the next N weeks back-to-back" onclick="promptFastForward()">&#9193;</span></p>
             <p class="tooltip-attr tooltip-attr-bottom" data-tooltip="Cash money">$<span class="balance"></span></p>
             <p class="tooltip-attr tooltip-attr-bottom actionPoints" data-tooltip="Action Points"></p>
             <div id="notificationBell" class="clickable relative pr-4" title="Notifications">
