@@ -181,6 +181,7 @@ async function doPostLoginSetup(user) {
 
     mobileCheck();
     refreshWallpaper();
+    applySoloMode();
 
     // Airline-specific setup
     if (user.airlineIds && user.airlineIds.length > 0) {
