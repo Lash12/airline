@@ -1,11 +1,12 @@
 name: OptiPlex Deploy & Verify
 
-# workflow_dispatch only until the first successful run; then add
-#   push: { branches: [master] }
-# per docs/optiplex-ci-plan.md. Never trigger on pull_request — this runs
-# on a self-hosted runner.
+# Never trigger on pull_request — this runs on a self-hosted runner
+# (docs/optiplex-ci-plan.md).
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - master
 
 concurrency:
   group: optiplex-deploy
