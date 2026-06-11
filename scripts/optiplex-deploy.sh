@@ -80,7 +80,7 @@ fi
 echo "==> Starting simulation (SIM_EXTRA_OPTS='$SIM_EXTRA_OPTS') and web"
 docker exec -d -e SIM_EXTRA_OPTS="$SIM_EXTRA_OPTS" airline-app \
   sh -c 'sh /home/airline/start-data.sh > /home/airline/sim.log 2>&1'
-docker exec -d -e WEB_EXTRA_OPTS="$DB_OVERRIDE" airline-app \
+docker exec -d -e WEB_EXTRA_OPTS="$DB_OVERRIDE ${WEB_SOLO_OPTS:-}" airline-app \
   sh -c 'sh /home/airline/start-web.sh > /home/airline/web.log 2>&1'
 
 echo "==> Waiting for HTTP 200 from :9000 (up to 10 min)"
