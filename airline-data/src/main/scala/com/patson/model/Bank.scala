@@ -12,7 +12,7 @@ object Bank {
   val MIN_LOAN_AMOUNT = 10000
   val MAX_LOAN_AMOUNT : Long = 10000000000L //10b max
   val LOAN_REAPPLY_MIN_INTERVAL = 2
-  val DEFAULT_ANNUAL_RATE = 0.11
+  val DEFAULT_ANNUAL_RATE = com.patson.data.SoloConfig.loanDefaultAnnualRate
   def getMaxLoan(airlineId : Int) : LoanReply = {
     val existingLoans = BankSource.loadLoansByAirline(airlineId)
     

@@ -7,7 +7,7 @@ import com.patson.model._
 import com.patson.Authentication
 
 import java.util.Calendar
-import com.patson.data.{AirlineSource, CycleSource, NotificationSource}
+import com.patson.data.{AirlineSource, CycleSource, NotificationSource, SoloConfig}
 import com.patson.model.{Notification, NotificationCategory}
 import com.patson.util.AirlineCache
 import play.api.libs.ws.WSClient
@@ -133,7 +133,8 @@ class SignUp @Inject()(cc: ControllerComponents)(ws: WSClient) extends AbstractC
 
   private def initializeNewAirline(airlineName: String, user: User): Airline = {
     val newAirline = Airline(airlineName)
-    newAirline.setMinimumRenewalBalance(300000)
+    newAirline.setBalance(SoloConfig.startingBalance) //default 0; solo hosts can grant starting capital
+    newAirline.setMinimumRenewalBalance(SoloConfig.minRenewalBalance)
     AirlineSource.saveAirlines(List(newAirline))
     AirlineSource.saveAirlineCode(newAirline.id, newAirline.getDefaultAirlineCode())
     UserSource.setUserAirline(user, newAirline)

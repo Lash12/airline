@@ -4,8 +4,8 @@ import com.patson.model.Airport
 import com.patson.LoanInterestRateSimulation
 
 object GameConstants {
-  val BANKRUPTCY_ASSETS_THRESHOLD = -100_000_000 //-100m
-  val BANKRUPTCY_CASH_THRESHOLD = -10_000_000 //-10M
+  val BANKRUPTCY_ASSETS_THRESHOLD = SoloConfig.bankruptcyAssetsThreshold //default -100m
+  val BANKRUPTCY_CASH_THRESHOLD = SoloConfig.bankruptcyCashThreshold //default -10M
   val TOOLTIP_BANKRUPTCY = List(
     s"If your airline has less than ${String.format("%,d", BANKRUPTCY_CASH_THRESHOLD)} cash and less than ${String.format("%,d", BANKRUPTCY_ASSETS_THRESHOLD)} in asset value, your airline will go through bankruptcy and all your assets will be sold.",
     s"When you have a negative cash balance, you are charged a ${LoanInterestRateSimulation.HIGH_RATE_THRESHOLD * 100}% interest rate on your balance."
