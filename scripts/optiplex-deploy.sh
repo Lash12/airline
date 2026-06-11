@@ -8,7 +8,10 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 COMPOSE="docker compose -f docker-compose.small.yaml"
-SIM_EXTRA_OPTS="${SIM_EXTRA_OPTS:-}"
+# application.conf hardcodes localhost:3306; override via Typesafe Config
+# system property (sbt does not fork, so SBT_OPTS reaches the app).
+DB_OVERRIDE="-Dmysqldb.host=airline-db:3306"
+SIM_EXTRA_OPTS="${SIM_EXTRA_OPTS:-} $DB_OVERRIDE"
 
 # Containers with our fixed names left behind by an older compose project
 # (different working dir) block `up` with a name conflict. Only stopped
@@ -67,7 +70,7 @@ cycle_table=$(docker exec airline-db mysql -u"$DB_USER" -p"$DB_PASS" -N \
   -e "SHOW TABLES LIKE 'cycle'" "$DB_NAME" 2>/dev/null || true)
 if [ -z "$cycle_table" ]; then
   echo "==> Database not initialized; running init (publishLocal + MainInit)"
-  docker exec airline-app sh /home/airline/init-data.sh
+  docker exec -e SBT_OPTS="$DB_OVERRIDE" airline-app sh /home/airline/init-data.sh
 else
   echo "==> Database already initialized; refreshing airline-data artifact"
   docker exec airline-app sh -c \
@@ -77,7 +80,7 @@ fi
 echo "==> Starting simulation (SIM_EXTRA_OPTS='$SIM_EXTRA_OPTS') and web"
 docker exec -d -e SIM_EXTRA_OPTS="$SIM_EXTRA_OPTS" airline-app \
   sh -c 'sh /home/airline/start-data.sh > /home/airline/sim.log 2>&1'
-docker exec -d airline-app \
+docker exec -d -e WEB_EXTRA_OPTS="$DB_OVERRIDE" airline-app \
   sh -c 'sh /home/airline/start-web.sh > /home/airline/web.log 2>&1'
 
 echo "==> Waiting for HTTP 200 from :9000 (up to 10 min)"
