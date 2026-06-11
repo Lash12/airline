@@ -11,6 +11,7 @@ volumes:
 services:
   airline-app:
     container_name: airline-app
+    restart: unless-stopped
     build:
       context: .
       dockerfile: .docker/Dockerfile
@@ -47,6 +48,7 @@ services:
     # the frozen archive of the same image.
     image: bitnamilegacy/mysql:8.0
     container_name: airline-db
+    restart: unless-stopped
     security_opt:
       - apparmor=unconfined
     environment:
