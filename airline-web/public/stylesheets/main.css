@@ -2890,6 +2890,14 @@ i, .italic {
     color: var(--text-color);
 }
 
+/* Solo mode: hide multiplayer-only surfaces (toggled in Style Settings). */
+body.solo-mode [data-link="rivals"],
+body.solo-mode [data-link="alliance"],
+body.solo-mode [data-link="champions"],
+body.solo-mode #live-chat {
+    display: none !important;
+}
+
 #loginPageOverlay .login-form input::placeholder {
     color: var(--placeholder-color);
 }

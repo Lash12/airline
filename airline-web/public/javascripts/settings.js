@@ -30,6 +30,21 @@ var wallpaperTemplates = [
 
 ]
 
+function toggleSoloMode() {
+    var solo = $("#switchSoloOn").is(":checked")
+    localStorage.setItem('soloMode', solo)
+    applySoloMode()
+}
+
+// Hide multiplayer surfaces (chat, alliances, rivals, leaderboards) for solo play.
+// Driven by the body.solo-mode CSS rule in main.css.
+function applySoloMode() {
+    var solo = localStorage.getItem('soloMode') === 'true'
+    document.body.classList.toggle('solo-mode', solo)
+    $("#switchSoloOn").prop('checked', solo)
+    $("#switchSoloOff").prop('checked', !solo)
+}
+
 function changeWallpaper() {
     var wallpaperIndex = 0
     if (localStorage.getItem('wallpaperIndex')) {
