@@ -44,6 +44,13 @@ object NotificationCategory extends Enumeration {
    *   Navigation:  /flights/{linkId}
    *   Lifecycle:   managed entirely by LinkSimulation (checkLoadFactor / purgeAlerts);
    *                exempt from the 100-notification retention purge.
+   *
+   * CASH_FLOW_WARNING — Single-player: player airline balance below the configured
+   *   warning threshold (gated by solo.notify.enabled). targetId: "cashflow";
+   *   throttled/replaced per solo.notify.intervalCycles.
+   *
+   * PROFIT_MILESTONE — Single-player: player airline weekly profit crossed the
+   *   configured milestone (gated by solo.notify.enabled). targetId: "profit".
    */
-  val NEGOTIATION_LOSS, LEVEL_UP, LOYALIST, GAME_OVER, OLYMPICS_PRIZE, TUTORIAL, LINK_CANCELLATION = Value
+  val NEGOTIATION_LOSS, LEVEL_UP, LOYALIST, GAME_OVER, OLYMPICS_PRIZE, TUTORIAL, LINK_CANCELLATION, CASH_FLOW_WARNING, PROFIT_MILESTONE = Value
 }

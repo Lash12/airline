@@ -191,6 +191,24 @@ object AirlineSimulation {
       val airlineExpense = airlineExpenseNormalized + -loanInterestEntry + linksFuelTax + (actualFuelCost - linksFuelCost) + dividendsPaid
       val airlineProfit = airlineRevenue - airlineExpense
 
+      // Single-player financial notifications (gated; player airlines only).
+      // Throttled to once per interval and replaced in place so the bell isn't
+      // spammed while a condition persists.
+      if (SoloConfig.notifyEnabled && !isBankrupt && airline.airlineType != NonPlayerAirline && cycle % SoloConfig.notifyIntervalCycles == 0) {
+        if (airlineValue.existingBalance < SoloConfig.notifyCashWarningThreshold) {
+          NotificationSource.deleteNotificationsByTargetId(airline.id, "cashflow", NotificationCategory.CASH_FLOW_WARNING)
+          NotificationSource.insertNotification(Notification(airline.id, NotificationCategory.CASH_FLOW_WARNING,
+            s"Low cash: your balance is ${String.format("%,d", airlineValue.existingBalance)}. Consider a loan or trimming unprofitable routes.",
+            cycle, targetId = Some("cashflow"), expiryCycle = Some(cycle + SoloConfig.notifyIntervalCycles)))
+        }
+        if (airlineProfit >= SoloConfig.notifyProfitMilestone) {
+          NotificationSource.deleteNotificationsByTargetId(airline.id, "profit", NotificationCategory.PROFIT_MILESTONE)
+          NotificationSource.insertNotification(Notification(airline.id, NotificationCategory.PROFIT_MILESTONE,
+            s"Strong week: ${String.format("%,d", airlineProfit)} profit. Keep expanding!",
+            cycle, targetId = Some("profit"), expiryCycle = Some(cycle + SoloConfig.notifyIntervalCycles)))
+        }
+      }
+
       // Record weekly ledger entries
       if (!isBankrupt) {
         val weeklyLedger = List(
