@@ -12,6 +12,9 @@ services:
   airline-app:
     container_name: airline-app
     restart: unless-stopped
+    # PID 1 is `tail`, which never reaps the healthcheck's curl zombies;
+    # tini does.
+    init: true
     build:
       context: .
       dockerfile: .docker/Dockerfile
