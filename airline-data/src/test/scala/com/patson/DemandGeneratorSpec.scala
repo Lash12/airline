@@ -551,6 +551,51 @@ class DemandGeneratorSpec extends AnyWordSpecLike with Matchers {
       )
     }
 
+    "base-demand cache (Step E-1) should invalidate only changed airports".in {
+      // Synthetic airports so the test is independent of DB contents. A fingerprint
+      // covers income/population/popMiddleIncome/size/zone/countryCode/features.
+      def mk(iata: String, income: Int, pop: Int): Airport =
+        Airport(iata, s"K$iata", iata, 10.0, 10.0 + iata.hashCode % 30, "ZZ", iata, "North America", 5, income, pop, pop / 2, 0, 2000, math.abs(iata.hashCode) % 100000)
+
+      val a = mk("AAA", 30000, 1000000)
+      val b = mk("BBB", 25000, 800000)
+      val c = mk("CCC", 20000, 600000)
+      val airports = Array(a, b, c)
+      val epoch = 12345L
+
+      // First call must full-reset (cold cache) and seed all fingerprints.
+      val (reset1, changed1) = DemandGenerator.prepareBaseDemandCache(airports, epoch)
+      assert(reset1, "first call should full-reset")
+      assert(changed1 == airports.length)
+
+      // Re-running with identical airports + epoch evicts nothing.
+      val (reset2, changed2) = DemandGenerator.prepareBaseDemandCache(airports, epoch)
+      assert(!reset2, "unchanged world should not full-reset")
+      assert(changed2 == 0, s"unchanged world should evict nothing, evicted $changed2")
+
+      // Mutate one airport (new instance, higher income) -> exactly one eviction.
+      val bChanged = mk("BBB", 40000, 800000)
+      val (reset3, changed3) = DemandGenerator.prepareBaseDemandCache(Array(a, bChanged, c), epoch)
+      assert(!reset3, "single demographic change should be incremental, not a full reset")
+      assert(changed3 == 1, s"only the mutated airport should be evicted, evicted $changed3")
+
+      // Same world again -> stable, no eviction (fingerprint was updated).
+      val (reset4, changed4) = DemandGenerator.prepareBaseDemandCache(Array(a, bChanged, c), epoch)
+      assert(!reset4 && changed4 == 0, s"world stable again should evict nothing, evicted $changed4")
+
+      // A relationship-epoch change is a global input -> full reset.
+      val (reset5, _) = DemandGenerator.prepareBaseDemandCache(Array(a, bChanged, c), epoch + 1)
+      assert(reset5, "relationship epoch change should full-reset")
+
+      // Adding an airport changes membership/order -> full reset.
+      val (reset6, _) = DemandGenerator.prepareBaseDemandCache(Array(a, bChanged, c, mk("DDD", 15000, 400000)), epoch + 1)
+      assert(reset6, "membership change should full-reset")
+
+      // Fingerprint sanity: same demographics hash equal, changed income differs.
+      assert(DemandGenerator.airportFingerprint(b) == DemandGenerator.airportFingerprint(mk("BBB", 25000, 800000)))
+      assert(DemandGenerator.airportFingerprint(b) != DemandGenerator.airportFingerprint(bChanged))
+    }
+
     "computeDemand should have no PassengerType exceeding 35% of total demand".in {
       // Load airport stats from database
       val airportStatsList = AirportStatisticsSource.loadAllAirportStats()

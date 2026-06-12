@@ -43,6 +43,13 @@ object SoloConfig {
   // to decide whether memoizing the base layer is worthwhile (off by default).
   val demandProfile : Boolean = boolAt("solo.demand.profile", false)
 
+  // Memoize the deterministic base-demand layer across cycles (Step E-1). The base
+  // layer is ~55x the per-cycle chunk cost but its inputs (airport demographics +
+  // country relationships) barely change, so a fingerprint-invalidated cache serves
+  // most pairs for free. Off by default (multiplayer/default deploys unchanged); the
+  // cache is ~635MB at full dataset, so only enable with sufficient sim heap.
+  val demandMemoize : Boolean = boolAt("solo.demand.memoize", false)
+
   // Living-world dynamic AI (ComputerAirlineSimulation). Off by default. MVP is
   // drop-only: NPC airlines cancel persistently money-losing routes. Bounded per
   // cycle so it cannot destabilize the economy or blow the cycle budget.
