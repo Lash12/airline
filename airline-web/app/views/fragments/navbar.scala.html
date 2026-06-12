@@ -1,6 +1,10 @@
 
 	<div style="display: none;" class="extendedTopBarDetails flex-row items-center gap-1">
         <p class="tooltip-attr tooltip-attr-bottom" data-tooltip="An estimate of how long until next week."><img src='@routes.Assets.versioned("/images/icons/clock-moon-phase.png")' style="vertical-align: middle;"><span class="nextTickEstimation label" style="font-weight: bold;">Estimating...</span></p>
+        <p class="flex-row items-center gap-1" style="margin: 0;">
+            <span class="clickable label" onclick="promptSimSpeed()" title="Change simulation speed (minutes per game week)">&#9881; Speed</span>
+            <span class="clickable label" onclick="promptFastForward()" title="Fast-forward: run the next N weeks back-to-back">&#9193; Fast-fwd</span>
+        </p>
         <div style="display: none; margin-right: auto;" id="logoutDivMobile">
             <span id="currentUserNameMobile" class="label"></span>
             <a id="airlineSwitcherBtnMobile">
