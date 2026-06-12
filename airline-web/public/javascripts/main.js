@@ -203,9 +203,32 @@ function promptFastForward() {
 		url: "/sim-control/fast-forward/" + cycles,
 		dataType: 'json',
 		success: function(result) {
-			alert("Fast-forwarding " + result.fastForward + " week(s) starting after the current week completes")
+			// Surface progress in the top bar instead of a one-off modal. Each week still
+			// takes the normal compute time, so this is the only ongoing signal it worked.
+			renderFastForwardStatus(result.fastForward)
 		},
 		error: function(jqXHR) { alert(simControlError(jqXHR, "fast-forward the simulation")) }
+	})
+}
+
+// Show/hide the "N weeks left" fast-forward badge in the top bar + mobile panel.
+function renderFastForwardStatus(count) {
+	var n = count || 0
+	if (n > 0) {
+		$(".fastForwardStatus").text("⏩ " + n + " week" + (n === 1 ? "" : "s") + " left").show()
+	} else {
+		$(".fastForwardStatus").hide().text("")
+	}
+}
+
+// Poll the authoritative fast-forward count and update the badge. Called on load, on
+// fast-forward requests, and once per cycle (the count decrements as weeks complete).
+function refreshFastForwardStatus() {
+	$.ajax({
+		type: 'GET',
+		url: "/sim-control",
+		dataType: 'json',
+		success: function(control) { renderFastForwardStatus(control.fastForward) }
 	})
 }
 
@@ -252,6 +275,9 @@ function updateTime(cycle, fraction, cycleDurationEstimation) {
     }
 
 	currentTickTimer = tickTimerCreator()
+
+	// A new cycle just advanced (cycleInfo) — refresh the fast-forward countdown.
+	if (typeof refreshFastForwardStatus === 'function') refreshFastForwardStatus()
 }
 
 

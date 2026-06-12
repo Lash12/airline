@@ -214,6 +214,7 @@ async function doPostLoginSetup(user) {
         if (typeof loadAirportsDynamic === 'function') loadAirportsDynamic();
         if (typeof initAdminActions === 'function') initAdminActions();
         if (typeof loadAllCountries === 'function') loadAllCountries();
+        if (typeof refreshFastForwardStatus === 'function') refreshFastForwardStatus();
     } catch (e) {
         console.warn('Optional features setup error:', e);
     }
