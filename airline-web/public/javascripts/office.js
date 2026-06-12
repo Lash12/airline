@@ -424,7 +424,6 @@ function writeMilestones(breakdowns) {
     const milestones = gameConstants.milestones[activeAirline.type] || gameConstants.milestones.Legacy
 
     milestones.forEach(milestone => {
-        const currentValue = breakdowns[milestone.name] ? breakdowns[milestone.name].value : 0;
         const currentQuantityValue = breakdowns[milestone.name] ? breakdowns[milestone.name].quantityValue : 0;
 
         const $col = $("<div></div>")
@@ -433,8 +432,21 @@ function writeMilestones(breakdowns) {
             `<p class="pb-1 opacity-70 italic">@ ${commaSeparateNumber(currentQuantityValue)}</p>`,
         );
 
+        // Progress toward the next unmet tier (lowest threshold above the current value).
+        const nextTier = milestone.conditions.slice().sort((a, b) => a.threshold - b.threshold)
+            .find(cond => currentQuantityValue < cond.threshold);
+        if (nextTier) {
+            const pct = Math.min(100, Math.round(currentQuantityValue / nextTier.threshold * 100));
+            $col.append(
+                `<div style="width:160px;height:6px;border-radius:4px;background:rgba(0,0,0,0.25);overflow:hidden;margin-bottom:4px;" title="${pct}% to ${commaSeparateNumber(nextTier.threshold)}">
+                    <div style="height:100%;width:${pct}%;background:gold;"></div>
+                </div>`);
+        } else {
+            $col.append(`<p class="pb-1" style="color:gold;font-size:11px;">All tiers complete ✓</p>`);
+        }
+
         milestone.conditions.forEach(cond => {
-            const metCondtion = currentValue >= cond.reward ? "tick" : "cross";
+            const metCondtion = currentQuantityValue >= cond.threshold ? "tick" : "cross";
             $col.append(
                 `<div style="width: 160px;justify-content: space-between;" class="flex-row py-1">
 					<div class="font-mono text-sm flex-align-center">

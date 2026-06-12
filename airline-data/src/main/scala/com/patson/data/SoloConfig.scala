@@ -58,4 +58,9 @@ object SoloConfig {
   val aiMaxDropsPerAirline : Int = intAt("solo.ai.maxDropsPerAirline", 1)
   val aiLossLookbackCycles : Int = intAt("solo.ai.lossLookbackCycles", 4)
   val aiDropProfitThreshold : Long = longAt("solo.ai.dropProfitThreshold", -500000L)
+
+  // Solo progression (Phase G): surface the already-computed milestone system to the
+  // player as one-time achievement notifications + a progress view. Off by default so
+  // multiplayer/default deploys are unchanged (no notifications, no behavior change).
+  val progressionEnabled : Boolean = boolAt("solo.progression.enabled", false)
 }

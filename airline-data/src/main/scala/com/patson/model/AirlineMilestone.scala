@@ -339,4 +339,18 @@ object AirlineMilestones {
       .map(_.reward)
       .getOrElse(0)
   }
-} 
+
+  /**
+   * Milestone tiers that should produce a one-time achievement notification (Phase G).
+   * Pure / no I/O so it is unit-testable: returns the conditions met at `value` that are
+   * not already recorded, but only when `track` is set (progression on, player airline).
+   *
+   * @param track          whether progression tracking applies (solo flag + player airline)
+   * @param value          the airline's current value for this milestone
+   * @param alreadyAchieved predicate: has this threshold already been notified?
+   */
+  def milestoneNotificationsToEmit(track: Boolean, milestone: Milestone, value: Long, alreadyAchieved: Long => Boolean): List[MilestoneCondition] = {
+    if (!track) Nil
+    else milestone.conditions.filter(condition => condition.threshold <= value && !alreadyAchieved(condition.threshold))
+  }
+}

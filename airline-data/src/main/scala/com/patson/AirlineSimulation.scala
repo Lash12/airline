@@ -309,6 +309,9 @@ object AirlineSimulation {
       reputationBreakdowns.append(ReputationBreakdown(ReputationType.LEADERBOARD_BONUS, reputationBonusFromLeaderboards, reputationBonusFromLeaderboards.toInt))
 
       val milestones = AirlineMilestones.getMilestonesForAirlineType(airline.airlineType)
+      // Phase G: emit a one-time achievement notification when the player airline crosses
+      // a milestone tier (gated; player airlines only). Deduped by targetId per tier.
+      val trackProgression = SoloConfig.progressionEnabled && airline.airlineType != NonPlayerAirline && !isBankrupt
 
       milestones.foreach { milestone =>
         val (milestoneValue, reputationType) = milestone.name match {
@@ -395,6 +398,15 @@ object AirlineSimulation {
 
         val reputation = AirlineMilestones.evaluateMilestone(milestone, milestoneValue.toLong)
         reputationBreakdowns.append(ReputationBreakdown(reputationType, reputation, milestoneValue.toLong))
+
+        AirlineMilestones.milestoneNotificationsToEmit(trackProgression, milestone, milestoneValue.toLong,
+          threshold => NotificationSource.existsByTargetId(airline.id, s"milestone_${milestone.name}_$threshold", NotificationCategory.MILESTONE_ACHIEVED)
+        ).foreach { condition =>
+          val targetId = s"milestone_${milestone.name}_${condition.threshold}"
+          NotificationSource.insertNotification(Notification(airline.id, NotificationCategory.MILESTONE_ACHIEVED,
+            s"Milestone reached: ${String.format("%,d", condition.threshold)} ${milestone.description} (+${condition.reward} reputation)",
+            cycle, targetId = Some(targetId)))
+        }
       }
 
       if (airline.airlineType.airportRepRatio > 0) {
