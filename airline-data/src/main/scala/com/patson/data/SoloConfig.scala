@@ -63,4 +63,10 @@ object SoloConfig {
   // player as one-time achievement notifications + a progress view. Off by default so
   // multiplayer/default deploys are unchanged (no notifications, no behavior change).
   val progressionEnabled : Boolean = boolAt("solo.progression.enabled", false)
+
+  // Demand balance (ported from upstream v5): seasonal amplitude multiplier for TOURIST
+  // demand in DemandGenerator.demandRandomizerByType. Our fork inherited 2.0 (very strong
+  // tourist swings → routes whiplash between profitable and dead); upstream iteratively
+  // reduced this to 1.25. Exposed as a knob so it can be tuned live during playtest.
+  val demandTouristAmplitude : Double = doubleAt("solo.demand.touristAmplitude", 1.25)
 }

@@ -39,17 +39,19 @@ object DemandGenerator {
   }
 
   def demandRandomizerByType(passengerType: PassengerType.Value, demand: Int, cycle: Int, cyclePhaseLength: Int): Int = {
+    // Seasonal amplitude/offset per pax type, ported from upstream v5 (reduced tourist
+    // oscillation to cut demand whiplash). Tourist amplitude is solo-tunable.
     val randomizedDemand = if (passengerType == PassengerType.TOURIST) {
-      demandRandomizer(demand, cycle, cyclePhaseLength, 2, 24)
+      demandRandomizer(demand, cycle, cyclePhaseLength, SoloConfig.demandTouristAmplitude, 30)
     } else if (passengerType == PassengerType.BUSINESS) {
-      demandRandomizer(demand, cycle, cyclePhaseLength, 1, 12)
+      demandRandomizer(demand, cycle, cyclePhaseLength, 1, 15)
     } else { //traveler, elite
       demandRandomizer(demand, cycle, cyclePhaseLength)
     }
     randomizedDemand
   }
 
-  def demandRandomizer(demand: Int, cycle: Int, frequency: Int, amplitudeRatio: Int = 1, offset: Int = 0): Int = {
+  def demandRandomizer(demand: Int, cycle: Int, frequency: Int, amplitudeRatio: Double = 1, offset: Int = 0): Int = {
     val baseSeasonalPct = 0.07  // The wave naturally swings +/- 8%
     val noisePct = 0.03
     val rng = ThreadLocalRandom.current()
