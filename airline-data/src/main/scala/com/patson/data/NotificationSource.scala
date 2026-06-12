@@ -56,11 +56,16 @@ object NotificationSource {
     }
   }
 
+  // Categories exempt from the retention purge: live link-cancellation alerts (managed by
+  // LinkSimulation) and milestone achievements (a permanent record of what the player earned).
+  private val PURGE_EXEMPT_CATEGORIES = List(NotificationCategory.LINK_CANCELLATION, NotificationCategory.MILESTONE_ACHIEVED)
+  private val purgeExemptClause = PURGE_EXEMPT_CATEGORIES.map(c => s"'$c'").mkString("category NOT IN (", ", ", ")")
+
   private def purgeOldNotifications(airlineId: Int): Unit = {
     val connection = Meta.getConnection()
     try {
       val statement = connection.prepareStatement(
-        s"DELETE FROM $NOTIFICATION_TABLE WHERE airline = ? AND category != '${NotificationCategory.LINK_CANCELLATION}' AND id NOT IN (SELECT id FROM (SELECT id FROM $NOTIFICATION_TABLE WHERE airline = ? AND category != '${NotificationCategory.LINK_CANCELLATION}' ORDER BY id DESC LIMIT $RETENTION_LIMIT) AS t)"
+        s"DELETE FROM $NOTIFICATION_TABLE WHERE airline = ? AND $purgeExemptClause AND id NOT IN (SELECT id FROM (SELECT id FROM $NOTIFICATION_TABLE WHERE airline = ? AND $purgeExemptClause ORDER BY id DESC LIMIT $RETENTION_LIMIT) AS t)"
       )
       try {
         statement.setInt(1, airlineId)
@@ -268,6 +273,28 @@ object NotificationSource {
       try {
         statement.setInt(1, airlineId)
         statement.executeUpdate()
+      } finally {
+        statement.close()
+      }
+    } finally {
+      connection.close()
+    }
+  }
+
+  // True if a notification already exists for this (airline, target, category) — used to
+  // fire a milestone achievement exactly once per tier.
+  def existsByTargetId(airlineId: Int, targetId: String, category: NotificationCategory.Value): Boolean = {
+    val connection = Meta.getConnection()
+    try {
+      val statement = connection.prepareStatement(
+        s"SELECT 1 FROM $NOTIFICATION_TABLE WHERE airline = ? AND target_id = ? AND category = ? LIMIT 1"
+      )
+      try {
+        statement.setInt(1, airlineId)
+        statement.setString(2, targetId)
+        statement.setString(3, category.toString)
+        val rs = statement.executeQuery()
+        rs.next()
       } finally {
         statement.close()
       }

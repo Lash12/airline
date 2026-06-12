@@ -51,6 +51,11 @@ object NotificationCategory extends Enumeration {
    *
    * PROFIT_MILESTONE — Single-player: player airline weekly profit crossed the
    *   configured milestone (gated by solo.notify.enabled). targetId: "profit".
+   *
+   * MILESTONE_ACHIEVED — Single-player progression (gated by solo.progression.enabled):
+   *   the player airline crossed a milestone tier (AirlineMilestones). One per tier, ever.
+   *   targetId: "milestone_{name}_{threshold}"; exempt from the retention purge so the
+   *   achievement record persists.
    */
-  val NEGOTIATION_LOSS, LEVEL_UP, LOYALIST, GAME_OVER, OLYMPICS_PRIZE, TUTORIAL, LINK_CANCELLATION, CASH_FLOW_WARNING, PROFIT_MILESTONE = Value
+  val NEGOTIATION_LOSS, LEVEL_UP, LOYALIST, GAME_OVER, OLYMPICS_PRIZE, TUTORIAL, LINK_CANCELLATION, CASH_FLOW_WARNING, PROFIT_MILESTONE, MILESTONE_ACHIEVED = Value
 }
