@@ -162,7 +162,7 @@ var tickTimerCreator
 function promptSimSpeed() {
 	$.ajax({
 		type: 'GET',
-		url: "sim-control",
+		url: "/sim-control",
 		dataType: 'json',
 		success: function(control) {
 			var input = prompt("Minutes per game week (" + control.minCycleMinutes + " - " + control.maxCycleMinutes + ", default " + control.defaultCycleMinutes + "):", control.cycleMinutes)
@@ -171,16 +171,26 @@ function promptSimSpeed() {
 			if (isNaN(minutes)) { return }
 			$.ajax({
 				type: 'PUT',
-				url: "sim-control/cycle-minutes/" + minutes,
+				url: "/sim-control/cycle-minutes/" + minutes,
 				dataType: 'json',
 				success: function(result) {
 					alert("Simulation speed set to " + result.cycleMinutes + " minutes per week (takes effect after the current week)")
 				},
-				error: function() { alert("Please log in to change the simulation speed") }
+				error: function(jqXHR) { alert(simControlError(jqXHR, "change the simulation speed")) }
 			})
 		},
-		error: function() { alert("Please log in to change the simulation speed") }
+		error: function(jqXHR) { alert(simControlError(jqXHR, "change the simulation speed")) }
 	})
+}
+
+// Build an accurate message for a failed sim-control request: only an auth status
+// means "log in"; anything else is a real error (a 404 here usually means a relative
+// URL resolved against a subpath — keep these URLs absolute).
+function simControlError(jqXHR, action) {
+	if (jqXHR && (jqXHR.status === 401 || jqXHR.status === 400)) {
+		return "Your session expired — please log in again to " + action + "."
+	}
+	return "Could not " + action + " (error " + (jqXHR ? jqXHR.status : "?") + "). Please try again."
 }
 
 function promptFastForward() {
@@ -190,12 +200,12 @@ function promptFastForward() {
 	if (isNaN(cycles)) { return }
 	$.ajax({
 		type: 'PUT',
-		url: "sim-control/fast-forward/" + cycles,
+		url: "/sim-control/fast-forward/" + cycles,
 		dataType: 'json',
 		success: function(result) {
 			alert("Fast-forwarding " + result.fastForward + " week(s) starting after the current week completes")
 		},
-		error: function() { alert("Please log in to fast-forward the simulation") }
+		error: function(jqXHR) { alert(simControlError(jqXHR, "fast-forward the simulation")) }
 	})
 }
 
