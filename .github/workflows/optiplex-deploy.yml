@@ -29,15 +29,17 @@ jobs:
           # solo.*: friendlier single-player economy + financial notifications
           # (see com.patson.data.SoloConfig). Tune these freely — they only
           # affect this self-hosted instance.
+          # -Xmx2816M: headroom for the ~635MB Step E-1 base-demand cache on top
+          # of the ~1.8G working set (container mem_limit raised to match).
           SIM_EXTRA_OPTS: >-
-            -Xmx2048M
+            -Xmx2816M
             -Dsolo.ap.generationRate=0.3
             -Dsolo.loan.defaultAnnualRate=0.06
             -Dsolo.bankruptcy.cashThreshold=-25000000
             -Dsolo.bankruptcy.assetsThreshold=-150000000
             -Dsolo.notify.enabled=true
             -Dsolo.ai.enabled=true
-            -Dsolo.demand.profile=true
+            -Dsolo.demand.memoize=true
           # Web process (sign-up + tooltips): starting capital and the same
           # economy display values so tooltips match the simulation.
           WEB_SOLO_OPTS: >-

@@ -26,11 +26,19 @@ jobs:
             'grep -aE "demand-cache-size|demand-profile|Loaded .* airports" /home/airline/sim.log | tail -20' \
             || echo "no matching lines yet (cycle may not have reached demand generation)"
           echo "=== MEASUREMENT-END ==="
+          # Step E-1: container memory + JVM heap, to confirm the ~635MB base-demand
+          # cache fits the raised sim heap without OOMing the unmanaged sim process.
+          echo "=== HEAP-BEGIN ==="
+          docker stats --no-stream airline-app || echo "no docker stats"
+          docker exec airline-app sh -c \
+            'jcmd $(pgrep -f MainSimulation | head -1) GC.heap_info 2>/dev/null' \
+            || echo "no jcmd heap info"
+          echo "=== HEAP-END ==="
           {
             echo "## Demand measurement (latest matches in sim.log)"
             echo '```'
             docker exec airline-app sh -c \
-              'grep -aE "demand-cache-size|demand-profile|Loaded .* airports" /home/airline/sim.log | tail -20' \
+              'grep -aE "demand-cache-size|demand-profile|demand-memoize|Loaded .* airports" /home/airline/sim.log | tail -20' \
               || echo "no matching lines yet"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
