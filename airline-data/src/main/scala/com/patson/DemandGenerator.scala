@@ -192,6 +192,22 @@ object DemandGenerator {
     def timedProfile[T](acc : java.util.concurrent.atomic.AtomicLong)(block : => T) : T =
       if (profileDemand) { val t0 = System.nanoTime(); try block finally acc.addAndGet(System.nanoTime() - t0) } else block
 
+    // Step E-1: memoize the deterministic base-demand layer across cycles. Build a
+    // primitive id->row-index map for this cycle and run single-threaded eviction
+    // before the parallel loop; the cache itself is read/written lock-free inside it.
+    val memoize = SoloConfig.demandMemoize
+    val idToIndex: Array[Int] =
+      if (memoize) {
+        val orderedAirports = airports.toArray
+        val maxId = orderedAirports.foldLeft(0)((m, a) => if (a.id > m) a.id else m)
+        val idx = Array.fill(maxId + 1)(-1)
+        var i = 0
+        while (i < orderedAirports.length) { idx(orderedAirports(i).id) = i; i += 1 }
+        val (fullReset, changedCount) = prepareBaseDemandCache(orderedAirports, countryRelationships.hashCode.toLong)
+        println(s"[demand-memoize] ${if (fullReset) "full-reset" else s"incremental evicted=$changedCount"} (N=${orderedAirports.length})")
+        idx
+      } else null
+
     val computedDemandChunks = airports.par.flatMap { fromAirport =>
       val flightPreferencesPool = getFlightPreferencePoolOnAirport(fromAirport)
       val hubAirportsDemands = generateHubAirportDemand(fromAirport, cycle)
@@ -203,8 +219,35 @@ object DemandGenerator {
           if (profileDemand) validPairCount.incrementAndGet()
           val relationship = countryRelationships.getOrElse((fromAirport.countryCode, toAirport.countryCode), 0)
           val affinity = Computation.calculateAffinityValue(fromAirport.zone, toAirport.zone, relationship)
-          
-          val demand = timedProfile(baseDemandNanos)(computeBaseDemandBetweenAirports(fromAirport, toAirport, affinity, distance))
+
+          val demand =
+            if (memoize) {
+              val row = cacheData(idToIndex(fromAirport.id))
+              val base = idToIndex(toAirport.id) * DEMAND_SLOTS
+              if (row(base) == ABSENT) { // miss: compute once, store all 12 slots
+                val d = computeBaseDemandBetweenAirports(fromAirport, toAirport, affinity, distance)
+                row(base)      = d.travelerDemand.economyVal
+                row(base + 1)  = d.travelerDemand.businessVal
+                row(base + 2)  = d.travelerDemand.firstVal
+                row(base + 3)  = d.travelerDemand.discountVal
+                row(base + 4)  = d.businessDemand.economyVal
+                row(base + 5)  = d.businessDemand.businessVal
+                row(base + 6)  = d.businessDemand.firstVal
+                row(base + 7)  = d.businessDemand.discountVal
+                row(base + 8)  = d.touristDemand.economyVal
+                row(base + 9)  = d.touristDemand.businessVal
+                row(base + 10) = d.touristDemand.firstVal
+                row(base + 11) = d.touristDemand.discountVal
+                d
+              } else { // hit: rebuild Demand from the cached ints
+                Demand(
+                  LinkClassValues(row(base),     row(base + 1), row(base + 2),  row(base + 3)),
+                  LinkClassValues(row(base + 4), row(base + 5), row(base + 6),  row(base + 7)),
+                  LinkClassValues(row(base + 8), row(base + 9), row(base + 10), row(base + 11)))
+              }
+            } else {
+              timedProfile(baseDemandNanos)(computeBaseDemandBetweenAirports(fromAirport, toAirport, affinity, distance))
+            }
 
           // Combine all chunks for this airport pair
           val travelerDemandValue = demand.travelerDemand + hubAirportsDemands.getOrElse(toAirport.iata, LinkClassValues.empty)
@@ -695,5 +738,93 @@ object DemandGenerator {
   sealed case class Demand(travelerDemand: LinkClassValues, businessDemand: LinkClassValues, touristDemand: LinkClassValues)
   def addUpDemands(demand: Demand): Int = {
     (demand.travelerDemand.totalwithSeatSize + demand.businessDemand.totalwithSeatSize + demand.touristDemand.totalwithSeatSize).toInt
+  }
+
+  // --- Step E-1: base-demand memoization (solo.demand.memoize) ----------------
+  // computeBaseDemandBetweenAirports is deterministic and costs ~55x the randomized
+  // chunk layer per cycle, but its inputs (airport demographics + country
+  // relationships) barely change cycle-to-cycle. We cache the full Demand result per
+  // ordered airport pair as a dense primitive int matrix (DEMAND_SLOTS ints/pair: 3
+  // LinkClassValues x economy/business/first/discount). Keying by the airport's
+  // index in the loaded list keeps it a flat int[] (no boxing, ~635MB at N=3638)
+  // instead of ~3GB of Demand/HashMap objects.
+  //
+  // Concurrency: each fromAirport owns exactly one outer row, written only by the
+  // single airports.par thread handling it -> lock-free. All eviction is
+  // single-threaded in prepareBaseDemandCache, before the parallel loop.
+  private val DEMAND_SLOTS = 12
+  private val ABSENT = -1                                    // sentinel: slot 0 (traveler economy) is always >= 0 once computed
+  private var cacheData: Array[Array[Int]] = null           // [fromIdx] -> flat [toIdx*DEMAND_SLOTS .. +DEMAND_SLOTS]
+  private var cacheMembershipSig: Long = Long.MinValue       // hash of ordered airport ids; change => full reset
+  private var cacheRelationshipEpoch: Long = Long.MinValue   // hash of country relationships; change => full reset
+  private val cacheFingerprint = new java.util.HashMap[Int, Long]() // airportId -> demographic fingerprint
+
+  // Every field computeBaseDemandBetweenAirports / computeRawDemandBetweenAirports
+  // reads off an airport. affinity (zones + relationship) and distance (lat/long,
+  // static) are covered by zone + the relationship epoch, so they need not be here.
+  private[patson] def airportFingerprint(a: Airport): Long = {
+    var h = 1125899906842597L
+    h = 31 * h + a.income
+    h = 31 * h + a.population
+    h = 31 * h + a.popMiddleIncome
+    h = 31 * h + a.size
+    h = 31 * h + a.zone.hashCode
+    h = 31 * h + a.countryCode.hashCode
+    var fh = 0L // order-independent fold of feature (type, strength)
+    a.getFeatures().foreach { f => fh += (f.featureType.id.toLong << 20) ^ f.strength }
+    31 * h + fh
+  }
+
+  /** Single-threaded cache maintenance, run before the parallel demand loop. Evicts
+    * rows + columns for airports whose demographics changed; full-resets on a change
+    * to airport membership/order or country relationships. Returns (fullReset,
+    * changedAirportCount) for logging. */
+  private[patson] def prepareBaseDemandCache(orderedAirports: Array[Airport], relationshipEpoch: Long): (Boolean, Int) = {
+    val n = orderedAirports.length
+    var membershipSig = 1125899906842597L
+    var i = 0
+    while (i < n) { membershipSig = 31 * membershipSig + orderedAirports(i).id; i += 1 }
+
+    val fullReset = cacheData == null || cacheData.length != n ||
+      membershipSig != cacheMembershipSig || relationshipEpoch != cacheRelationshipEpoch
+
+    if (fullReset) {
+      cacheData = Array.ofDim[Array[Int]](n)
+      i = 0
+      while (i < n) {
+        val row = new Array[Int](n * DEMAND_SLOTS)
+        java.util.Arrays.fill(row, ABSENT)
+        cacheData(i) = row
+        i += 1
+      }
+      cacheFingerprint.clear()
+      i = 0
+      while (i < n) { val a = orderedAirports(i); cacheFingerprint.put(a.id, airportFingerprint(a)); i += 1 }
+      cacheMembershipSig = membershipSig
+      cacheRelationshipEpoch = relationshipEpoch
+      (true, n)
+    } else {
+      val changed = new java.util.ArrayList[Int]()
+      i = 0
+      while (i < n) {
+        val a = orderedAirports(i)
+        val fp = airportFingerprint(a)
+        val prev = cacheFingerprint.get(a.id)
+        if (prev == null || prev.longValue() != fp) {
+          changed.add(i)
+          cacheFingerprint.put(a.id, fp)
+        }
+        i += 1
+      }
+      val it = changed.iterator()
+      while (it.hasNext) {
+        val idx = it.next()
+        java.util.Arrays.fill(cacheData(idx), ABSENT)        // evict the changed airport's row
+        val base = idx * DEMAND_SLOTS
+        var r = 0
+        while (r < n) { cacheData(r)(base) = ABSENT; r += 1 } // and its column in every row
+      }
+      (false, changed.size)
+    }
   }
 }
