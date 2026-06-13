@@ -22,6 +22,9 @@
         display: block !important; width: auto !important; height: auto;
         text-align: left !important; padding: 3px 0 !important; border: none !important;
         white-space: normal !important;
+        /* Force the theme text colour: the desktop table gives highlighted rows white
+           text, which is invisible on a card. */
+        color: var(--text-color) !important;
     }
     #linksCanvas .table.data .table-row .cell[data-label]::before {
         content: attr(data-label) ": "; font-weight: 700; opacity: 0.55;
