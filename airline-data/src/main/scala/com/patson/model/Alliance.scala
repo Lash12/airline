@@ -74,7 +74,9 @@ object AllianceEvent extends Enumeration {
 object Alliance {
   val MAX_MEMBER_NON_REGIONAL_COUNT = 7
   val MAX_MEMBER_REGIONALS_COUNT = 0
-  val ESTABLISH_MIN_MEMBER_COUNT = 3
+  // Members required for an alliance to become ESTABLISHED (vs FORMING). Defaults to the
+  // upstream 3; solo.alliance.minMembers can lower it so a player's own 2 airlines qualify.
+  val ESTABLISH_MIN_MEMBER_COUNT = com.patson.data.SoloConfig.allianceMinMembers
 
   /**
     *

@@ -442,9 +442,15 @@ class AirlineApplication @Inject()(cc: ControllerComponents) extends AbstractCon
       return Consideration(cost, newLounge, Some("Cannot build lounge without a base"))
     }
 
-    //alliance
-    if (! airline.getAllianceId().isDefined) {
+    //alliance — solo airlines may build airline-owned lounges without one
+    //(solo.lounge.allowWithoutAlliance). The sim already supports airline-owned lounges;
+    //they benefit this airline's own premium pax and have no alliance/codeshare interaction.
+    val allowSoloLounge = SoloConfig.loungeWithoutAlliance && airline.getAllianceId().isEmpty
+    if (airline.getAllianceId().isEmpty && !allowSoloLounge) {
       return Consideration(cost, newLounge, Some("Must be in an alliance to build/upgrade lounge"))
+    }
+    if (allowSoloLounge) {
+      return Consideration(cost, newLounge) //airline-owned lounge: no alliance ranking requirement
     }
 
     //check whether it fulfills ranking requirement
