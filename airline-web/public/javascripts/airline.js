@@ -2156,19 +2156,19 @@ function updateLinksTable(sortProperty, sortOrder) {
         rowsHtml.push(
             `<div class='table-row clickable${selectedClass}' data-link-id='${link.id}'${bgStyle}>` +
             `<div class='cell'><input type='checkbox' class='link-checkbox'${checkedAttr}></div>` +
-            `<div class='cell'>${getCountryFlagImg(link.fromCountryCode)}${getAirportText(link.fromAirportCity, link.fromAirportCode)}</div>` +
-            `<div class='cell'>${getCountryFlagImg(link.toCountryCode)}${getAirportText(link.toAirportCity, link.toAirportCode)}</div>` +
-            `<div class='cell'>${link.model}</div>` +
-            `<div class='cell' align='right'>${Math.round(convertDistance(link.distance))}${distanceLabel()}</div>` +
-            `<div class='cell' align='right'>${link.totalCapacity}(${link.frequency})</div>` +
-            `<div class='cell' align='right'>${quality}</div>` +
-            `<div class='cell${avgClass}' align='right'>${link.displayLoadFactor}%</div>` +
-            `<div class='cell${avgClass}' align='right'>${Math.round(link.displaySatisfaction * 100)}%</div>` +
-            `<div class='cell${avgClass}' align='right'>$${commaSeparateNumber(link.revenue)}</div>` +
-            `<div class='cell${avgClass}' align='right'>$${commaSeparateNumber(link.displayProfit)}</div>` +
-            `<div class='cell${avgClass}' align='right'>${(link.displayProfitMargin * 100).toFixed(2)}%</div>` +
-            `<div class='cell' align='right'>${link.currentStaffRequired}</div>` +
-            `<div class='cell' align='right'>$${commaSeparateNumber(link.profitPerStaff)}</div>` +
+            `<div class='cell' data-label='From'>${getCountryFlagImg(link.fromCountryCode)}${getAirportText(link.fromAirportCity, link.fromAirportCode)}</div>` +
+            `<div class='cell' data-label='To'>${getCountryFlagImg(link.toCountryCode)}${getAirportText(link.toAirportCity, link.toAirportCode)}</div>` +
+            `<div class='cell' data-label='Model'>${link.model}</div>` +
+            `<div class='cell' align='right' data-label='Distance'>${Math.round(convertDistance(link.distance))}${distanceLabel()}</div>` +
+            `<div class='cell' align='right' data-label='Cap (Freq)'>${link.totalCapacity}(${link.frequency})</div>` +
+            `<div class='cell' align='right' data-label='Quality'>${quality}</div>` +
+            `<div class='cell${avgClass}' align='right' data-label='Load Factor'>${link.displayLoadFactor}%</div>` +
+            `<div class='cell${avgClass}' align='right' data-label='Satisfaction'>${Math.round(link.displaySatisfaction * 100)}%</div>` +
+            `<div class='cell${avgClass}' align='right' data-label='Revenue'>$${commaSeparateNumber(link.revenue)}</div>` +
+            `<div class='cell${avgClass}' align='right' data-label='Profit'>$${commaSeparateNumber(link.displayProfit)}</div>` +
+            `<div class='cell${avgClass}' align='right' data-label='Margin'>${(link.displayProfitMargin * 100).toFixed(2)}%</div>` +
+            `<div class='cell' align='right' data-label='Staff'>${link.currentStaffRequired}</div>` +
+            `<div class='cell' align='right' data-label='Profit / Staff'>$${commaSeparateNumber(link.profitPerStaff)}</div>` +
             `</div>`
         );
     });
