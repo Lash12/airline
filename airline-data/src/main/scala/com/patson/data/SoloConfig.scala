@@ -69,4 +69,12 @@ object SoloConfig {
   // tourist swings → routes whiplash between profitable and dead); upstream iteratively
   // reduced this to 1.25. Exposed as a knob so it can be tuned live during playtest.
   val demandTouristAmplitude : Double = doubleAt("solo.demand.touristAmplitude", 1.25)
+
+  // Lounges & alliances (single-player). Lounges are an alliance facility upstream, but
+  // the sim already supports airline-owned lounges (Airport.getLounge is airline-first);
+  // allowWithoutAlliance lets a solo airline build one standalone (benefits its own premium
+  // pax, no codeshare impact). allianceMinMembers lowers the count at which an alliance
+  // becomes ESTABLISHED (upstream 3) so a player's own 2 airlines can form a real alliance.
+  val loungeWithoutAlliance : Boolean = boolAt("solo.lounge.allowWithoutAlliance", false)
+  val allianceMinMembers : Int = intAt("solo.alliance.minMembers", 3)
 }

@@ -281,7 +281,10 @@ object AirportSimulation {
 
         airport.getLounges().foreach { lounge =>
           val newStatus =
-            if (lounge.allianceId.exists(eligibleAllianceIds.contains)) {
+            // Airline-owned lounges (no alliance, solo.lounge.allowWithoutAlliance) are not
+            // subject to alliance ranking — keep them active. Alliance lounges still must
+            // rank in the top N by premium pax.
+            if (lounge.allianceId.isEmpty || lounge.allianceId.exists(eligibleAllianceIds.contains)) {
               LoungeStatus.ACTIVE
             } else {
               LoungeStatus.INACTIVE
