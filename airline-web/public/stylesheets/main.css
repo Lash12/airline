@@ -868,6 +868,16 @@ li.row, div.table-row {
     box-sizing: border-box;
     overflow-x: scroll;
     max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* The main content panel sits in a flex .canvas. Without a grow factor it shrinks to
+   its content width, leaving large dead space on wide screens and forcing tables (e.g.
+   the flights list) to scroll/truncate. Let it fill the canvas; any side panel keeps its
+   own width. min-width:0 lets inner scroll containers shrink instead of overflowing. */
+.mainPanel {
+    flex: 1 1 0%;
+    min-width: 0;
 }
 
 .table.data {
