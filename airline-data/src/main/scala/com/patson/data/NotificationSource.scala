@@ -111,6 +111,30 @@ object NotificationSource {
     }
   }
 
+  // Most recent notifications for one airline in a single category (e.g. the WORLD_NEWS
+  // feed, rendered in its own News panel rather than the personal bell).
+  def loadByCategory(airlineId: Int, category: NotificationCategory.Value, limit: Int = 50): List[Notification] = {
+    val connection = Meta.getConnection()
+    try {
+      val statement = connection.prepareStatement(
+        s"SELECT * FROM $NOTIFICATION_TABLE WHERE airline = ? AND category = ? ORDER BY id DESC LIMIT ?"
+      )
+      try {
+        statement.setInt(1, airlineId)
+        statement.setString(2, category.toString)
+        statement.setInt(3, limit)
+        val rs = statement.executeQuery()
+        val result = scala.collection.mutable.ListBuffer[Notification]()
+        while (rs.next()) result += rowToNotification(rs)
+        result.toList
+      } finally {
+        statement.close()
+      }
+    } finally {
+      connection.close()
+    }
+  }
+
   def loadAllByCategory(category: NotificationCategory.Value): List[Notification] = {
     val connection = Meta.getConnection()
     try {
@@ -179,8 +203,10 @@ object NotificationSource {
   def countUnreadByAirline(airlineId: Int): Int = {
     val connection = Meta.getConnection()
     try {
+      // WORLD_NEWS lives in its own pull-based News panel, so it must not drive the
+      // personal notification bell badge (otherwise the feed would constantly nag).
       val statement = connection.prepareStatement(
-        s"SELECT COUNT(*) FROM $NOTIFICATION_TABLE WHERE airline = ? AND is_read = 0"
+        s"SELECT COUNT(*) FROM $NOTIFICATION_TABLE WHERE airline = ? AND is_read = 0 AND category != '${NotificationCategory.WORLD_NEWS}'"
       )
       try {
         statement.setInt(1, airlineId)

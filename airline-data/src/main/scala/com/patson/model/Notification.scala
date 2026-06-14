@@ -56,6 +56,12 @@ object NotificationCategory extends Enumeration {
    *   the player airline crossed a milestone tier (AirlineMilestones). One per tier, ever.
    *   targetId: "milestone_{name}_{threshold}"; exempt from the retention purge so the
    *   achievement record persists.
+   *
+   * WORLD_NEWS — Single-player world news feed (gated by solo.news.enabled): an ambient
+   *   log of notable world events (NPC route changes, etc.), one row per player airline so
+   *   each keeps its own read state. Surfaced in a dedicated News panel, NOT the personal
+   *   bell — excluded from the bell unread count so it never nags. targetId optional, e.g.
+   *   "rival_{airlineId}" for navigation. Subject to the normal retention purge.
    */
-  val NEGOTIATION_LOSS, LEVEL_UP, LOYALIST, GAME_OVER, OLYMPICS_PRIZE, TUTORIAL, LINK_CANCELLATION, CASH_FLOW_WARNING, PROFIT_MILESTONE, MILESTONE_ACHIEVED = Value
+  val NEGOTIATION_LOSS, LEVEL_UP, LOYALIST, GAME_OVER, OLYMPICS_PRIZE, TUTORIAL, LINK_CANCELLATION, CASH_FLOW_WARNING, PROFIT_MILESTONE, MILESTONE_ACHIEVED, WORLD_NEWS = Value
 }
