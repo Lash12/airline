@@ -8,30 +8,6 @@
         overflow: scroll !important;
     }
 
-    /* Flights list: the wide multi-column table is unreadable on a phone (columns run
-       off-screen). Render each flight as a stacked "label: value" card instead. Cells
-       carry a data-label set in updateLinksTable (airline.js). */
-    #linksCanvas .table.data { display: block; min-width: 0 !important; height: auto; }
-    #linksCanvas .table.data .table-header { display: none; }
-    #linksCanvas .table.data .table-row {
-        display: block; height: auto;
-        border: 1px solid rgba(0, 0, 0, 0.15); border-radius: 10px;
-        margin: 10px 6px; padding: 8px 12px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-    }
-    #linksCanvas .table.data .table-row .cell {
-        display: block !important; width: auto !important; height: auto;
-        text-align: left !important; padding: 3px 0 !important; border: none !important;
-        white-space: normal !important;
-        /* Force the theme text colour: the desktop table gives highlighted rows white
-           text, which is invisible on a card. */
-        color: var(--text-color) !important;
-    }
-    #linksCanvas .table.data .table-row .cell[data-label]::before {
-        content: attr(data-label) ": "; font-weight: 700; opacity: 0.55;
-    }
-    #linksCanvas .table.data .table-row .cell:first-child { display: none !important; } /* checkbox */
-    #linksCanvas .table.data .table-row .cell[data-label="From"]::before { content: "\2708 From: "; }
-
     div.section, .modal-content {
         padding: 8px;
     }
