@@ -314,4 +314,5 @@ GET     /log/                           controllers.Application.index(path = "/"
 GET     /log/*path                      controllers.Application.index(path)
 GET     /olympics/                      controllers.Application.index(path = "/")
 GET     /olympics/*path                 controllers.Application.index(path)
+GET     /news/                          controllers.Application.index(path = "/")
 GET		/							    controllers.Application.index(path = "/")
