@@ -194,8 +194,12 @@
        model details) is a .sidePanel, so the generic mobile rule pins it absolute at
        75dvh where it overlays the lower half of the plane list and blocks taps on those
        planes' maintenance / usage overlays. Lay the canvas out as one natural-scrolling
-       column instead: tabs -> full plane list -> cost calculator -> model details. */
-    #airplaneCanvas {
+       column instead: tabs -> full plane list -> cost calculator -> model details.
+       Scoped to .active so the canvas (and its cost calculator) is only forced visible
+       when the hangar/market is actually open - otherwise display:block would override
+       the display:none the SPA sets when navigating away, leaking the cost calculator
+       onto every other page (e.g. the flights route detail). */
+    #airplaneCanvas.active {
         display: block !important;
         height: auto !important;
     }
