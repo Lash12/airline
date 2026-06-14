@@ -175,6 +175,21 @@
         line-height: 1.05;
     }
 
+    /* The alliance/rivals charts reserve 480px / 360px (inline min-height) which, on a
+       short phone screen, pushes the ranking table and detail panel far below a mostly-
+       empty chart. Cap them so the data below is reachable without a long scroll. The
+       CSS is present at first paint, so Chart.js sizes the canvas to the smaller box on
+       creation. */
+    #allianceChartContainer {
+        flex: none !important;
+        min-height: 0 !important;
+        height: 240px !important;
+    }
+    #rivalsChartContainer {
+        min-height: 0 !important;
+        height: 260px !important;
+    }
+
     .sheet .table.data {
         padding: 4px;
     }
