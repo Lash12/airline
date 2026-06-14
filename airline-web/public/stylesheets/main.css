@@ -473,7 +473,7 @@ li.row, div.table-row {
     position: relative;
 }
 
-@media only screen and (min-device-width: 800px) {
+@media only screen and (min-width: 800px) {
     #airplaneModelTableFilters {
         position: absolute;
         top: 0px;
@@ -957,7 +957,7 @@ li.row, div.table-row {
     align-items: flex-start;
     gap: 1px;
 }
-@media only screen and (max-device-width : 640px) {
+@media only screen and (max-width : 640px) {
     .item-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -2687,7 +2687,7 @@ i, .italic {
     box-sizing: border-box;
     margin: 0 auto;
 }
-@media only screen and (max-device-width: 640px) {
+@media only screen and (max-width: 640px) {
 .flex-container-width-half > div {
         width: 100% !important;
     }
@@ -2756,7 +2756,7 @@ i, .italic {
 }
 
 /* Fullscreen Map */
-@media only screen and (min-device-width : 640px) {
+@media only screen and (min-width : 640px) {
     #hideRivalMapButton {
         top: 48px !important;
     }

@@ -1,5 +1,5 @@
 /* mobile (portrait) ----------- */
-@media only screen and (max-device-width : 640px) {
+@media only screen and (max-width : 640px) {
     .mainPanel, #map {
         height: calc(100dvh - 34px);
         width: 100%;
