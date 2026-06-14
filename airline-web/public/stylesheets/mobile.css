@@ -190,6 +190,27 @@
         height: 260px !important;
     }
 
+    /* Hangar / aircraft market: the right group (Aircraft Cost Calculator + selected-
+       model details) is a .sidePanel, so the generic mobile rule pins it absolute at
+       75dvh where it overlays the lower half of the plane list and blocks taps on those
+       planes' maintenance / usage overlays. Lay the canvas out as one natural-scrolling
+       column instead: tabs -> full plane list -> cost calculator -> model details. */
+    #airplaneCanvas {
+        display: block !important;
+        height: auto !important;
+    }
+    #airplaneCanvas .airplaneCanvasLeftGroup {
+        height: auto !important;
+        overflow: visible !important;
+    }
+    #airplaneCanvas .airplaneCanvasRightGroup {
+        position: static !important;
+        top: auto !important;
+        left: auto !important;
+        width: 100% !important;
+        height: auto !important;
+    }
+
     .sheet .table.data {
         padding: 4px;
     }
