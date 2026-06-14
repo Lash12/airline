@@ -22,6 +22,10 @@ object ComputerAirlineSimulation {
       val npcAirlines = AirlineSource.loadAirlinesByCriteria(List(("airline_type", NonPlayerAirline.id)))
       if (npcAirlines.isEmpty) return
 
+      // Resolve the player airlines once so each drop can be reported to the news feed
+      // (no-op / empty unless solo.news.enabled).
+      val playerIds = WorldNews.playerAirlineIds()
+
       // Act on a rotating, bounded subset each cycle to keep the cost small.
       val perCycle = Math.max(1, SoloConfig.aiAirlinesPerCycle)
       val sorted = npcAirlines.sortBy(_.id)
@@ -35,11 +39,13 @@ object ComputerAirlineSimulation {
           // links whose cumulative profit is below the (negative) threshold.
           val consumptions = LinkSource.loadLinkConsumptionsByAirline(airline.id, SoloConfig.aiLossLookbackCycles)
           if (consumptions.nonEmpty) {
-            val profitByLink = consumptions.groupBy(_.link.id).map { case (linkId, list) => (linkId, list.map(_.profit.toLong).sum) }
+            // Keep a representative link per id so the news feed can name the route.
+            val profitByLink = consumptions.groupBy(_.link.id).map { case (linkId, list) => (linkId, list.map(_.profit.toLong).sum, list.head.link) }
             val losers = profitByLink.filter(_._2 < SoloConfig.aiDropProfitThreshold).toList.sortBy(_._2)
-            losers.take(Math.max(0, SoloConfig.aiMaxDropsPerAirline)).foreach { case (linkId, totalProfit) =>
+            losers.take(Math.max(0, SoloConfig.aiMaxDropsPerAirline)).foreach { case (linkId, totalProfit, link) =>
               LinkSource.deleteLink(linkId)
               totalDrops += 1
+              WorldNews.post(playerIds, s"${airline.name} dropped its ${link.from.iata}-${link.to.iata} route", cycle, Some(s"rival_${airline.id}"))
               println(s"[ai] ${airline.name} dropped losing link $linkId (profit $totalProfit over ${SoloConfig.aiLossLookbackCycles} cycles)")
             }
           }
