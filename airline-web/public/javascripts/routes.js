@@ -121,9 +121,13 @@ function initializeRoutes() {
     page('/airport/:iata?', async (ctx) => {
         backgroundLoad();
         const iata = ctx.params.iata ?? null;
-        document.title = iata ? `${iata.toUpperCase()} Airport` : 'Airport';
-        id = getAirportByAttribute(iata.toUpperCase(), 'iata').id || null;
-        showAirportDetails(id);
+        // The airport view needs an airport. Reached via a map click; a bare or unknown
+        // /airport/ has nothing to show (and iata.toUpperCase() would throw on null), so
+        // send the user to the map to pick one instead of crashing.
+        const airport = iata ? getAirportByAttribute(iata.toUpperCase(), 'iata') : null;
+        if (!airport) { page.redirect('/map/'); return; }
+        document.title = `${iata.toUpperCase()} Airport`;
+        showAirportDetails(airport.id);
     });
 
     page('/flights/:link?', (ctx) => {
