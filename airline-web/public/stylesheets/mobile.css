@@ -178,6 +178,27 @@
         overflow-x: scroll;
     }
 
+    /* Wide multi-column data tables (outstanding loans, alliance/champions rankings,
+       country list, olympics, ...) shrink their fixed % column widths on a phone until
+       the values collide or the right-most columns get clipped off-screen. Drop the
+       inline widths, let cells wrap, and shrink the font so every column stays readable
+       within the viewport. The flights list opts out via its more-specific
+       #linksCanvas card rules above. */
+    .table.data .cell {
+        width: auto !important;
+        min-width: 0 !important;
+        white-space: normal !important;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        font-size: 10px;
+        padding-left: 2px;
+        padding-right: 2px;
+    }
+    .table.data .table-header .cell {
+        font-size: 9px;
+        line-height: 1.05;
+    }
+
     .sheet .table.data {
         padding: 4px;
     }
