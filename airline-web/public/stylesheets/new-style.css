@@ -83,7 +83,7 @@ li:before {
 
 /* mobile (portrait) ----------- */
 @media only screen
-and (max-device-width : 1024px)
+and (max-width : 1024px)
 and (orientation : portrait) {
     .frost-section {
         font-size: 1em;

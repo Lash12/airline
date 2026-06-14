@@ -296,6 +296,16 @@ function showWorldMap() {
     removeTempPath();
 	setActiveDiv($('#worldMapCanvas'));
 	$('#sidePanel').appendTo($('#worldMapCanvas'))
+	// The map is background-loaded, so its GL canvas can be created while the container
+	// is hidden/short. On mobile browsers whose viewport changes as the URL bar shows or
+	// hides, the canvas can stay at that stale size, leaving dead space below the map.
+	// Nudge a resize now that the container is visible at its full height (and once more
+	// after the fade settles) so the canvas always fills it.
+	if (window.AirlineMap && window.AirlineMap.map) {
+		const resizeMap = () => { try { window.AirlineMap.map.resize(); } catch (e) {} };
+		requestAnimationFrame(resizeMap);
+		setTimeout(resizeMap, 450);
+	}
 	if (selectedLink) {
 		selectLinkFromMap(selectedLink, !activeAirportPopupInfoWindow) //do not refocus if there's a popup, stay where it is
 	}
