@@ -1,6 +1,9 @@
 /* mobile (portrait) ----------- */
 @media only screen and (max-width : 640px) {
     .mainPanel, #map {
+        /* vh fallback first for browsers without dvh; dvh wins where supported so the
+           map/panel track the dynamic viewport as the mobile URL bar shows/hides. */
+        height: calc(100vh - 34px);
         height: calc(100dvh - 34px);
         width: 100%;
     }
