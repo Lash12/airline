@@ -39,6 +39,7 @@ jobs:
             -Dsolo.bankruptcy.assetsThreshold=-150000000
             -Dsolo.notify.enabled=true
             -Dsolo.ai.enabled=true
+            -Dsolo.news.enabled=true
             -Dsolo.demand.memoize=true
             -Dsolo.progression.enabled=true
             -Dsolo.alliance.minMembers=2

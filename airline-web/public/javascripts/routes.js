@@ -240,6 +240,12 @@ function initializeRoutes() {
         showEventCanvas();
     });
 
+    page('/news/', () => {
+        backgroundLoad();
+        document.title = 'News';
+        showNewsCanvas();
+    });
+
     // Start page.js routing
     page.start();
 }

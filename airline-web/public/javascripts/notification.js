@@ -153,8 +153,81 @@ function getCategoryIcon(category) {
         case 'CASH_FLOW_WARNING':
         case 'LINK_CANCELLATION': return '⚠'
         case 'PROFIT_MILESTONE': return '$'
+        case 'WORLD_NEWS': return '📣'
         default: return '•'
     }
+}
+
+/* ---------------- World News feed (pull-based; separate from the bell) ---------------- */
+
+function showNewsCanvas() {
+    setActiveDiv($('#newsCanvas'))
+    loadNews()
+    $('#newsMarkReadLink').off('click.news').on('click.news', function(e) {
+        e.stopPropagation()
+        markAllNewsRead()
+    })
+}
+
+function loadNews() {
+    if (!activeAirline) return
+    var $list = $('#newsList')
+    $list.empty()
+    $.ajax({
+        type: 'GET',
+        url: '/airlines/' + activeAirline.id + '/news',
+        dataType: 'json',
+        success: function(items) {
+            if (!items || items.length === 0) {
+                $list.append('<div class="notification-empty">No news yet</div>')
+                return
+            }
+            $.each(items, function(i, n) {
+                var $item = $('<div class="notification-item"></div>')
+                if (!n.isRead) $item.addClass('unread')
+                $item.append('<span class="notification-icon">' + getCategoryIcon(n.category) + '</span>')
+                $item.append('<span class="notification-message">' + htmlEncode(n.message) + '</span>')
+                if (typeof currentCycle !== 'undefined' && currentCycle && n.cycle) {
+                    var weeks = Math.max(0, currentCycle - n.cycle)
+                    var age = weeks === 0 ? 'this week' : (weeks + (weeks === 1 ? ' week ago' : ' weeks ago'))
+                    $item.append('<span class="notification-age label" style="opacity:0.5; margin-left:auto; padding-left:8px; white-space:nowrap;">' + age + '</span>')
+                }
+                if (n.targetId) {
+                    $item.addClass('clickable')
+                    ;(function(targetId) {
+                        $item.on('click', function() {
+                            var m = /^rival_(\d+)$/.exec(targetId)
+                            if (m) {
+                                navigateTo('/rivals/' + m[1])
+                            } else if (/^\d+-\d+$/.test(targetId)) {
+                                var parts = targetId.split('-')
+                                planLink(parseInt(parts[0]), parseInt(parts[1]))
+                            } else if (/^\d+$/.test(targetId)) {
+                                navigateTo('/flights/' + targetId)
+                            } else {
+                                navigateTo(targetId)
+                            }
+                        })
+                    })(n.targetId)
+                }
+                $list.append($item)
+            })
+        },
+        error: function() {
+            $list.append('<div class="notification-empty">Failed to load news</div>')
+        }
+    })
+}
+
+function markAllNewsRead() {
+    if (!activeAirline) return
+    $.ajax({
+        type: 'POST',
+        url: '/airlines/' + activeAirline.id + '/news/read',
+        success: function() {
+            $('#newsList .notification-item').removeClass('unread')
+        }
+    })
 }
 
 function markNotificationRead(notifId, $item) {

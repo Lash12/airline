@@ -23,7 +23,19 @@ class NotificationApplication @Inject()(cc: ControllerComponents) extends Abstra
 
   def getNotifications(airlineId: Int) = AuthenticatedAirline(airlineId) { _ =>
     NotificationSource.purgeExpiredByCategory(airlineId, NotificationCategory.NEGOTIATION_LOSS, CycleSource.loadCycle())
-    Ok(Json.toJson(NotificationSource.loadNotificationsByAirline(airlineId)))
+    // WORLD_NEWS has its own News panel; keep it out of the personal bell drawer.
+    val personal = NotificationSource.loadNotificationsByAirline(airlineId).filterNot(_.category == NotificationCategory.WORLD_NEWS)
+    Ok(Json.toJson(personal))
+  }
+
+  // World news feed (pull-based, separate from the personal bell).
+  def getNews(airlineId: Int) = AuthenticatedAirline(airlineId) { _ =>
+    Ok(Json.toJson(NotificationSource.loadByCategory(airlineId, NotificationCategory.WORLD_NEWS, 50)))
+  }
+
+  def markNewsRead(airlineId: Int) = AuthenticatedAirline(airlineId) { _ =>
+    NotificationSource.markCategoryRead(airlineId, NotificationCategory.WORLD_NEWS)
+    Ok(Json.obj())
   }
 
   def getUnreadCount(airlineId: Int) = AuthenticatedAirline(airlineId) { _ =>
