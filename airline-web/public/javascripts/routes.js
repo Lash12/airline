@@ -243,7 +243,22 @@ function initializeRoutes() {
     page('/news/', () => {
         backgroundLoad();
         document.title = 'News';
-        showNewsCanvas();
+        // showNewsCanvas lives in the deferred notification.js, which may not be loaded
+        // yet on a cold load / refresh of /news/. Wait for it instead of silently falling
+        // through to the default canvas (the map).
+        if (typeof showNewsCanvas === 'function') {
+            showNewsCanvas();
+        } else {
+            const start = Date.now();
+            const timer = setInterval(() => {
+                if (typeof showNewsCanvas === 'function') {
+                    clearInterval(timer);
+                    showNewsCanvas();
+                } else if (Date.now() - start > 5000) {
+                    clearInterval(timer);
+                }
+            }, 100);
+        }
     });
 
     // Start page.js routing

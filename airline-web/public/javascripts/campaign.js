@@ -40,6 +40,18 @@ async function showCampaignOverlay(airportId, popupPosition) {
         });
     }
     $panel.show()
+    if (popupPosition) {
+        // Anchoring to the tapped marker can push the popup off-screen (e.g. markers near
+        // the left/bottom edge on a phone). Clamp it fully into the viewport now that it's
+        // shown and measurable.
+        const margin = 8
+        const rect = $panel[0].getBoundingClientRect()
+        const maxLeft = Math.max(margin, window.innerWidth - rect.width - margin)
+        const maxTop = Math.max(margin, window.innerHeight - rect.height - margin)
+        const left = Math.min(Math.max(margin, popupPosition.left - 240), maxLeft)
+        const top = Math.min(Math.max(margin, popupPosition.top), maxTop)
+        $panel.css({ left: `${left}px`, top: `${top}px` })
+    }
 
     try {
         const [managersInfo, campaigns] = await Promise.all([
