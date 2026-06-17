@@ -1,6 +1,6 @@
 package com.patson
 
-import com.patson.data.{AirlineSource, LinkSource, SoloConfig}
+import com.patson.data.{AirlineSource, AirportSource, LinkSource, SoloConfig}
 import com.patson.model.NonPlayerAirline
 
 /**
@@ -16,7 +16,8 @@ import com.patson.model.NonPlayerAirline
   */
 object ComputerAirlineSimulation {
   def simulate(cycle : Int) : Unit = {
-    if (!SoloConfig.aiEnabled) return
+    // Drops (aiEnabled) and growth (aiGrowthEnabled) are independent; run if either is on.
+    if (!SoloConfig.aiEnabled && !SoloConfig.aiGrowthEnabled) return
 
     try {
       val npcAirlines = AirlineSource.loadAirlinesByCriteria(List(("airline_type", NonPlayerAirline.id)))
@@ -33,7 +34,7 @@ object ComputerAirlineSimulation {
       val acting = (0 until Math.min(perCycle, sorted.size)).map(i => sorted((offset + i) % sorted.size))
 
       var totalDrops = 0
-      acting.foreach { airline =>
+      if (SoloConfig.aiEnabled) acting.foreach { airline =>
         try {
           // Sum recent profit per link over the lookback window; drop the worst
           // links whose cumulative profit is below the (negative) threshold.
@@ -53,7 +54,17 @@ object ComputerAirlineSimulation {
           case e : Exception => println(s"[ai] error processing airline ${airline.id}: ${e.getMessage}")
         }
       }
-      println(s"[ai] cycle $cycle: ${acting.size} NPC airline(s) acted, $totalDrops link(s) dropped")
+
+      // Growth path (H-1): each acting NPC may open one profitable route from a base using a
+      // spare frame. Airports are only loaded when growth is enabled, so drop-only/default
+      // deploys pay nothing here.
+      var totalOpens = 0
+      if (SoloConfig.aiGrowthEnabled) {
+        val allAirports = AirportSource.loadAllAirports(true)
+        totalOpens = ComputerAirlineGrowth.grow(acting, allAirports, playerIds, cycle)
+      }
+
+      println(s"[ai] cycle $cycle: ${acting.size} NPC airline(s) acted, $totalDrops dropped, $totalOpens opened")
     } catch {
       case e : Exception => println(s"[ai] ComputerAirlineSimulation failed (skipping): ${e.getClass.getSimpleName}: ${e.getMessage}")
     }
