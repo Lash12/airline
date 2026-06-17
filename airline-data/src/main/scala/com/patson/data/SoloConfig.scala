@@ -67,6 +67,10 @@ object SoloConfig {
   // AND the network is under maxNetworkSize. No aircraft purchases in H-1 — only opens when a
   // spare frame already exists (frames freed by the drop path are the natural supply).
   val aiGrowthEnabled : Boolean = boolAt("solo.ai.growth.enabled", false)
+  // Only this many of the acting NPCs attempt to open a route each cycle, keeping growth slow
+  // and legible ("notice a change every few sessions") rather than redeploying all idle frames
+  // at once. Bounds the per-cycle open count regardless of how many frames are spare.
+  val aiMaxGrowthAirlinesPerCycle : Int = intAt("solo.ai.growth.maxAirlinesPerCycle", 3)
   val aiMaxOpensPerAirline : Int = intAt("solo.ai.growth.maxOpensPerAirline", 1)
   val aiOpenProfitThreshold : Long = longAt("solo.ai.growth.openProfitThreshold", 0L)
   val aiGrowthCandidateLimit : Int = intAt("solo.ai.growth.candidateLimit", 20)

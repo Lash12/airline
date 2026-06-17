@@ -64,7 +64,8 @@ object ComputerAirlineGrowth {
     val countryRelationships = CountrySource.getCountryMutualRelationships()
 
     var opened = 0
-    acting.foreach { airline =>
+    // Only a few of the acting NPCs grow per cycle, so the world changes slowly and legibly.
+    acting.take(Math.max(0, SoloConfig.aiMaxGrowthAirlinesPerCycle)).foreach { airline =>
       try {
         opened += growAirline(airline, allAirports, airportById, countryRelationships, playerIds, cycle)
       } catch {
@@ -72,6 +73,15 @@ object ComputerAirlineGrowth {
       }
     }
     opened
+  }
+
+  /** Total base demand per class for one direction (traveler + business + tourist). */
+  private def demandByClass(from : Airport, to : Airport, countryRelationships : Map[(String, String), Int]) : LinkClassValues = {
+    val distance = Computation.calculateDistance(from, to)
+    val relationship = countryRelationships.getOrElse((from.countryCode, to.countryCode), 0)
+    val affinity = Computation.calculateAffinityValue(from.zone, to.zone, relationship)
+    val d = DemandGenerator.computeBaseDemandBetweenAirports(from, to, affinity, distance)
+    d.travelerDemand + d.businessDemand + d.touristDemand
   }
 
   private def growAirline(airline : Airline,
@@ -117,8 +127,11 @@ object ComputerAirlineGrowth {
       // Build a candidate link per destination, estimate its profit with the real cost model,
       // and pick the most profitable one that clears the threshold ("the single best route").
       val scored = candidates.flatMap { case (toAirport, demand) =>
-        buildCandidateLink(airline, home, toAirport, airplane, minutes, demand)
-          .map(link => (link, estimateWeeklyProfit(link, demand, cycle)))
+        buildCandidateLink(airline, home, toAirport, airplane, minutes, demand).map { link =>
+          // A link serves both directions, so estimate captured seats from outbound + return demand.
+          val bothWays = demandByClass(home, toAirport, countryRelationships) + demandByClass(toAirport, home, countryRelationships)
+          (link, estimateWeeklyProfit(link, bothWays, cycle))
+        }
       }
       val best = selectBestOpen(networkSize + opened, SoloConfig.aiMaxNetworkSize, scored, SoloConfig.aiOpenProfitThreshold)
         .map(link => (link, scored.find(_._1 eq link).map(_._2).getOrElse(0L)))
@@ -204,9 +217,8 @@ object ComputerAirlineGrowth {
   }
 
   /** Projected weekly profit for a fresh link: seed an estimated, capacity-capped load factor
-    * from cached base demand (one direction — conservative), then run the real cost model. */
-  private def estimateWeeklyProfit(link : Link, demand : DemandGenerator.Demand, cycle : Int) : Long = {
-    val demandByClass = demand.travelerDemand + demand.businessDemand + demand.touristDemand
+    * from cached base demand (both directions, conservative capture), then run the real cost model. */
+  private def estimateWeeklyProfit(link : Link, demandByClass : LinkClassValues, cycle : Int) : Long = {
     val estSeats = estimatedSeats(demandByClass, link.capacity, SoloConfig.aiGrowthCaptureRatio)
     link.addSoldSeats(estSeats)
     val profit = LinkSimulation.computeFlightLinkConsumptionDetail(link, cycle).profit
