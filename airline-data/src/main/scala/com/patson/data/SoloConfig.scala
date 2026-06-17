@@ -72,6 +72,10 @@ object SoloConfig {
   // at once. Bounds the per-cycle open count regardless of how many frames are spare.
   val aiMaxGrowthAirlinesPerCycle : Int = intAt("solo.ai.growth.maxAirlinesPerCycle", 3)
   val aiMaxOpensPerAirline : Int = intAt("solo.ai.growth.maxOpensPerAirline", 1)
+  // Evaluate up to this many of the airline's most-idle frames and pick the globally best
+  // (frame, route) pair, so frame size matches route demand (a widebody won't be forced onto a
+  // thin route where it flies empty). Bounds per-airline cost.
+  val aiGrowthFramesConsidered : Int = intAt("solo.ai.growth.framesConsidered", 6)
   val aiOpenProfitThreshold : Long = longAt("solo.ai.growth.openProfitThreshold", 0L)
   val aiGrowthCandidateLimit : Int = intAt("solo.ai.growth.candidateLimit", 20)
   val aiMaxNetworkSize : Int = intAt("solo.ai.growth.maxNetworkSize", 60)

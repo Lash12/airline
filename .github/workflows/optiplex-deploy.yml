@@ -40,6 +40,7 @@ jobs:
             -Dsolo.notify.enabled=true
             -Dsolo.ai.enabled=true
             -Dsolo.ai.growth.enabled=true
+            -Dsolo.ai.growth.maxAirlinesPerCycle=10
             -Dsolo.news.enabled=true
             -Dsolo.demand.memoize=true
             -Dsolo.progression.enabled=true

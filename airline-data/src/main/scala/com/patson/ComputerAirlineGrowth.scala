@@ -106,48 +106,45 @@ object ComputerAirlineGrowth {
     val assignmentsByAirplaneId = AirplaneSource.loadAirplaneLinkAssignmentsByOwner(airline.id)
     def availableMinutes(p : Airplane) : Int =
       Airplane.MAX_FLIGHT_MINUTES - assignmentsByAirplaneId.get(p.id).map(_.assignments.values.map(_.flightMinutes).sum).getOrElse(0)
-    var spareFrames = AirplaneSource.loadAirplanesByOwner(airline.id)
+    val spareFrames = AirplaneSource.loadAirplanesByOwner(airline.id)
       .filter(p => p.isReady && !p.isSold)
       .map(p => (p, availableMinutes(p)))
       .filter(_._2 >= SoloConfig.aiGrowthMinAvailableMinutes)
       .sortBy(-_._2)
+    println(s"[ai-growth-diag] ${airline.name}: network=$networkSize spares=${spareFrames.size}") // TEMP diagnostic
     if (spareFrames.isEmpty) return 0
 
     // Already-served city pairs (either direction) so we never duplicate a route.
-    var served : Set[(Int, Int)] = existingLinks.flatMap(l => List((l.from.id, l.to.id), (l.to.id, l.from.id))).toSet
+    val served : Set[(Int, Int)] = existingLinks.flatMap(l => List((l.from.id, l.to.id), (l.to.id, l.from.id))).toSet
 
-    var opened = 0
-    while (opened < maxOpens && spareFrames.nonEmpty) {
-      val (airplane, minutes) = spareFrames.head
-      spareFrames = spareFrames.tail
+    if (maxOpens <= 0) return 0
+
+    // Evaluate the few most-idle frames against their best candidate routes and pick the globally
+    // best (frame, route) pair. Matching frame size to route demand matters: forcing the single
+    // largest spare frame onto a thin route flies it empty (unprofitable), so it would rarely open.
+    val framesToConsider = spareFrames.take(Math.max(1, SoloConfig.aiGrowthFramesConsidered))
+    val scoredAll : List[(Link, Long)] = framesToConsider.flatMap { case (airplane, minutes) =>
       val home = baseById.getOrElse(airplane.home.id, baseAirports.head)
-
       val candidates = bestCandidates(home, airplane.model, allAirports, served, countryRelationships, SoloConfig.aiGrowthCandidateLimit)
-
-      // Build a candidate link per destination, estimate its profit with the real cost model,
-      // and pick the most profitable one that clears the threshold ("the single best route").
-      val scored = candidates.flatMap { case (toAirport, demand) =>
-        buildCandidateLink(airline, home, toAirport, airplane, minutes, demand).map { link =>
+      candidates.flatMap { case (toAirport, fwdDemand) =>
+        buildCandidateLink(airline, home, toAirport, airplane, minutes, fwdDemand).map { link =>
           // A link serves both directions, so estimate captured seats from outbound + return demand.
           val bothWays = demandByClass(home, toAirport, countryRelationships) + demandByClass(toAirport, home, countryRelationships)
           (link, estimateWeeklyProfit(link, bothWays, cycle))
         }
       }
-      val best = selectBestOpen(networkSize + opened, SoloConfig.aiMaxNetworkSize, scored, SoloConfig.aiOpenProfitThreshold)
-        .map(link => (link, scored.find(_._1 eq link).map(_._2).getOrElse(0L)))
-
-      best match {
-        case Some((link, profit)) =>
-          LinkSource.saveLink(link)
-          WorldNews.post(playerIds, s"${airline.name} opened its ${link.from.iata}-${link.to.iata} route", cycle, Some(s"rival_${airline.id}"))
-          println(s"[ai-growth] ${airline.name} opened ${link.from.iata}-${link.to.iata} (est weekly profit $profit)")
-          // mark served so a second open this cycle (if maxOpens > 1) won't duplicate it
-          served = served ++ List((link.from.id, link.to.id), (link.to.id, link.from.id))
-          opened += 1
-        case None => // this frame found nothing worth opening; move on to the next spare frame
-      }
     }
-    opened
+    println(s"[ai-growth-diag] ${airline.name} eval=${framesToConsider.size} scored=${scoredAll.size} best=${scoredAll.map(_._2).maxOption.getOrElse(Long.MinValue)} thr=${SoloConfig.aiOpenProfitThreshold}") // TEMP diagnostic
+
+    selectBestOpen(networkSize, SoloConfig.aiMaxNetworkSize, scoredAll, SoloConfig.aiOpenProfitThreshold) match {
+      case Some(link) =>
+        val profit = scoredAll.find(_._1 eq link).map(_._2).getOrElse(0L)
+        LinkSource.saveLink(link)
+        WorldNews.post(playerIds, s"${airline.name} opened its ${link.from.iata}-${link.to.iata} route", cycle, Some(s"rival_${airline.id}"))
+        println(s"[ai-growth] ${airline.name} opened ${link.from.iata}-${link.to.iata} (est weekly profit $profit)")
+        1
+      case None => 0
+    }
   }
 
   /** Top reachable destinations from `from` by cached base demand, cheaply pre-filtered. */
