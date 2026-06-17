@@ -2028,6 +2028,21 @@ document.addEventListener('distanceUnitChanged', function() {
     }
 });
 
+// Compact "time ago" for the Flights table Modified column. lastUpdate is real-world epoch ms.
+function formatLastModified(epochMs) {
+    if (!epochMs) return '-'
+    var diff = Date.now() - Number(epochMs)
+    if (diff < 0) diff = 0
+    var mins = Math.floor(diff / 60000)
+    if (mins < 1) return 'just now'
+    if (mins < 60) return mins + 'm ago'
+    var hrs = Math.floor(mins / 60)
+    if (hrs < 24) return hrs + 'h ago'
+    var days = Math.floor(hrs / 24)
+    if (days < 30) return days + 'd ago'
+    return new Date(Number(epochMs)).toLocaleDateString()
+}
+
 function loadLinksTable(onComplete, forceRefresh) {
     const linksTable = $('#linksCanvas #linksTable');
     if (!linksTable.data('delegation-set')) {
@@ -2113,7 +2128,8 @@ function addSummaryRow(links) {
         { getValue: (link) => link.displayProfit, format: (val) => '$' + commaSeparateNumber(val.toFixed(0)) },
         { getValue: (link) => link.displayProfitMargin, format: (val) => (val * 100).toFixed(2) + "%" },
         { getValue: (link) => link.currentStaffRequired, format: (val) => val },
-        { getValue: (link) => link.profitPerStaff, format: (val) => '$' + commaSeparateNumber(val.toFixed(0)) }
+        { getValue: (link) => link.profitPerStaff, format: (val) => '$' + commaSeparateNumber(val.toFixed(0)) },
+        {} // Modified (non-numeric; keeps the summary row column-aligned)
     ];
     addTableSummaryRow("#linksCanvas #linksTable", data, linkColumnConfigs, linksTableSummaryState);
 }
@@ -2169,6 +2185,7 @@ function updateLinksTable(sortProperty, sortOrder) {
             `<div class='cell${avgClass}' align='right' data-label='Margin'>${(link.displayProfitMargin * 100).toFixed(2)}%</div>` +
             `<div class='cell' align='right' data-label='Staff'>${link.currentStaffRequired}</div>` +
             `<div class='cell' align='right' data-label='Profit / Staff'>$${commaSeparateNumber(link.profitPerStaff)}</div>` +
+            `<div class='cell' align='right' data-label='Modified'>${formatLastModified(link.lastUpdate)}</div>` +
             `</div>`
         );
     });
