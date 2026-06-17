@@ -113,6 +113,18 @@ object SoloConfig {
   val aiFleetEnabled : Boolean = boolAt("solo.ai.fleet.enabled", false)
   val aiFleetRenewalThreshold : Int = intAt("solo.ai.fleet.renewalThreshold", 40)
 
+  // Route/fleet consultant (single-player QOL). A manager assigned to the CONSULTANT task studies
+  // the player's network and surfaces profitable route opportunities (+ a suggested aircraft) that
+  // would otherwise require clicking every airport. Advice-only. Depth scales with the consultant's
+  // level and how many are assigned (capped). Off by default.
+  val consultantEnabled : Boolean = boolAt("solo.consultant.enabled", false)
+  val consultantBaseRecs : Int = intAt("solo.consultant.baseRecommendations", 3)
+  val consultantRecsPerLevel : Int = intAt("solo.consultant.recsPerLevel", 2)
+  val consultantRecsPerExtraConsultant : Int = intAt("solo.consultant.recsPerExtraConsultant", 2)
+  val consultantMaxRecs : Int = intAt("solo.consultant.maxRecommendations", 15)
+  val consultantCandidateLimit : Int = intAt("solo.consultant.candidateLimit", 40)
+  val consultantCaptureRatio : Double = doubleAt("solo.consultant.captureRatio", 0.7)
+
   // World news feed (single-player): an ambient, pull-based log of notable world
   // events (NPC route changes, etc.) surfaced in a dedicated News panel, separate from
   // the personal notification bell. Off by default. Reuses the notification store under

@@ -123,6 +123,8 @@ object ManagerSource {
             managerIdsOfThisTaskType.foreach(id => result.put(id, ManagerBaseTask()))
           case ManagerTaskType.MANAGER_AIRCRAFT_MODEL =>
             result.addAll(loadAircraftModelTasks(managerIdsOfThisTaskType))
+          case ManagerTaskType.CONSULTANT =>
+            result.addAll(loadConsultantTasks(managerIdsOfThisTaskType))
         }
       }
     }
@@ -160,6 +162,40 @@ object ManagerSource {
       connection.close()
     }
 
+  }
+
+  def loadConsultantTasks(managerIds : List[Int]) : Map[Int, ManagerTask] = {
+    if (managerIds.isEmpty) return Map.empty
+    val connection = Meta.getConnection()
+    try {
+      val managerIdPhrase = managerIds.mkString(",")
+      val preparedStatement = connection.prepareStatement(s"SELECT * FROM $CONSULTANT_DELEGATE_TASK_TABLE WHERE delegate IN ($managerIdPhrase)")
+      val resultSet = preparedStatement.executeQuery()
+      val result = mutable.Map[Int, ManagerTask]()
+      while (resultSet.next()) {
+        result.put(resultSet.getInt("delegate"), ConsultantManagerTask(resultSet.getInt("start_cycle")))
+      }
+      resultSet.close()
+      preparedStatement.close()
+      result.toMap
+    } finally {
+      connection.close()
+    }
+  }
+
+  private[this] def saveConsultantTasks(managers: List[Manager]) = {
+    val connection = Meta.getConnection()
+    val preparedStatement = connection.prepareStatement("INSERT INTO " + CONSULTANT_DELEGATE_TASK_TABLE + "(delegate, start_cycle) VALUES(?,?)")
+    try {
+      managers.foreach { manager =>
+        preparedStatement.setInt(1, manager.id)
+        preparedStatement.setInt(2, manager.assignedTask.getStartCycle)
+        preparedStatement.executeUpdate()
+      }
+    } finally {
+      preparedStatement.close()
+      connection.close()
+    }
   }
 
   def loadCampaignCostsByAirlineId() : Map[Int, Int] = {
@@ -417,6 +453,8 @@ object ManagerSource {
             // no per-task table; task_type in busy_delegate is sufficient
           case ManagerTaskType.MANAGER_AIRCRAFT_MODEL =>
             saveAircraftModelTasks(delegatesOfThisTaskType)
+          case ManagerTaskType.CONSULTANT =>
+            saveConsultantTasks(delegatesOfThisTaskType)
         }
       }
     }

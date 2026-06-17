@@ -63,5 +63,5 @@ object NotificationCategory extends Enumeration {
    *   bell — excluded from the bell unread count so it never nags. targetId optional, e.g.
    *   "rival_{airlineId}" for navigation. Subject to the normal retention purge.
    */
-  val NEGOTIATION_LOSS, LEVEL_UP, LOYALIST, GAME_OVER, OLYMPICS_PRIZE, TUTORIAL, LINK_CANCELLATION, CASH_FLOW_WARNING, PROFIT_MILESTONE, MILESTONE_ACHIEVED, WORLD_NEWS = Value
+  val NEGOTIATION_LOSS, LEVEL_UP, LOYALIST, GAME_OVER, OLYMPICS_PRIZE, TUTORIAL, LINK_CANCELLATION, CASH_FLOW_WARNING, PROFIT_MILESTONE, MILESTONE_ACHIEVED, WORLD_NEWS, CONSULTANT_ADVICE = Value
 }
