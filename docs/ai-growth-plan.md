@@ -53,8 +53,10 @@ game feel like a chore.
 5. **Self-limiting economics.** Growth requires a real projected-profit threshold + spare
    aircraft + cash, so it throttles itself; a hard network-size ceiling per NPC prevents
    runaway expansion.
-6. **Cheap per cycle.** The 800 MHz OptiPlex throttle means candidate evaluation must be
-   bounded and reuse cached demand/profit estimation; never sweep all airports.
+6. **Cheap per cycle.** Candidate evaluation stays bounded and reuses cached demand/profit
+   estimation (never sweep all airports). This is good engineering regardless; note the
+   OptiPlex AC-adapter fix (2026-06-17) lifted the 800 MHz clamp, so cycle budget is no
+   longer a hard constraint — but the phase stays cheap on principle.
 
 ---
 
@@ -143,10 +145,12 @@ stored per-airline tag, no heavy planning.
 - Player-facing competitive AI difficulty settings / scenario mode.
 - Sophisticated long-horizon NPC planning or game-theoretic pricing — keep heuristics cheap
   and bounded.
-- The 800 MHz CPU throttle (hardware/adapter fix, not code).
+- The 800 MHz CPU throttle — resolved 2026-06-17 (hardware/AC-adapter fault, since fixed);
+  no longer a constraint on this phase.
 
 ## Bundled cleanup
 
-Fold the pending **`/news/` cold-load fix** and any other small mobile papercuts into the
-first H-1 deploy to avoid extra restarts (the sim is on a single self-hosted instance and
-every deploy logs the player out).
+The **`/news/` cold-load fix already shipped (#69)**, so there's nothing outstanding to
+bundle right now. Still, fold any *new* small mobile papercuts into the first H-1 deploy to
+avoid extra restarts (the sim is on a single self-hosted instance and every deploy logs the
+player out).
