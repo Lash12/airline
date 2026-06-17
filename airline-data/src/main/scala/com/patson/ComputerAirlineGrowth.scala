@@ -1,7 +1,6 @@
 package com.patson
 
-import com.patson.data.airplane.AirplaneSource
-import com.patson.data.{AirlineSource, CountrySource, LinkSource, SoloConfig}
+import com.patson.data.{AirlineSource, AirplaneSource, CountrySource, LinkSource, SoloConfig}
 import com.patson.model._
 import com.patson.model.airplane.{Airplane, LinkAssignment}
 
@@ -26,6 +25,33 @@ import com.patson.model.airplane.{Airplane, LinkAssignment}
   */
 object ComputerAirlineGrowth {
   private val SEAT_TARGET_MULTIPLIER = 1.5 // mirror AirlineGenerator: size frequency a bit above raw demand
+
+  // ---- Pure decision helpers (no DB), unit-tested in ComputerAirlineGrowthSpec ----
+
+  /** Frequency for a new route: sized to demand, then capped by the frame's spare flight-minutes
+    * and the model's max frequency for the distance. 0 if the inputs can't support a flight. */
+  def sizeFrequency(demandTotal : Int, seatsPerFlight : Int, spareMinutes : Int, flightMinutesPerFreq : Int, maxFreqPerPlane : Int) : Int = {
+    if (seatsPerFlight <= 0 || flightMinutesPerFreq <= 0) return 0
+    val targetSeats = (demandTotal * SEAT_TARGET_MULTIPLIER).toInt
+    val freqForDemand = Math.max(1, Math.ceil(targetSeats.toDouble / seatsPerFlight).toInt)
+    val freqByMinutes = spareMinutes / flightMinutesPerFreq
+    Math.max(0, Math.min(Math.min(freqForDemand, freqByMinutes), maxFreqPerPlane))
+  }
+
+  /** Estimated sold seats for a hypothetical route: a fraction of base demand per class, capped by
+    * the link's capacity. Conservative (a new entrant doesn't capture all demand). */
+  def estimatedSeats(demandByClass : LinkClassValues, capacity : LinkClassValues, capture : Double) : LinkClassValues =
+    LinkClassValues(
+      Math.min(capacity.economyVal, (demandByClass.economyVal * capture).toInt),
+      Math.min(capacity.businessVal, (demandByClass.businessVal * capture).toInt),
+      Math.min(capacity.firstVal, (demandByClass.firstVal * capture).toInt))
+
+  /** Choose the single best route to open: the most profitable candidate clearing the threshold,
+    * but only while the network is under the ceiling. None enforces the bounded-growth guardrails. */
+  def selectBestOpen[A](networkSize : Int, maxNetworkSize : Int, candidates : List[(A, Long)], profitThreshold : Long) : Option[A] = {
+    if (networkSize >= maxNetworkSize) None
+    else candidates.filter(_._2 > profitThreshold).sortBy(-_._2).headOption.map(_._1)
+  }
 
   /**
     * Attempt to open routes for each acting airline. `allAirports` is loaded once by the caller
@@ -56,9 +82,10 @@ object ComputerAirlineGrowth {
                           cycle : Int) : Int = {
     val maxOpens = Math.max(0, SoloConfig.aiMaxOpensPerAirline)
 
-    // Network-size ceiling so an NPC cannot explode.
+    // Network-size ceiling so an NPC cannot explode (also re-checked per open below).
     val existingLinks = LinkSource.loadFlightLinksByAirlineId(airline.id)
-    if (existingLinks.size >= SoloConfig.aiMaxNetworkSize) return 0
+    val networkSize = existingLinks.size
+    if (networkSize >= SoloConfig.aiMaxNetworkSize) return 0
 
     // Bases are the legal origins; resolve to full airport objects (needed for demand calc).
     val baseAirports = AirlineSource.loadAirlineBasesByAirline(airline.id).flatMap(b => airportById.get(b.airport.id))
@@ -89,13 +116,15 @@ object ComputerAirlineGrowth {
 
       // Build a candidate link per destination, estimate its profit with the real cost model,
       // and pick the most profitable one that clears the threshold ("the single best route").
-      val best = candidates.flatMap { case (toAirport, demand) =>
-        buildCandidateLink(airline, home, toAirport, airplane, minutes, demand, countryRelationships)
-          .map(link => (link, demand, estimateWeeklyProfit(link, demand, cycle)))
-      }.filter(_._3 > SoloConfig.aiOpenProfitThreshold).sortBy(-_._3).headOption
+      val scored = candidates.flatMap { case (toAirport, demand) =>
+        buildCandidateLink(airline, home, toAirport, airplane, minutes, demand)
+          .map(link => (link, estimateWeeklyProfit(link, demand, cycle)))
+      }
+      val best = selectBestOpen(networkSize + opened, SoloConfig.aiMaxNetworkSize, scored, SoloConfig.aiOpenProfitThreshold)
+        .map(link => (link, scored.find(_._1 eq link).map(_._2).getOrElse(0L)))
 
       best match {
-        case Some((link, _, profit)) =>
+        case Some((link, profit)) =>
           LinkSource.saveLink(link)
           WorldNews.post(playerIds, s"${airline.name} opened its ${link.from.iata}-${link.to.iata} route", cycle, Some(s"rival_${airline.id}"))
           println(s"[ai-growth] ${airline.name} opened ${link.from.iata}-${link.to.iata} (est weekly profit $profit)")
@@ -145,8 +174,7 @@ object ComputerAirlineGrowth {
                                  to : Airport,
                                  airplane : Airplane,
                                  spareMinutes : Int,
-                                 demand : DemandGenerator.Demand,
-                                 countryRelationships : Map[(String, String), Int]) : Option[Link] = {
+                                 demand : DemandGenerator.Demand) : Option[Link] = {
     val model = airplane.model
     val distance = Computation.calculateDistance(from, to)
     if (distance <= 0 || model.range < distance || to.runwayLength < model.runwayRequirement) return None
@@ -155,14 +183,9 @@ object ComputerAirlineGrowth {
     if (flightMinutesPerFreq <= 0) return None
 
     val seatsPerFlight = airplane.configuration.economyVal + airplane.configuration.businessVal + airplane.configuration.firstVal
-    if (seatsPerFlight <= 0) return None
-
     val demandTotal = demand.travelerDemand.total + demand.businessDemand.total + demand.touristDemand.total
-    val targetSeats = (demandTotal * SEAT_TARGET_MULTIPLIER).toInt
-    val freqForDemand = Math.max(1, Math.ceil(targetSeats.toDouble / seatsPerFlight).toInt)
-    val freqByMinutes = spareMinutes / flightMinutesPerFreq
     val maxFreqPerPlane = Computation.calculateMaxFrequency(model, distance)
-    val frequency = Math.min(Math.min(freqForDemand, freqByMinutes), maxFreqPerPlane)
+    val frequency = sizeFrequency(demandTotal, seatsPerFlight, spareMinutes, flightMinutesPerFreq, maxFreqPerPlane)
     if (frequency <= 0) return None
 
     val priceMod = if (from.popMiddleIncome < 100_000 || to.popMiddleIncome < 100_000) 1.2 else 1.0
@@ -183,13 +206,8 @@ object ComputerAirlineGrowth {
   /** Projected weekly profit for a fresh link: seed an estimated, capacity-capped load factor
     * from cached base demand (one direction — conservative), then run the real cost model. */
   private def estimateWeeklyProfit(link : Link, demand : DemandGenerator.Demand, cycle : Int) : Long = {
-    val capture = SoloConfig.aiGrowthCaptureRatio
     val demandByClass = demand.travelerDemand + demand.businessDemand + demand.touristDemand
-    val capacity = link.capacity
-    val estSeats = LinkClassValues(
-      Math.min(capacity.economyVal, (demandByClass.economyVal * capture).toInt),
-      Math.min(capacity.businessVal, (demandByClass.businessVal * capture).toInt),
-      Math.min(capacity.firstVal, (demandByClass.firstVal * capture).toInt))
+    val estSeats = estimatedSeats(demandByClass, link.capacity, SoloConfig.aiGrowthCaptureRatio)
     link.addSoldSeats(estSeats)
     val profit = LinkSimulation.computeFlightLinkConsumptionDetail(link, cycle).profit
     // reset so the link we persist carries no runtime consumption state
