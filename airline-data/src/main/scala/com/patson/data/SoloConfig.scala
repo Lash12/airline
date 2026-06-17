@@ -88,6 +88,22 @@ object SoloConfig {
   // Service quality assumed for an NPC-opened route (feeds price/cost estimation).
   val aiGrowthRawQuality : Int = intAt("solo.ai.growth.rawQuality", 40)
 
+  // Living-world AI price tuning (Phase H-2). Off by default; independent of the other ai flags.
+  // When on, each acting NPC nudges prices on a few of its existing links toward equilibrium by
+  // recent load factor: a persistently full route edges its price up (capture revenue), a
+  // persistently empty one edges down (fill seats, and undercut a competitor). Small bounded step,
+  // clamped to a band around the standard price so prices never run away — this is what makes
+  // competition feel adaptive without new-route churn. No aircraft/fleet changes here.
+  val aiPriceTuneEnabled : Boolean = boolAt("solo.ai.pricetune.enabled", false)
+  val aiPriceTuneMaxAirlinesPerCycle : Int = intAt("solo.ai.pricetune.maxAirlinesPerCycle", 3)
+  val aiPriceTuneMaxLinksPerAirline : Int = intAt("solo.ai.pricetune.maxLinksPerAirline", 5)
+  val aiPriceTuneStep : Double = doubleAt("solo.ai.pricetune.step", 0.05)
+  val aiPriceTuneHighLoadFactor : Double = doubleAt("solo.ai.pricetune.highLoadFactor", 0.85)
+  val aiPriceTuneLowLoadFactor : Double = doubleAt("solo.ai.pricetune.lowLoadFactor", 0.5)
+  val aiPriceTuneFloorRatio : Double = doubleAt("solo.ai.pricetune.floorRatio", 0.6)
+  val aiPriceTuneCeilRatio : Double = doubleAt("solo.ai.pricetune.ceilRatio", 1.5)
+  val aiPriceTuneLookbackCycles : Int = intAt("solo.ai.pricetune.lookbackCycles", 4)
+
   // World news feed (single-player): an ambient, pull-based log of notable world
   // events (NPC route changes, etc.) surfaced in a dedicated News panel, separate from
   // the personal notification bell. Off by default. Reuses the notification store under

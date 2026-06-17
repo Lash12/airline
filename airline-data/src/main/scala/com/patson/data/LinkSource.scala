@@ -516,6 +516,25 @@ object LinkSource {
     }
   }
 
+  /**
+   * Targeted price-only update: rewrites just the price columns, leaving capacity / frequency /
+   * airplane assignment / quality untouched. Safe for callers that only have a price change and
+   * not a fully-loaded link (unlike updateLink, which rewrites the airplane_model from the passed
+   * link and would clobber the assignment if it were absent). Used by the solo AI price tuning.
+   */
+  def updateLinkPrice(linkId : Int, price : LinkClassValues) : Int = {
+    Using.resource(Meta.getConnection()) { connection =>
+      Using.resource(connection.prepareStatement("UPDATE " + LINK_TABLE + " SET price_economy = ?, price_business = ?, price_first = ?, last_update = ? WHERE id = ?")) { preparedStatement =>
+        preparedStatement.setInt(1, price(ECONOMY))
+        preparedStatement.setInt(2, price(BUSINESS))
+        preparedStatement.setInt(3, price(FIRST))
+        preparedStatement.setTimestamp(4, new java.sql.Timestamp(new Date().getTime()))
+        preparedStatement.setInt(5, linkId)
+        preparedStatement.executeUpdate()
+      }
+    }
+  }
+
   def updateLinks[T <: Transport](links : List[T]) = {
     val existingLinks = loadLinksByIds(links.map(_.id)).map(link => (link.id, link)).toMap
     val changeEntries = ListBuffer[LinkChange]()
