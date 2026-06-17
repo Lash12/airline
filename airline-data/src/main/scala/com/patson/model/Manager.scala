@@ -97,7 +97,21 @@ object AircraftModelManagerTask {
   val MAX_MANAGERS_PER_MODEL = 2
 }
 
+/**
+ * Consultant / route advisor (single-player QOL). A manager assigned here studies the network and
+ * surfaces profitable route opportunities (and a suggested aircraft) the player would otherwise have
+ * to find by clicking every airport. Advice-only — never acts. Like other leveling tasks it gets more
+ * proficient the longer it is in the role (deeper/more recommendations); capped for balance.
+ */
+case class ConsultantManagerTask(startCycle : Int) extends LevelingManagerTask(startCycle, ManagerTaskType.CONSULTANT) {
+  override val description: String = "Advising on route & fleet opportunities"
+}
+
+object ConsultantManagerTask {
+  val MAX_CONSULTANT_MANAGERS = 3
+}
+
 object ManagerTaskType extends Enumeration {
   type ManagerTaskType = Value
-  val COUNTRY, CAMPAIGN, MANAGER_BASE, MANAGER_AIRCRAFT_MODEL = Value
+  val COUNTRY, CAMPAIGN, MANAGER_BASE, MANAGER_AIRCRAFT_MODEL, CONSULTANT = Value
 }

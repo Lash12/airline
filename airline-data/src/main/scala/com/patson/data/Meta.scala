@@ -1279,6 +1279,9 @@ object Meta {
     statement = connection.prepareStatement("DROP TABLE IF EXISTS " + COUNTRY_DELEGATE_TASK_TABLE)
     statement.execute()
     statement.close()
+    statement = connection.prepareStatement("DROP TABLE IF EXISTS " + CONSULTANT_DELEGATE_TASK_TABLE)
+    statement.execute()
+    statement.close()
     statement = connection.prepareStatement("DROP TABLE IF EXISTS " + LINK_NEGOTIATION_TASK_TABLE)
     statement.execute()
     statement.close()
@@ -1303,6 +1306,14 @@ object Meta {
     statement = connection.prepareStatement("CREATE TABLE " + COUNTRY_DELEGATE_TASK_TABLE + "(" +
       "delegate INTEGER PRIMARY KEY, " +
       "country_code CHAR(2), " +
+      "start_cycle INTEGER, " +
+      "FOREIGN KEY(delegate) REFERENCES " + BUSY_DELEGATE_TABLE + "(id) ON DELETE CASCADE ON UPDATE CASCADE" +
+      ")")
+    statement.execute()
+    statement.close()
+
+    statement = connection.prepareStatement("CREATE TABLE " + CONSULTANT_DELEGATE_TASK_TABLE + "(" +
+      "delegate INTEGER PRIMARY KEY, " +
       "start_cycle INTEGER, " +
       "FOREIGN KEY(delegate) REFERENCES " + BUSY_DELEGATE_TABLE + "(id) ON DELETE CASCADE ON UPDATE CASCADE" +
       ")")
