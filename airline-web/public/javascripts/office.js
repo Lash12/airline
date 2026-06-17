@@ -1502,4 +1502,83 @@ function resetAirline(keepAssets) {
 
 function updateManagerStatus() {
     updateAirlineManagerStatus($('#managerStatus .managerGroups'))
+    loadConsultant()
+}
+
+// ---- Route Consultant (single-player advice-only QOL) ----
+function cycleToYearWeek(cycle) {
+    return "Year " + Math.floor(cycle / 48) + ", Week " + (cycle % 48)
+}
+
+function loadConsultant() {
+    if (typeof activeAirline === 'undefined' || !activeAirline) return
+    $.ajax({
+        type: 'GET',
+        url: "/managers/airline/" + activeAirline.id + "/consultants",
+        success: function(d) {
+            if (!d.enabled) { $('#consultantStatus').hide(); return }
+            $('#consultantStatus').show()
+            $('#consultantCount').text(d.count)
+            $('#consultantMax').text(d.maxManagers)
+            $('#consultantLevel').text(d.count > 0 ? d.levelDescription : '—')
+            $('#consultantDepth').text(d.adviceDepth)
+            $('#consultantStatus').data('available', d.availableCount)
+            loadConsultantAdvice()
+        }
+    })
+}
+
+function changeConsultantCount(delta) {
+    var cur = parseInt($('#consultantCount').text()) || 0
+    var max = parseInt($('#consultantMax').text()) || 0
+    var avail = $('#consultantStatus').data('available') || 0
+    var target = cur + delta
+    if (target < 0 || target > max) return
+    if (delta > 0 && avail < 1) { alert('No available managers — free one up from another task first.'); return }
+    $.ajax({
+        type: 'POST',
+        url: "/managers/airline/" + activeAirline.id + "/consultants",
+        contentType: 'application/json; charset=utf-8',
+        data: JSON.stringify({ managerCount: target }),
+        success: function() { loadConsultant() },
+        error: function(x) { alert(x.responseText || 'Could not update consultants') }
+    })
+}
+
+function refreshConsultantAdvice() {
+    var $btn = $('#consultantStatus button[onclick="refreshConsultantAdvice()"]')
+    $btn.prop('disabled', true).text('Analyzing…')
+    $.ajax({
+        type: 'POST',
+        url: "/airlines/" + activeAirline.id + "/consultant-advice/refresh",
+        success: function() { loadConsultantAdvice() },
+        error: function(x) { alert(x.responseText || 'Could not refresh advice') },
+        complete: function() { $btn.prop('disabled', false).text('Refresh advice') }
+    })
+}
+
+function loadConsultantAdvice() {
+    $.ajax({
+        type: 'GET',
+        url: "/airlines/" + activeAirline.id + "/consultant-advice",
+        success: function(list) { renderConsultantAdvice(list) }
+    })
+}
+
+function renderConsultantAdvice(list) {
+    var $c = $('#consultantAdviceList'); $c.empty()
+    if (!list || list.length === 0) {
+        $('#consultantAsOf').text('')
+        $c.html("<p class='text-sm' style='opacity:0.7;'>No advice yet — assign a consultant, then click Refresh advice.</p>")
+        return
+    }
+    $('#consultantAsOf').text("Advice as of " + cycleToYearWeek(list[0].cycle))
+    list.forEach(function(n) {
+        var stamp = "Yr " + Math.floor(n.cycle / 48) + " Wk " + (n.cycle % 48)
+        $c.append(
+            "<div class='py-1' style='border-bottom:1px solid rgba(255,255,255,0.1);'>" +
+            "<span>" + n.message + "</span> " +
+            "<span class='text-sm' style='opacity:0.55;'>(" + stamp + ")</span></div>"
+        )
+    })
 }

@@ -1,7 +1,8 @@
 package controllers
 
-import com.patson.data.{CampaignSource, CycleSource, ManagerSource}
+import com.patson.data.{CampaignSource, CycleSource, ManagerSource, SoloConfig}
 import com.patson.data.airplane.ModelSource
+import com.patson.ConsultantAdvisor
 import com.patson.model._
 import com.patson.model.campaign.Campaign
 import com.patson.model.airplane.{DiscountReason, DiscountType, ModelDiscount}
@@ -89,6 +90,47 @@ class ManagerApplication @Inject()(cc: ControllerComponents) extends AbstractCon
       }
     } else {
       Ok(Json.obj()) // delta == 0
+    }
+  }
+
+  def getConsultants(airlineId : Int) = AuthenticatedAirline(airlineId) { request =>
+    val currentCycle = CycleSource.loadCycle()
+    val managerInfo = request.user.getManagerInfo()
+    val leveling = managerInfo.busyManagers.filter(_.assignedTask.getTaskType == ManagerTaskType.CONSULTANT).map(_.assignedTask.asInstanceOf[LevelingManagerTask])
+    val levels : Seq[Int] = leveling.map(_.level(currentCycle))
+    val best = leveling.sortBy(t => -t.level(currentCycle)).headOption
+    val levelDescription : String = best.map(t => t.levelDescription(currentCycle).toString).getOrElse("—")
+    Ok(Json.obj(
+      "count" -> leveling.size,
+      "maxManagers" -> ConsultantManagerTask.MAX_CONSULTANT_MANAGERS,
+      "availableCount" -> managerInfo.availableCount,
+      "bestLevel" -> (if (levels.isEmpty) 0 else levels.max),
+      "levelDescription" -> levelDescription,
+      "adviceDepth" -> ConsultantAdvisor.adviceDepth(levels),
+      "enabled" -> SoloConfig.consultantEnabled
+    ))
+  }
+
+  def updateConsultants(airlineId : Int) = AuthenticatedAirline(airlineId) { request =>
+    val airline = request.user
+    val managerCount = request.body.asInstanceOf[AnyContentAsJson].json.\("managerCount").as[Int]
+    val existing = ManagerSource.loadBusyManagersByAirline(airlineId).filter(_.assignedTask.getTaskType == ManagerTaskType.CONSULTANT).sortBy(_.assignedTask.getStartCycle)
+    val delta = managerCount - existing.length
+    if (managerCount < 0) {
+      BadRequest(s"Invalid manager count $managerCount")
+    } else if (managerCount > ConsultantManagerTask.MAX_CONSULTANT_MANAGERS) {
+      BadRequest(s"Invalid manager count $managerCount (max ${ConsultantManagerTask.MAX_CONSULTANT_MANAGERS})")
+    } else if (delta > airline.getManagerInfo().availableCount) {
+      BadRequest("Not enough available managers")
+    } else if (delta < 0) {
+      existing.takeRight(-delta).foreach(m => ManagerSource.deleteBusyDelegateByCriteria(List(("id", "=", m.id))))
+      Ok(Json.obj())
+    } else if (delta > 0) {
+      val task = ConsultantManagerTask(CycleSource.loadCycle())
+      ManagerSource.saveBusyManagers((0 until delta).map(_ => Manager(airline, task, None)).toList)
+      Ok(Json.obj())
+    } else {
+      Ok(Json.obj())
     }
   }
 
