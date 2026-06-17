@@ -16,8 +16,9 @@ import com.patson.model.NonPlayerAirline
   */
 object ComputerAirlineSimulation {
   def simulate(cycle : Int) : Unit = {
-    // Drops (aiEnabled) and growth (aiGrowthEnabled) are independent; run if either is on.
-    if (!SoloConfig.aiEnabled && !SoloConfig.aiGrowthEnabled) return
+    // Drops (aiEnabled), growth (aiGrowthEnabled) and price tuning (aiPriceTuneEnabled) are
+    // independent; run if any is on.
+    if (!SoloConfig.aiEnabled && !SoloConfig.aiGrowthEnabled && !SoloConfig.aiPriceTuneEnabled) return
 
     try {
       val npcAirlines = AirlineSource.loadAirlinesByCriteria(List(("airline_type", NonPlayerAirline.id)))
@@ -64,7 +65,14 @@ object ComputerAirlineSimulation {
         totalOpens = ComputerAirlineGrowth.grow(acting, allAirports, playerIds, cycle)
       }
 
-      println(s"[ai] cycle $cycle: ${acting.size} NPC airline(s) acted, $totalDrops dropped, $totalOpens opened")
+      // Price tuning (H-2): each acting NPC nudges prices on a few existing links toward
+      // equilibrium by recent load factor. No-op unless aiPriceTuneEnabled.
+      var totalTuned = 0
+      if (SoloConfig.aiPriceTuneEnabled) {
+        totalTuned = ComputerAirlinePriceTuning.tune(acting, cycle)
+      }
+
+      println(s"[ai] cycle $cycle: ${acting.size} NPC airline(s) acted, $totalDrops dropped, $totalOpens opened, $totalTuned repriced")
     } catch {
       case e : Exception => println(s"[ai] ComputerAirlineSimulation failed (skipping): ${e.getClass.getSimpleName}: ${e.getMessage}")
     }
