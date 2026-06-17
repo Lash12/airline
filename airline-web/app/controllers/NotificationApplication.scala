@@ -1,7 +1,9 @@
 package controllers
 
-import com.patson.data.{CycleSource, NotificationSource}
-import com.patson.model.{Notification, NotificationCategory}
+import com.patson.data.{AirportSource, CountrySource, CycleSource, NotificationSource, SoloConfig}
+import com.patson.data.airplane.AirplaneSource
+import com.patson.model.{ManagerTaskType, LevelingManagerTask, Notification, NotificationCategory}
+import com.patson.ConsultantAdvisor
 import controllers.AuthenticationObject.AuthenticatedAirline
 import javax.inject.Inject
 import play.api.libs.json._
@@ -23,14 +25,45 @@ class NotificationApplication @Inject()(cc: ControllerComponents) extends Abstra
 
   def getNotifications(airlineId: Int) = AuthenticatedAirline(airlineId) { _ =>
     NotificationSource.purgeExpiredByCategory(airlineId, NotificationCategory.NEGOTIATION_LOSS, CycleSource.loadCycle())
-    // WORLD_NEWS has its own News panel; keep it out of the personal bell drawer.
-    val personal = NotificationSource.loadNotificationsByAirline(airlineId).filterNot(_.category == NotificationCategory.WORLD_NEWS)
+    // WORLD_NEWS and CONSULTANT_ADVICE have their own panels; keep them out of the personal bell.
+    val personal = NotificationSource.loadNotificationsByAirline(airlineId)
+      .filterNot(n => n.category == NotificationCategory.WORLD_NEWS || n.category == NotificationCategory.CONSULTANT_ADVICE)
     Ok(Json.toJson(personal))
   }
 
   // World news feed (pull-based, separate from the personal bell).
   def getNews(airlineId: Int) = AuthenticatedAirline(airlineId) { _ =>
     Ok(Json.toJson(NotificationSource.loadByCategory(airlineId, NotificationCategory.WORLD_NEWS, 50)))
+  }
+
+  // Route consultant advice — a pull-based, timestamped list (separate from the bell).
+  def getConsultantAdvice(airlineId: Int) = AuthenticatedAirline(airlineId) { _ =>
+    Ok(Json.toJson(NotificationSource.loadByCategory(airlineId, NotificationCategory.CONSULTANT_ADVICE, 50)))
+  }
+
+  // Regenerate advice: the assigned consultant(s) study the network and replace the stored report,
+  // stamped with the current cycle. Advice-only; nothing is opened.
+  def refreshConsultantAdvice(airlineId: Int) = AuthenticatedAirline(airlineId) { request =>
+    val airline = request.user
+    val currentCycle = CycleSource.loadCycle()
+    val consultants = airline.getManagerInfo().busyManagers.filter(_.assignedTask.getTaskType == ManagerTaskType.CONSULTANT)
+    if (!SoloConfig.consultantEnabled || consultants.isEmpty) {
+      Ok(Json.obj("count" -> 0, "cycle" -> currentCycle))
+    } else {
+      val levels = consultants.map(_.assignedTask.asInstanceOf[LevelingManagerTask].level(currentCycle))
+      val allAirports = AirportSource.loadAllAirports(true)
+      val countryRelationships = CountrySource.getCountryMutualRelationships()
+      val ownedModels = AirplaneSource.loadAirplanesByOwner(airlineId).filterNot(_.isSold).map(_.model).distinct
+      val recs = ConsultantAdvisor.recommendations(airline, levels, allAirports, countryRelationships, ownedModels, currentCycle)
+      NotificationSource.deleteByCategory(airlineId, NotificationCategory.CONSULTANT_ADVICE)
+      val notifications = recs.map { r =>
+        val cfg = s"${r.config.economyVal}Y/${r.config.businessVal}J/${r.config.firstVal}F"
+        val msg = s"Open ${r.from.iata}–${r.to.iata} (${r.distance}km) · ${r.model.name} $cfg · est +$$${r.estWeeklyProfit}/wk"
+        Notification(airlineId = airlineId, category = NotificationCategory.CONSULTANT_ADVICE, message = msg, cycle = currentCycle, targetId = Some(s"${r.from.id}-${r.to.id}"))
+      }
+      if (notifications.nonEmpty) NotificationSource.insertNotificationsBulk(notifications)
+      Ok(Json.obj("count" -> recs.size, "cycle" -> currentCycle))
+    }
   }
 
   def markNewsRead(airlineId: Int) = AuthenticatedAirline(airlineId) { _ =>

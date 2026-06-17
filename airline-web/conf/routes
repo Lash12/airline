@@ -122,6 +122,8 @@ GET	 	 /airlines/:airlineId/oil-inventory-options		controllers.OilApplication.ge
 POST		 /airlines/:airlineId/set-oil-inventory-option  controllers.OilApplication.setInventoryOption(airlineId : Int, optionId : Int)
 GET		 /airlines/:airlineId/news  controllers.NotificationApplication.getNews(airlineId : Int)
 POST	 /airlines/:airlineId/news/read  controllers.NotificationApplication.markNewsRead(airlineId : Int)
+GET		 /airlines/:airlineId/consultant-advice  controllers.NotificationApplication.getConsultantAdvice(airlineId : Int)
+POST	 /airlines/:airlineId/consultant-advice/refresh  controllers.NotificationApplication.refreshConsultantAdvice(airlineId : Int)
 GET		 /airlines/:airlineId/notifications  controllers.NotificationApplication.getNotifications(airlineId : Int)
 GET		 /airlines/:airlineId/notifications/unread  controllers.NotificationApplication.getUnreadCount(airlineId : Int)
 POST	 /airlines/:airlineId/notifications/read  controllers.NotificationApplication.markAllRead(airlineId : Int)
@@ -201,6 +203,8 @@ POST      /managers/airline/:airlineId/country/:countryCode      controllers.Man
 GET      /managers/airline/:airlineId/aircraft-model/:modelId      controllers.ManagerApplication.getAircraftModelDelegates(modelId: Int, airlineId: Int)
 POST      /managers/airline/:airlineId/aircraft-model/:modelId      controllers.ManagerApplication.updateAircraftModelDelegates(modelId: Int, airlineId: Int)
 GET      /managers/airline/:airlineId/leveling                      controllers.ManagerApplication.getLevelingManagers(airlineId: Int)
+GET      /managers/airline/:airlineId/consultants                   controllers.ManagerApplication.getConsultants(airlineId: Int)
+POST     /managers/airline/:airlineId/consultants                   controllers.ManagerApplication.updateConsultants(airlineId: Int)
 DELETE   /managers/airline/:airlineId/manager/:managerId            controllers.ManagerApplication.deleteManager(airlineId: Int, managerId: Int)
 
 POST		 /santa-claus/guess/:airportId/:airlineId/:difficulty   controllers.ChristmasApplication.makeGuess(airportId : Int, airlineId : Int, difficulty : String)
