@@ -59,6 +59,27 @@ object SoloConfig {
   val aiLossLookbackCycles : Int = intAt("solo.ai.lossLookbackCycles", 4)
   val aiDropProfitThreshold : Long = longAt("solo.ai.dropProfitThreshold", -500000L)
 
+  // Living-world AI growth (Phase H-1). Independent of aiEnabled (drops); off by default.
+  // When on, each acting NPC may OPEN one profitable route from an existing base using a
+  // spare (idle) owned airplane — the growth counterpart to the drop path. Bounded and
+  // self-limiting: at most maxOpensPerAirline route(s)/cycle, only if projected weekly profit
+  // (the real LinkSimulation cost model on an estimated load factor) clears openProfitThreshold
+  // AND the network is under maxNetworkSize. No aircraft purchases in H-1 — only opens when a
+  // spare frame already exists (frames freed by the drop path are the natural supply).
+  val aiGrowthEnabled : Boolean = boolAt("solo.ai.growth.enabled", false)
+  val aiMaxOpensPerAirline : Int = intAt("solo.ai.growth.maxOpensPerAirline", 1)
+  val aiOpenProfitThreshold : Long = longAt("solo.ai.growth.openProfitThreshold", 0L)
+  val aiGrowthCandidateLimit : Int = intAt("solo.ai.growth.candidateLimit", 20)
+  val aiMaxNetworkSize : Int = intAt("solo.ai.growth.maxNetworkSize", 60)
+  // Fraction of base demand an NPC is assumed to capture when projecting a new route's load
+  // factor (conservative; a new entrant won't take 100%). Lower = stricter open gate.
+  val aiGrowthCaptureRatio : Double = doubleAt("solo.ai.growth.captureRatio", 0.65)
+  // A frame counts as "spare" only if it has at least this many idle weekly flight-minutes
+  // (MAX_FLIGHT_MINUTES is 6480), so we don't open a route on a near-fully-utilised plane.
+  val aiGrowthMinAvailableMinutes : Int = intAt("solo.ai.growth.minSpareFlightMinutes", 600)
+  // Service quality assumed for an NPC-opened route (feeds price/cost estimation).
+  val aiGrowthRawQuality : Int = intAt("solo.ai.growth.rawQuality", 40)
+
   // World news feed (single-player): an ambient, pull-based log of notable world
   // events (NPC route changes, etc.) surfaced in a dedicated News panel, separate from
   // the personal notification bell. Off by default. Reuses the notification store under
