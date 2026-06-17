@@ -41,6 +41,7 @@ jobs:
             -Dsolo.ai.enabled=true
             -Dsolo.ai.growth.enabled=true
             -Dsolo.ai.pricetune.enabled=true
+            -Dsolo.ai.fleet.enabled=true
             -Dsolo.news.enabled=true
             -Dsolo.demand.memoize=true
             -Dsolo.progression.enabled=true

@@ -104,6 +104,15 @@ object SoloConfig {
   val aiPriceTuneCeilRatio : Double = doubleAt("solo.ai.pricetune.ceilRatio", 1.5)
   val aiPriceTuneLookbackCycles : Int = intAt("solo.ai.pricetune.lookbackCycles", 4)
 
+  // Living-world AI fleet renewal (Phase H-3). Off by default; independent of the other ai flags.
+  // The sim already renews worn aircraft in place (buy replacement, sell old via ledger, reset
+  // condition, keep airplane id so link assignments survive) but only for airlines with an
+  // "airplane renewal" threshold; players get one at sign-up, NPCs never do, so NPC fleets decay to
+  // scrap and networks shrink. When on, seed that threshold for NPCs so the existing (financially
+  // self-limiting) renewal path keeps their fleets alive. Renew when condition < renewalThreshold.
+  val aiFleetEnabled : Boolean = boolAt("solo.ai.fleet.enabled", false)
+  val aiFleetRenewalThreshold : Int = intAt("solo.ai.fleet.renewalThreshold", 40)
+
   // World news feed (single-player): an ambient, pull-based log of notable world
   // events (NPC route changes, etc.) surfaced in a dedicated News panel, separate from
   // the personal notification bell. Off by default. Reuses the notification store under
