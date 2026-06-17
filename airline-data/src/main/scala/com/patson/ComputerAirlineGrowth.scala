@@ -111,7 +111,6 @@ object ComputerAirlineGrowth {
       .map(p => (p, availableMinutes(p)))
       .filter(_._2 >= SoloConfig.aiGrowthMinAvailableMinutes)
       .sortBy(-_._2)
-    println(s"[ai-growth-diag] ${airline.name}: network=$networkSize spares=${spareFrames.size}") // TEMP diagnostic
     if (spareFrames.isEmpty) return 0
 
     // Already-served city pairs (either direction) so we never duplicate a route.
@@ -134,8 +133,6 @@ object ComputerAirlineGrowth {
         }
       }
     }
-    println(s"[ai-growth-diag] ${airline.name} eval=${framesToConsider.size} scored=${scoredAll.size} best=${scoredAll.map(_._2).maxOption.getOrElse(Long.MinValue)} thr=${SoloConfig.aiOpenProfitThreshold}") // TEMP diagnostic
-
     selectBestOpen(networkSize, SoloConfig.aiMaxNetworkSize, scoredAll, SoloConfig.aiOpenProfitThreshold) match {
       case Some(link) =>
         val profit = scoredAll.find(_._1 eq link).map(_._2).getOrElse(0L)
