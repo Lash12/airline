@@ -1,7 +1,6 @@
 package controllers
 
-import com.patson.data.{AirportSource, CountrySource, CycleSource, NotificationSource, SoloConfig}
-import com.patson.data.airplane.AirplaneSource
+import com.patson.data.{AirplaneSource, AirportSource, CountrySource, CycleSource, NotificationSource, SoloConfig}
 import com.patson.model.{ManagerTaskType, LevelingManagerTask, Notification, NotificationCategory}
 import com.patson.ConsultantAdvisor
 import controllers.AuthenticationObject.AuthenticatedAirline

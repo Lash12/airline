@@ -97,14 +97,15 @@ class ManagerApplication @Inject()(cc: ControllerComponents) extends AbstractCon
     val currentCycle = CycleSource.loadCycle()
     val managerInfo = request.user.getManagerInfo()
     val leveling = managerInfo.busyManagers.filter(_.assignedTask.getTaskType == ManagerTaskType.CONSULTANT).map(_.assignedTask.asInstanceOf[LevelingManagerTask])
-    val levels = leveling.map(_.level(currentCycle))
+    val levels : Seq[Int] = leveling.map(_.level(currentCycle))
     val best = leveling.sortBy(t => -t.level(currentCycle)).headOption
+    val levelDescription : String = best.map(t => t.levelDescription(currentCycle).toString).getOrElse("—")
     Ok(Json.obj(
       "count" -> leveling.size,
       "maxManagers" -> ConsultantManagerTask.MAX_CONSULTANT_MANAGERS,
       "availableCount" -> managerInfo.availableCount,
       "bestLevel" -> (if (levels.isEmpty) 0 else levels.max),
-      "levelDescription" -> best.map(_.levelDescription(currentCycle)).getOrElse("—"),
+      "levelDescription" -> levelDescription,
       "adviceDepth" -> ConsultantAdvisor.adviceDepth(levels),
       "enabled" -> SoloConfig.consultantEnabled
     ))
