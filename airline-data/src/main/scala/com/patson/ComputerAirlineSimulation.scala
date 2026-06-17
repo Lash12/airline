@@ -16,9 +16,8 @@ import com.patson.model.NonPlayerAirline
   */
 object ComputerAirlineSimulation {
   def simulate(cycle : Int) : Unit = {
-    // Drops (aiEnabled), growth (aiGrowthEnabled) and price tuning (aiPriceTuneEnabled) are
-    // independent; run if any is on.
-    if (!SoloConfig.aiEnabled && !SoloConfig.aiGrowthEnabled && !SoloConfig.aiPriceTuneEnabled) return
+    // Drops, growth, price tuning and fleet renewal are independent flags; run if any is on.
+    if (!SoloConfig.aiEnabled && !SoloConfig.aiGrowthEnabled && !SoloConfig.aiPriceTuneEnabled && !SoloConfig.aiFleetEnabled) return
 
     try {
       val npcAirlines = AirlineSource.loadAirlinesByCriteria(List(("airline_type", NonPlayerAirline.id)))
@@ -27,6 +26,10 @@ object ComputerAirlineSimulation {
       // Resolve the player airlines once so each drop can be reported to the news feed
       // (no-op / empty unless solo.news.enabled).
       val playerIds = WorldNews.playerAirlineIds()
+
+      // Fleet renewal (H-3): seed an airplane-renewal threshold for NPCs so the sim keeps their
+      // aging fleets alive (no-op unless aiFleetEnabled). Covers all NPCs, idempotent.
+      val totalSeeded = if (SoloConfig.aiFleetEnabled) ComputerAirlineFleet.ensureRenewal(npcAirlines) else 0
 
       // Act on a rotating, bounded subset each cycle to keep the cost small.
       val perCycle = Math.max(1, SoloConfig.aiAirlinesPerCycle)
@@ -72,7 +75,7 @@ object ComputerAirlineSimulation {
         totalTuned = ComputerAirlinePriceTuning.tune(acting, cycle)
       }
 
-      println(s"[ai] cycle $cycle: ${acting.size} NPC airline(s) acted, $totalDrops dropped, $totalOpens opened, $totalTuned repriced")
+      println(s"[ai] cycle $cycle: ${acting.size} NPC airline(s) acted, $totalDrops dropped, $totalOpens opened, $totalTuned repriced, $totalSeeded renewal-seeded")
     } catch {
       case e : Exception => println(s"[ai] ComputerAirlineSimulation failed (skipping): ${e.getClass.getSimpleName}: ${e.getMessage}")
     }
