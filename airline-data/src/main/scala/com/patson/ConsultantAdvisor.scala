@@ -145,16 +145,23 @@ object ConsultantAdvisor {
     }.toList.sortBy(-_._2).take(Math.max(1, limit))
   }
 
-  /** Right-sized aircraft for a market: the smallest model that can fly it (range + runways) and cover
-    * ~daily demand; if demand exceeds every single-flight capacity, the largest fitting model. */
+  /** Right-sized aircraft for a market: among models that can fly it (range + runways) and cover
+    * ~daily demand, prefer the most fuel-efficient per seat within a right-sized capacity band (so a
+    * thirsty antique/piston that merely has the range loses to a modern jet of similar size), then the
+    * higher-quality one. If demand exceeds every single-flight capacity, the largest fitting model. */
   def suggestModel(distance : Int, fromRunway : Int, toRunway : Int, demandBothWays : Int, models : List[Model]) : Option[Model] = {
     val fitting = models.filter(m => m.range >= distance && fromRunway >= m.runwayRequirement && toRunway >= m.runwayRequirement)
     if (fitting.isEmpty) None
     else {
       val target = targetSeatsPerFlight(demandBothWays)
       val covering = fitting.filter(_.capacity >= target)
-      if (covering.nonEmpty) Some(covering.minBy(m => (m.capacity, m.cruiseBurn / Math.max(1, m.capacity), -m.quality)))
-      else Some(fitting.maxBy(_.capacity))
+      if (covering.isEmpty) Some(fitting.maxBy(_.capacity))
+      else {
+        // Stay close to demand (avoid oversizing) but, within that band, pick the best economics.
+        val band = covering.filter(_.capacity <= target * 2)
+        val candidates = if (band.nonEmpty) band else covering
+        Some(candidates.minBy(m => (m.cruiseBurn.toDouble / Math.max(1, m.capacity), -m.quality)))
+      }
     }
   }
 
