@@ -29,4 +29,16 @@ class ConsultantAdvisorSpec extends AnyWordSpecLike with Matchers {
       ConsultantAdvisor.adviceDepth(Seq(4, 4, 4, 4)) shouldBe 15 // would be 17, capped
     }
   }
+
+  "commonalityScore".must {
+    "be 0 when the family is not in the fleet".in {
+      ConsultantAdvisor.commonalityScore("A320", Map.empty) shouldBe 0.0
+    }
+    "grow with the number of that family's frames owned (default 0.03/frame)".in {
+      ConsultantAdvisor.commonalityScore("A320", Map("A320" -> 4)) shouldBe (0.12 +- 0.0001)
+    }
+    "cap at the max bonus (default 0.25)".in {
+      ConsultantAdvisor.commonalityScore("A320", Map("A320" -> 100)) shouldBe 0.25
+    }
+  }
 }

@@ -18,7 +18,17 @@ import com.patson.model.airplane.{Airplane, AirplaneConfiguration, LinkAssignmen
 object ConsultantAdvisor {
   private val SEAT_TARGET_MULTIPLIER = 1.5
 
-  case class Recommendation(from : Airport, to : Airport, distance : Int, estWeeklyProfit : Long, model : Model, config : AirplaneConfiguration)
+  case class Recommendation(from : Airport, to : Airport, distance : Int, estWeeklyProfit : Long, model : Model, config : AirplaneConfiguration, familyKey : String, familyInFleet : Int)
+
+  /** Family key for fleet-commonality: the model family if set, else the model name. */
+  def familyKeyOf(model : Model) : String = if (model.family.nonEmpty) model.family else model.name
+
+  /** Fractional ranking bonus (0..maxBonus) for a family the player already operates, growing with
+    * how many of that family are in the fleet. Pure (keyed by family string); unit-tested. */
+  def commonalityScore(familyKey : String, fleetByFamily : Map[String, Int]) : Double = {
+    val count = fleetByFamily.getOrElse(familyKey, 0)
+    Math.min(SoloConfig.consultantCommonalityMaxBonus, count * SoloConfig.consultantCommonalityPerFrame)
+  }
 
   /** How many recommendations to surface, from the assigned consultants' levels (pure; tested).
     * Empty → 0 (no consultant). Best level drives depth; extra consultants add a little; capped. */
@@ -39,9 +49,12 @@ object ConsultantAdvisor {
                       allAirports : List[Airport],
                       countryRelationships : Map[(String, String), Int],
                       ownedModels : List[Model],
+                      fleetByFamily : Map[String, Int],
                       currentCycle : Int) : List[Recommendation] = {
     val depth = adviceDepth(levels)
     if (depth <= 0 || ownedModels.isEmpty) return Nil
+    // Fleet-commonality bias only applies once the consultant is experienced enough.
+    val considerCommonality = levels.nonEmpty && levels.max >= SoloConfig.consultantCommonalityLevel
 
     val airportById = allAirports.map(a => (a.id, a)).toMap
     val baseAirports = AirlineSource.loadAirlineBasesByAirline(airline.id).flatMap(b => airportById.get(b.airport.id))
@@ -58,10 +71,13 @@ object ConsultantAdvisor {
         .map { case (to, demand) => (home, to, demand) }
     }
 
+    // Each candidate yields (recommendation, rankScore); rankScore folds in the commonality bonus
+    // when applicable, so commonality affects both the per-route plane choice and the overall order,
+    // while the displayed estWeeklyProfit stays the honest operating figure.
     val scored = candidates.flatMap { case (home, to, demand) =>
-      bestForRoute(airline, home, to, demand, ownedModels, countryRelationships, currentCycle)
+      bestForRoute(airline, home, to, demand, ownedModels, countryRelationships, currentCycle, fleetByFamily, considerCommonality)
     }
-    scored.filter(_.estWeeklyProfit > 0).sortBy(-_.estWeeklyProfit).take(depth)
+    scored.filter(_._1.estWeeklyProfit > 0).sortBy(-_._2).take(depth).map(_._1)
   }
 
   private def rankedDestinations(home : Airport, maxRange : Int, minRunway : Int, allAirports : List[Airport],
@@ -84,18 +100,25 @@ object ConsultantAdvisor {
     }.toList.sortBy(-_._3).take(Math.max(1, limit)).map { case (a, d, _) => (a, d) }
   }
 
-  /** Best owned model for this route, with its profit estimate. */
+  /** Best model for this route as (recommendation, rankScore). rankScore = est profit, scaled by the
+    * fleet-commonality bonus when considerCommonality — so a slightly-less-profitable plane from a
+    * family the player already flies can win, and the displayed profit stays honest. */
   private def bestForRoute(airline : Airline, from : Airport, to : Airport, demand : DemandGenerator.Demand,
-                           models : List[Model], countryRelationships : Map[(String, String), Int], currentCycle : Int) : Option[Recommendation] = {
+                           models : List[Model], countryRelationships : Map[(String, String), Int], currentCycle : Int,
+                           fleetByFamily : Map[String, Int], considerCommonality : Boolean) : Option[(Recommendation, Double)] = {
     val distance = Computation.calculateDistance(from, to)
     val fitting = models.filter(m => m.range >= distance && to.runwayLength >= m.runwayRequirement && from.runwayLength >= m.runwayRequirement)
     if (fitting.isEmpty) return None
     val bothWays = demandByClass(from, to, countryRelationships) + demandByClass(to, from, countryRelationships)
     fitting.flatMap { model =>
       buildLink(airline, from, to, model, demand, distance, currentCycle).map { case (link, config) =>
-        Recommendation(from, to, distance, estimateWeeklyProfit(link, bothWays, currentCycle), model, config)
+        val profit = estimateWeeklyProfit(link, bothWays, currentCycle)
+        val key = familyKeyOf(model)
+        val count = fleetByFamily.getOrElse(key, 0)
+        val rankScore = profit.toDouble * (if (considerCommonality) 1.0 + commonalityScore(key, fleetByFamily) else 1.0)
+        (Recommendation(from, to, distance, profit, model, config, key, count), rankScore)
       }
-    }.sortBy(-_.estWeeklyProfit).headOption
+    }.sortBy(-_._2).headOption
   }
 
   private def buildLink(airline : Airline, from : Airport, to : Airport, model : Model, demand : DemandGenerator.Demand, distance : Int, currentCycle : Int) : Option[(Link, AirplaneConfiguration)] = {
