@@ -1563,15 +1563,22 @@ function loadConsultantAdvice() {
         url: "/airlines/" + activeAirline.id + "/consultant-advice",
         success: function(list) { renderConsultantAdvice(list) }
     })
+    $.ajax({
+        type: 'GET',
+        url: "/airlines/" + activeAirline.id + "/consultant-market",
+        success: function(list) { renderMarketOverview(list) }
+    })
 }
 
 function renderConsultantAdvice(list) {
     var $c = $('#consultantAdviceList'); $c.empty()
     if (!list || list.length === 0) {
         $('#consultantAsOf').text('')
+        $('#consultantRecsHeading').hide()
         $c.html("<p class='text-sm' style='opacity:0.7;'>No advice yet — assign a consultant, then click Refresh advice.</p>")
         return
     }
+    $('#consultantRecsHeading').show()
     $('#consultantAsOf').text("Advice as of " + cycleToYearWeek(list[0].cycle))
     list.forEach(function(n) {
         var stamp = "Yr " + Math.floor(n.cycle / 48) + " Wk " + (n.cycle % 48)
@@ -1582,6 +1589,27 @@ function renderConsultantAdvice(list) {
             "<div class='py-1' style='border-bottom:1px solid rgba(255,255,255,0.1);'>" +
             "<div><strong>" + route + "</strong> <span class='text-sm' style='opacity:0.5;'>" + stamp + "</span></div>" +
             "<div class='text-sm' style='opacity:0.8;'>" + detail + "</div>" +
+            "</div>"
+        )
+    })
+}
+
+function renderMarketOverview(list) {
+    var $c = $('#consultantMarketList'); $c.empty()
+    if (!list || list.length === 0) {
+        $('#consultantMarketHeading').hide()
+        return
+    }
+    $('#consultantMarketHeading').show()
+    list.forEach(function(n) {
+        var parts = (n.message || '').split(' · ')
+        var market = parts.shift() || n.message
+        var detail = parts.join(' · ')
+        var gap = /fleet gap/i.test(n.message)
+        $c.append(
+            "<div class='py-1' style='border-bottom:1px solid rgba(255,255,255,0.1);'>" +
+            "<div><strong>" + market + "</strong></div>" +
+            "<div class='text-sm' style='opacity:0.8;" + (gap ? "color:#e0a030;" : "") + "'>" + detail + "</div>" +
             "</div>"
         )
     })

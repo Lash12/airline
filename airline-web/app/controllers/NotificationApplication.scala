@@ -24,9 +24,11 @@ class NotificationApplication @Inject()(cc: ControllerComponents) extends Abstra
 
   def getNotifications(airlineId: Int) = AuthenticatedAirline(airlineId) { _ =>
     NotificationSource.purgeExpiredByCategory(airlineId, NotificationCategory.NEGOTIATION_LOSS, CycleSource.loadCycle())
-    // WORLD_NEWS and CONSULTANT_ADVICE have their own panels; keep them out of the personal bell.
+    // WORLD_NEWS, CONSULTANT_ADVICE and MARKET_OVERVIEW have their own panels; keep them out of the bell.
     val personal = NotificationSource.loadNotificationsByAirline(airlineId)
-      .filterNot(n => n.category == NotificationCategory.WORLD_NEWS || n.category == NotificationCategory.CONSULTANT_ADVICE)
+      .filterNot(n => n.category == NotificationCategory.WORLD_NEWS
+        || n.category == NotificationCategory.CONSULTANT_ADVICE
+        || n.category == NotificationCategory.MARKET_OVERVIEW)
     Ok(Json.toJson(personal))
   }
 
@@ -69,8 +71,26 @@ class NotificationApplication @Inject()(cc: ControllerComponents) extends Abstra
         Notification(airlineId = airlineId, category = NotificationCategory.CONSULTANT_ADVICE, message = msg, cycle = currentCycle, targetId = Some(s"${r.from.id}-${r.to.id}"))
       }
       if (notifications.nonEmpty) NotificationSource.insertNotificationsBulk(notifications)
-      Ok(Json.obj("count" -> recs.size, "cycle" -> currentCycle))
+
+      // Market overview: biggest markets from the bases regardless of fleet, with fleet-gap notes.
+      val allModels = com.patson.util.AirplaneModelCache.allModels.values.toList
+      val market = ConsultantAdvisor.marketOverview(airline, levels, allAirports, countryRelationships, ownedModels, allModels, currentCycle)
+      NotificationSource.deleteByCategory(airlineId, NotificationCategory.MARKET_OVERVIEW)
+      val marketNotifs = market.map { mi =>
+        val suggestion = mi.suggested.map(_.name).getOrElse("no in-range aircraft")
+        val tag = if (mi.ownedFits) s"✓ serve with $suggestion" else s"⚠ fleet gap — consider $suggestion"
+        val msg = s"${mi.from.iata} ↔ ${mi.to.iata} · ${f"${mi.demand}%,d"} pax/wk · ${f"${mi.distance}%,d"} km · $tag"
+        Notification(airlineId = airlineId, category = NotificationCategory.MARKET_OVERVIEW, message = msg, cycle = currentCycle, targetId = Some(s"${mi.from.id}-${mi.to.id}"))
+      }
+      if (marketNotifs.nonEmpty) NotificationSource.insertNotificationsBulk(marketNotifs)
+
+      Ok(Json.obj("count" -> recs.size, "markets" -> market.size, "cycle" -> currentCycle))
     }
+  }
+
+  // Market overview list (pull-based, separate from the bell).
+  def getMarketOverview(airlineId: Int) = AuthenticatedAirline(airlineId) { _ =>
+    Ok(Json.toJson(NotificationSource.loadByCategory(airlineId, NotificationCategory.MARKET_OVERVIEW, 50)))
   }
 
   def markNewsRead(airlineId: Int) = AuthenticatedAirline(airlineId) { _ =>

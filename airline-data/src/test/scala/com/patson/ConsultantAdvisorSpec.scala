@@ -30,6 +30,31 @@ class ConsultantAdvisorSpec extends AnyWordSpecLike with Matchers {
     }
   }
 
+  "marketCount".must {
+    "be 0 below the market level (or no consultant)".in {
+      ConsultantAdvisor.marketCount(Nil) shouldBe 0
+      ConsultantAdvisor.marketCount(Seq(0)) shouldBe 0
+      ConsultantAdvisor.marketCount(Seq(1)) shouldBe 0 // default marketLevel = 2
+    }
+    "give the base count at the market level and +1 per level above".in {
+      ConsultantAdvisor.marketCount(Seq(2)) shouldBe 5 // base
+      ConsultantAdvisor.marketCount(Seq(3)) shouldBe 6
+      ConsultantAdvisor.marketCount(Seq(4)) shouldBe 7
+      ConsultantAdvisor.marketCount(Seq(2, 4)) shouldBe 7 // driven by the best
+    }
+  }
+
+  "targetSeatsPerFlight".must {
+    "right-size to ~daily capture of both-way demand".in {
+      ConsultantAdvisor.targetSeatsPerFlight(1291) shouldBe 129 // 1291*0.7/7
+      ConsultantAdvisor.targetSeatsPerFlight(700) shouldBe 70
+    }
+    "never be below 1".in {
+      ConsultantAdvisor.targetSeatsPerFlight(0) shouldBe 1
+      ConsultantAdvisor.targetSeatsPerFlight(5) shouldBe 1
+    }
+  }
+
   "commonalityScore".must {
     "be 0 when the family is not in the fleet".in {
       ConsultantAdvisor.commonalityScore("A320", Map.empty) shouldBe 0.0
