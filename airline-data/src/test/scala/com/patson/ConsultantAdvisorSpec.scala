@@ -1,7 +1,6 @@
 package com.patson
 
-import com.patson.model.Manufacturer
-import com.patson.model.airplane.Model
+import com.patson.model.airplane.{Manufacturer, Model}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
