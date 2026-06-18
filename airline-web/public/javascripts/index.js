@@ -10,10 +10,12 @@ let gameConstants = null;
 let stockBenchmarks = {};
 let postLoginScriptsLoaded = false;
 
-const POPPER_JS = 'https://unpkg.com/@popperjs/core@2/dist/umd/popper.min.js';
-const PAGE_JS = 'https://cdnjs.cloudflare.com/ajax/libs/page.js/1.11.6/page.js';
-const MAPLIBRE_JS = 'https://unpkg.com/maplibre-gl@5.17.0/dist/maplibre-gl.js';
-const MAPLIBRE_CSS = 'https://unpkg.com/maplibre-gl@5.17.0/dist/maplibre-gl.css';
+// Self-hosted (was external CDNs unpkg/cdnjs, which a browser's tracking protection, an
+// ad-blocker, or the network can block — breaking login since boot awaits maplibre).
+const POPPER_JS = '/assets/javascripts/vendor/popper.min.js';
+const PAGE_JS = '/assets/javascripts/vendor/page.js';
+const MAPLIBRE_JS = '/assets/javascripts/vendor/maplibre-gl.js';
+const MAPLIBRE_CSS = '/assets/stylesheets/vendor/maplibre-gl.css';
 
 function asset(name) {
     return (window.VERSIONED_ASSETS && window.VERSIONED_ASSETS[name]) || `/assets/javascripts/${name}`;
@@ -247,8 +249,16 @@ window.loadMap = async function() {
 };
 
 async function ensureFullBoot() {
-    await Promise.all([_bgSessionScripts, _bgAirports, _bgConstants, _bgMaplibre]);
-    await window.loadMap();
+    // Essential session data — the app needs these to function.
+    await Promise.all([_bgSessionScripts, _bgAirports, _bgConstants]);
+    // The map must never block login: if maplibre or its tiles fail to load (CDN/network/blocker),
+    // log in anyway and continue without the map rather than failing the whole login.
+    try {
+        await _bgMaplibre;
+        await window.loadMap();
+    } catch (e) {
+        console.warn('Map failed to load during boot; continuing without it', e);
+    }
     await loadChatApp();
 }
 window.ensureFullBoot = ensureFullBoot;
