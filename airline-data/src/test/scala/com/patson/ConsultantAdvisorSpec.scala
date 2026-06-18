@@ -1,6 +1,5 @@
 package com.patson
 
-import com.patson.model.airplane.{Manufacturer, Model}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
@@ -32,18 +31,14 @@ class ConsultantAdvisorSpec extends AnyWordSpecLike with Matchers {
   }
 
   "commonalityScore".must {
-    val m = Model("A320neo", "A320", 180, 5, 0.1, 0.1, 800, 5000, 50000000, 30, 4, Manufacturer("Airbus", countryCode = "FR"), 2000)
     "be 0 when the family is not in the fleet".in {
-      ConsultantAdvisor.commonalityScore(m, Map.empty) shouldBe 0.0
+      ConsultantAdvisor.commonalityScore("A320", Map.empty) shouldBe 0.0
     }
     "grow with the number of that family's frames owned (default 0.03/frame)".in {
-      ConsultantAdvisor.commonalityScore(m, Map("A320" -> 4)) shouldBe (0.12 +- 0.0001)
+      ConsultantAdvisor.commonalityScore("A320", Map("A320" -> 4)) shouldBe (0.12 +- 0.0001)
     }
     "cap at the max bonus (default 0.25)".in {
-      ConsultantAdvisor.commonalityScore(m, Map("A320" -> 100)) shouldBe 0.25
-    }
-    "fall back to the model name when the family is blank".in {
-      ConsultantAdvisor.commonalityScore(m.copy(family = ""), Map("A320neo" -> 3)) shouldBe (0.09 +- 0.0001)
+      ConsultantAdvisor.commonalityScore("A320", Map("A320" -> 100)) shouldBe 0.25
     }
   }
 }

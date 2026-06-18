@@ -23,10 +23,10 @@ object ConsultantAdvisor {
   /** Family key for fleet-commonality: the model family if set, else the model name. */
   def familyKeyOf(model : Model) : String = if (model.family.nonEmpty) model.family else model.name
 
-  /** Fractional ranking bonus (0..maxBonus) for a model whose family the player already operates,
-    * growing with how many of that family are in the fleet. Pure; unit-tested. */
-  def commonalityScore(model : Model, fleetByFamily : Map[String, Int]) : Double = {
-    val count = fleetByFamily.getOrElse(familyKeyOf(model), 0)
+  /** Fractional ranking bonus (0..maxBonus) for a family the player already operates, growing with
+    * how many of that family are in the fleet. Pure (keyed by family string); unit-tested. */
+  def commonalityScore(familyKey : String, fleetByFamily : Map[String, Int]) : Double = {
+    val count = fleetByFamily.getOrElse(familyKey, 0)
     Math.min(SoloConfig.consultantCommonalityMaxBonus, count * SoloConfig.consultantCommonalityPerFrame)
   }
 
@@ -115,7 +115,7 @@ object ConsultantAdvisor {
         val profit = estimateWeeklyProfit(link, bothWays, currentCycle)
         val key = familyKeyOf(model)
         val count = fleetByFamily.getOrElse(key, 0)
-        val rankScore = profit.toDouble * (if (considerCommonality) 1.0 + commonalityScore(model, fleetByFamily) else 1.0)
+        val rankScore = profit.toDouble * (if (considerCommonality) 1.0 + commonalityScore(key, fleetByFamily) else 1.0)
         (Recommendation(from, to, distance, profit, model, config, key, count), rankScore)
       }
     }.sortBy(-_._2).headOption
