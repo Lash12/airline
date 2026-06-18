@@ -17,6 +17,9 @@ import com.patson.model.airplane.{Airplane, AirplaneConfiguration, LinkAssignmen
   */
 object ConsultantAdvisor {
   private val SEAT_TARGET_MULTIPLIER = 1.5
+  // Floor to exclude impractical novelty types (airships ~100-135 km/h) from aircraft suggestions;
+  // every real commercial aircraft, turboprops included, cruises well above this.
+  private val MIN_PRACTICAL_SPEED_KPH = 300
 
   case class Recommendation(from : Airport, to : Airport, distance : Int, estWeeklyProfit : Long, model : Model, config : AirplaneConfiguration, familyKey : String, familyInFleet : Int)
 
@@ -155,7 +158,7 @@ object ConsultantAdvisor {
     * then the higher-quality one — so a thirsty antique or a too-slow airship loses to a modern jet of
     * similar size. If demand exceeds every single-flight capacity, the largest fitting model. */
   def suggestModel(distance : Int, fromRunway : Int, toRunway : Int, demandBothWays : Int, models : List[Model]) : Option[Model] = {
-    val fitting = models.filter(m => m.range >= distance && fromRunway >= m.runwayRequirement && toRunway >= m.runwayRequirement)
+    val fitting = models.filter(m => m.speed >= MIN_PRACTICAL_SPEED_KPH && m.range >= distance && fromRunway >= m.runwayRequirement && toRunway >= m.runwayRequirement)
     if (fitting.isEmpty) None
     else {
       val target = targetSeatsPerFlight(demandBothWays)
