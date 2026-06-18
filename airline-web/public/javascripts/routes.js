@@ -67,6 +67,11 @@ function initializeRoutes() {
     });
 
     page('/login/', () => {
+        // Already logged in? Don't show a dead login screen over the app chrome — go to the app.
+        if (checkSessionGuard()) {
+            page.redirect('/map/');
+            return;
+        }
         document.title = 'Login';
         showLoginPage();
     });
