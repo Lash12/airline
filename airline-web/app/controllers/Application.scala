@@ -134,16 +134,23 @@ class Application @Inject()(cc: ControllerComponents, val configuration: play.ap
     }
   }
 
+  // Deploy-unique ETag for the index HTML. The HTML embeds the fingerprinted asset map, so it
+  // changes every build — but the old ETag was the static app version ("v5.1.2"), which never
+  // changed between deploys. With Cache-Control: no-cache the browser revalidates, the static ETag
+  // always matched → 304 → the browser kept the OLD HTML (and thus loaded OLD JS) forever. Keying
+  // the ETag to the JVM start time makes each deploy (new process) invalidate the cached HTML.
+  private val indexEtag: String = s""""build-${java.lang.management.ManagementFactory.getRuntimeMXBean.getStartTime}""""
+
   // path parameter is captured but ignored - page.js handles routing
   def index(path: String = "") = Action { implicit request =>
     implicit lazy val config = configuration
     request.headers.get(IF_NONE_MATCH) match {
-      case Some(etag) if etag == s""""$currentApiVersion"""" =>
+      case Some(etag) if etag == indexEtag =>
         NotModified
       case _ =>
         Ok(views.html.index()).withHeaders(
           CACHE_CONTROL -> "no-cache",
-          ETAG -> s""""$currentApiVersion""""
+          ETAG -> indexEtag
         )
     }
   }
