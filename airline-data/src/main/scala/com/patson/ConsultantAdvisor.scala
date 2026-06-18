@@ -145,10 +145,15 @@ object ConsultantAdvisor {
     }.toList.sortBy(-_._2).take(Math.max(1, limit))
   }
 
+  /** Fuel per available seat-km (the standard airline efficiency metric). Lower is better. Rewards
+    * modern efficient jets and penalizes both thirsty antiques (high burn) and impractically slow
+    * novelty types like airships (near-zero burn swamped by near-zero speed). */
+  private def fuelPerSeatKm(m : Model) : Double = m.cruiseBurn.toDouble / Math.max(1, m.capacity * m.speed)
+
   /** Right-sized aircraft for a market: among models that can fly it (range + runways) and cover
-    * ~daily demand, prefer the most fuel-efficient per seat within a right-sized capacity band (so a
-    * thirsty antique/piston that merely has the range loses to a modern jet of similar size), then the
-    * higher-quality one. If demand exceeds every single-flight capacity, the largest fitting model. */
+    * ~daily demand, prefer the best fuel-per-seat-km within a right-sized capacity band (target..2x),
+    * then the higher-quality one — so a thirsty antique or a too-slow airship loses to a modern jet of
+    * similar size. If demand exceeds every single-flight capacity, the largest fitting model. */
   def suggestModel(distance : Int, fromRunway : Int, toRunway : Int, demandBothWays : Int, models : List[Model]) : Option[Model] = {
     val fitting = models.filter(m => m.range >= distance && fromRunway >= m.runwayRequirement && toRunway >= m.runwayRequirement)
     if (fitting.isEmpty) None
@@ -160,7 +165,7 @@ object ConsultantAdvisor {
         // Stay close to demand (avoid oversizing) but, within that band, pick the best economics.
         val band = covering.filter(_.capacity <= target * 2)
         val candidates = if (band.nonEmpty) band else covering
-        Some(candidates.minBy(m => (m.cruiseBurn.toDouble / Math.max(1, m.capacity), -m.quality)))
+        Some(candidates.minBy(m => (fuelPerSeatKm(m), -m.quality)))
       }
     }
   }
