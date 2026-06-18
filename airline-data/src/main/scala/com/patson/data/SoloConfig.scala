@@ -130,6 +130,12 @@ object SoloConfig {
   val consultantCommonalityLevel : Int = intAt("solo.consultant.commonalityLevel", 2)
   val consultantCommonalityPerFrame : Double = doubleAt("solo.consultant.commonalityPerFrame", 0.03)
   val consultantCommonalityMaxBonus : Double = doubleAt("solo.consultant.commonalityMaxBonus", 0.25)
+  // Market overview: a more experienced consultant (level >= marketOverviewLevel) also reports the
+  // biggest markets from the player's bases regardless of the current fleet, suggesting an ideal
+  // aircraft and flagging fleet gaps (a market whose ideal plane the player doesn't own).
+  val consultantMarketLevel : Int = intAt("solo.consultant.marketLevel", 2)
+  val consultantMarketCount : Int = intAt("solo.consultant.marketCount", 5)
+  val consultantMarketCandidateLimit : Int = intAt("solo.consultant.marketCandidateLimit", 80)
 
   // World news feed (single-player): an ambient, pull-based log of notable world
   // events (NPC route changes, etc.) surfaced in a dedicated News panel, separate from

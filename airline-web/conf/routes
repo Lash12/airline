@@ -123,6 +123,7 @@ POST		 /airlines/:airlineId/set-oil-inventory-option  controllers.OilApplication
 GET		 /airlines/:airlineId/news  controllers.NotificationApplication.getNews(airlineId : Int)
 POST	 /airlines/:airlineId/news/read  controllers.NotificationApplication.markNewsRead(airlineId : Int)
 GET		 /airlines/:airlineId/consultant-advice  controllers.NotificationApplication.getConsultantAdvice(airlineId : Int)
+GET		 /airlines/:airlineId/consultant-market  controllers.NotificationApplication.getMarketOverview(airlineId : Int)
 POST	 /airlines/:airlineId/consultant-advice/refresh  controllers.NotificationApplication.refreshConsultantAdvice(airlineId : Int)
 GET		 /airlines/:airlineId/notifications  controllers.NotificationApplication.getNotifications(airlineId : Int)
 GET		 /airlines/:airlineId/notifications/unread  controllers.NotificationApplication.getUnreadCount(airlineId : Int)

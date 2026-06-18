@@ -20,6 +20,22 @@ object ConsultantAdvisor {
 
   case class Recommendation(from : Airport, to : Airport, distance : Int, estWeeklyProfit : Long, model : Model, config : AirplaneConfiguration, familyKey : String, familyInFleet : Int)
 
+  /** A big-market opportunity surfaced regardless of the current fleet, with a suggested aircraft and
+    * whether the player already owns something that can serve it. */
+  case class MarketInsight(from : Airport, to : Airport, distance : Int, demand : Int, ownedFits : Boolean, suggested : Option[Model])
+
+  /** How many market-overview insights to surface for the assigned consultants' levels (pure; tested).
+    * Nothing below the market level; then base count + 1 per level above the threshold. */
+  def marketCount(levels : Seq[Int]) : Int = {
+    if (levels.isEmpty || levels.max < SoloConfig.consultantMarketLevel) 0
+    else SoloConfig.consultantMarketCount + Math.max(0, levels.max - SoloConfig.consultantMarketLevel)
+  }
+
+  /** Target seats per flight for a market's both-way demand assuming ~daily service capturing the
+    * usual share — used to right-size the suggested aircraft. Pure; tested. */
+  def targetSeatsPerFlight(demandBothWays : Int) : Int =
+    Math.max(1, Math.round(demandBothWays * SoloConfig.consultantCaptureRatio / 7).toInt)
+
   /** Family key for fleet-commonality: the model family if set, else the model name. */
   def familyKeyOf(model : Model) : String = if (model.family.nonEmpty) model.family else model.name
 
@@ -78,6 +94,68 @@ object ConsultantAdvisor {
       bestForRoute(airline, home, to, demand, ownedModels, countryRelationships, currentCycle, fleetByFamily, considerCommonality)
     }
     scored.filter(_._1.estWeeklyProfit > 0).sortBy(-_._2).take(depth).map(_._1)
+  }
+
+  /** Biggest markets from the player's bases regardless of the current fleet, each with a suggested
+    * right-sized aircraft (from all models) and whether an owned model can already serve it. */
+  def marketOverview(airline : Airline,
+                     levels : Seq[Int],
+                     allAirports : List[Airport],
+                     countryRelationships : Map[(String, String), Int],
+                     ownedModels : List[Model],
+                     allModels : List[Model],
+                     currentCycle : Int) : List[MarketInsight] = {
+    val count = marketCount(levels)
+    if (count <= 0) return Nil
+
+    val airportById = allAirports.map(a => (a.id, a)).toMap
+    val baseAirports = AirlineSource.loadAirlineBasesByAirline(airline.id).flatMap(b => airportById.get(b.airport.id))
+    if (baseAirports.isEmpty) return Nil
+    val served : Set[(Int, Int)] = LinkSource.loadFlightLinksByAirlineId(airline.id)
+      .flatMap(l => List((l.from.id, l.to.id), (l.to.id, l.from.id))).toSet
+
+    val markets = baseAirports.flatMap { home =>
+      topMarketsFromBase(home, allAirports, served, countryRelationships, SoloConfig.consultantMarketCandidateLimit)
+        .map { case (to, demand) => (home, to, demand) }
+    }
+    val top = markets.groupBy(m => (m._1.id, m._2.id)).map(_._2.maxBy(_._3)).toList.sortBy(-_._3).take(count)
+
+    top.map { case (home, to, demand) =>
+      val distance = Computation.calculateDistance(home, to)
+      val ownedFits = ownedModels.exists(m => m.range >= distance && to.runwayLength >= m.runwayRequirement && home.runwayLength >= m.runwayRequirement)
+      val suggested = suggestModel(distance, home.runwayLength.toInt, to.runwayLength.toInt, demand, allModels)
+      MarketInsight(home, to, distance, demand, ownedFits, suggested)
+    }
+  }
+
+  /** Top markets (by both-direction base demand) from one base, not filtered by range/fleet. */
+  private def topMarketsFromBase(home : Airport, allAirports : List[Airport], served : Set[(Int, Int)],
+                                 countryRelationships : Map[(String, String), Int], limit : Int) : List[(Airport, Int)] = {
+    allAirports.iterator.filter(to => to.id != home.id && !served.contains((home.id, to.id))).flatMap { to =>
+      val distance = Computation.calculateDistance(home, to)
+      if (distance <= 0 || !DemandGenerator.canHaveDemand(home, to, distance)) None
+      else {
+        val rel = countryRelationships.getOrElse((home.countryCode, to.countryCode), 0)
+        if (rel < 0) None
+        else {
+          val total = (demandByClass(home, to, countryRelationships) + demandByClass(to, home, countryRelationships)).total
+          if (total <= 0) None else Some((to, total))
+        }
+      }
+    }.toList.sortBy(-_._2).take(Math.max(1, limit))
+  }
+
+  /** Right-sized aircraft for a market: the smallest model that can fly it (range + runways) and cover
+    * ~daily demand; if demand exceeds every single-flight capacity, the largest fitting model. */
+  def suggestModel(distance : Int, fromRunway : Int, toRunway : Int, demandBothWays : Int, models : List[Model]) : Option[Model] = {
+    val fitting = models.filter(m => m.range >= distance && fromRunway >= m.runwayRequirement && toRunway >= m.runwayRequirement)
+    if (fitting.isEmpty) None
+    else {
+      val target = targetSeatsPerFlight(demandBothWays)
+      val covering = fitting.filter(_.capacity >= target)
+      if (covering.nonEmpty) Some(covering.minBy(m => (m.capacity, m.cruiseBurn / Math.max(1, m.capacity), -m.quality)))
+      else Some(fitting.maxBy(_.capacity))
+    }
   }
 
   private def rankedDestinations(home : Airport, maxRange : Int, minRunway : Int, allAirports : List[Airport],

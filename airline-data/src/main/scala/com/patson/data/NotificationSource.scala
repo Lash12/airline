@@ -206,7 +206,7 @@ object NotificationSource {
       // WORLD_NEWS and CONSULTANT_ADVICE live in their own pull-based panels (News / Advisor),
       // so they must not drive the personal notification bell badge (otherwise they would nag).
       val statement = connection.prepareStatement(
-        s"SELECT COUNT(*) FROM $NOTIFICATION_TABLE WHERE airline = ? AND is_read = 0 AND category != '${NotificationCategory.WORLD_NEWS}' AND category != '${NotificationCategory.CONSULTANT_ADVICE}'"
+        s"SELECT COUNT(*) FROM $NOTIFICATION_TABLE WHERE airline = ? AND is_read = 0 AND category != '${NotificationCategory.WORLD_NEWS}' AND category != '${NotificationCategory.CONSULTANT_ADVICE}' AND category != '${NotificationCategory.MARKET_OVERVIEW}'"
       )
       try {
         statement.setInt(1, airlineId)
