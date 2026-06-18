@@ -52,12 +52,16 @@ class NotificationApplication @Inject()(cc: ControllerComponents) extends Abstra
       val levels = consultants.map(_.assignedTask.asInstanceOf[LevelingManagerTask].level(currentCycle))
       val allAirports = AirportSource.loadAllAirports(true)
       val countryRelationships = CountrySource.getCountryMutualRelationships()
-      val ownedModels = AirplaneSource.loadAirplanesByOwner(airlineId).filterNot(_.isSold).map(_.model).distinct
-      val recs = ConsultantAdvisor.recommendations(airline, levels, allAirports, countryRelationships, ownedModels, currentCycle)
+      val ownedAirplanes = AirplaneSource.loadAirplanesByOwner(airlineId).filterNot(_.isSold)
+      val ownedModels = ownedAirplanes.map(_.model).distinct
+      val fleetByFamily = ownedAirplanes.groupBy(a => ConsultantAdvisor.familyKeyOf(a.model)).map { case (k, v) => (k, v.size) }
+      val considerCommonality = levels.nonEmpty && levels.max >= SoloConfig.consultantCommonalityLevel
+      val recs = ConsultantAdvisor.recommendations(airline, levels, allAirports, countryRelationships, ownedModels, fleetByFamily, currentCycle)
       NotificationSource.deleteByCategory(airlineId, NotificationCategory.CONSULTANT_ADVICE)
       val notifications = recs.map { r =>
         val cfg = s"${r.config.economyVal}Y/${r.config.businessVal}J/${r.config.firstVal}F"
-        val msg = s"Open ${r.from.iata}–${r.to.iata} (${r.distance}km) · ${r.model.name} $cfg · est +$$${r.estWeeklyProfit}/wk"
+        val base = s"Open ${r.from.iata}–${r.to.iata} (${r.distance}km) · ${r.model.name} $cfg · est +$$${r.estWeeklyProfit}/wk"
+        val msg = if (considerCommonality && r.familyInFleet > 0) s"$base · fits your ${r.familyKey} fleet (${r.familyInFleet})" else base
         Notification(airlineId = airlineId, category = NotificationCategory.CONSULTANT_ADVICE, message = msg, cycle = currentCycle, targetId = Some(s"${r.from.id}-${r.to.id}"))
       }
       if (notifications.nonEmpty) NotificationSource.insertNotificationsBulk(notifications)

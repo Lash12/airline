@@ -124,6 +124,12 @@ object SoloConfig {
   val consultantMaxRecs : Int = intAt("solo.consultant.maxRecommendations", 15)
   val consultantCandidateLimit : Int = intAt("solo.consultant.candidateLimit", 40)
   val consultantCaptureRatio : Double = doubleAt("solo.consultant.captureRatio", 0.7)
+  // Fleet-commonality bias: from this consultant level up, advice favors (and mentions) routes whose
+  // suggested aircraft is from a family the player already operates, rewarding a focused fleet. A
+  // novice consultant ignores it. Bonus = perFrame * (frames of that family owned), capped.
+  val consultantCommonalityLevel : Int = intAt("solo.consultant.commonalityLevel", 2)
+  val consultantCommonalityPerFrame : Double = doubleAt("solo.consultant.commonalityPerFrame", 0.03)
+  val consultantCommonalityMaxBonus : Double = doubleAt("solo.consultant.commonalityMaxBonus", 0.25)
 
   // World news feed (single-player): an ambient, pull-based log of notable world
   // events (NPC route changes, etc.) surfaced in a dedicated News panel, separate from
