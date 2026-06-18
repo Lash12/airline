@@ -34,7 +34,7 @@ object ConsultantAdvisor {
   /** Target seats per flight for a market's both-way demand assuming ~daily service capturing the
     * usual share — used to right-size the suggested aircraft. Pure; tested. */
   def targetSeatsPerFlight(demandBothWays : Int) : Int =
-    Math.max(1, (demandBothWays * SoloConfig.consultantCaptureRatio / 7).toInt)
+    Math.max(1, Math.round(demandBothWays * SoloConfig.consultantCaptureRatio / 7).toInt)
 
   /** Family key for fleet-commonality: the model family if set, else the model name. */
   def familyKeyOf(model : Model) : String = if (model.family.nonEmpty) model.family else model.name
