@@ -21,8 +21,6 @@
 						<div class="table-header" id="linksTableSortHeader">
 							<div class="cell" style="width: 3%"><input type="checkbox" id="toggleAllLinks"
 									onclick="toggleAllLinks(this)"></div>
-                            <div class="cell clickable" style="width: 0%" data-sort-property="lastUpdate"
-								data-sort-order="ascending" id="hiddenLinkSortBy"></div>
 							<div class="cell clickable selected" style="width: 16%" data-sort-property="fromAirportCode"
 								data-sort-order="descending" onclick="toggleLinksTableSortOrder($(this))">From Airport
 							</div>
@@ -58,19 +56,17 @@
 							<div class="cell clickable" style="width: 8%" align="right"
 								data-sort-property="profitPerStaff" data-sort-order="ascending"
 								onclick="toggleLinksTableSortOrder($(this))">Profit per staff</div>
-							<div class="cell clickable" style="width: 7%" align="right"
+							<div class="cell clickable" style="width: 7%" align="right" id="hiddenLinkSortBy"
 								data-sort-property="lastUpdate" data-sort-order="descending"
 								onclick="toggleLinksTableSortOrder($(this))" title="When you last edited this route (real time)">Modified</div>
 						</div>
 						<div class="table-header" id="linksTableFilterHeader" style="display: none;">
 							<div class="cell" style="width: 3%">&nbsp;</div>
-                            <div class="cell" style="width: 0%"></div>
 							<div class="cell" style="width: 16%" data-filter-property="fromAirportCode">&nbsp;</div>
 							<div class="cell" style="width: 16%" data-filter-property="toAirportCode">&nbsp;</div>
 							<div class="cell" style="width: 14%" data-filter-property="modelId">&nbsp;</div>
 							<div class="cell" style="width: 8%" data-filter-property="distance">&nbsp;</div>
 							<div class="cell" style="width: 8%">&nbsp;</div>
-							<div class="cell" style="width: 4%">&nbsp;</div>
 							<div class="cell" style="width: 3%">&nbsp;</div>
 							<div class="cell" style="width: 4%">&nbsp;</div>
 							<div class="cell" style="width: 5%">&nbsp;</div>

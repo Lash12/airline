@@ -59,8 +59,12 @@ class NotificationApplication @Inject()(cc: ControllerComponents) extends Abstra
       val recs = ConsultantAdvisor.recommendations(airline, levels, allAirports, countryRelationships, ownedModels, fleetByFamily, currentCycle)
       NotificationSource.deleteByCategory(airlineId, NotificationCategory.CONSULTANT_ADVICE)
       val notifications = recs.map { r =>
-        val cfg = s"${r.config.economyVal}Y/${r.config.businessVal}J/${r.config.firstVal}F"
-        val base = s"Open ${r.from.iata}–${r.to.iata} (${r.distance}km) · ${r.model.name} $cfg · est +$$${r.estWeeklyProfit}/wk"
+        val cabin = Seq(
+          if (r.config.economyVal > 0) Some(s"${r.config.economyVal}Y") else None,
+          if (r.config.businessVal > 0) Some(s"${r.config.businessVal}J") else None,
+          if (r.config.firstVal > 0) Some(s"${r.config.firstVal}F") else None
+        ).flatten.mkString(" ")
+        val base = s"${r.from.iata} → ${r.to.iata} · ${f"${r.distance}%,d"} km · ${r.model.name} ($cabin) · ~$$${f"${r.estWeeklyProfit}%,d"}/wk"
         val msg = if (considerCommonality && r.familyInFleet > 0) s"$base · fits your ${r.familyKey} fleet (${r.familyInFleet})" else base
         Notification(airlineId = airlineId, category = NotificationCategory.CONSULTANT_ADVICE, message = msg, cycle = currentCycle, targetId = Some(s"${r.from.id}-${r.to.id}"))
       }
