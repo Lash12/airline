@@ -1575,10 +1575,14 @@ function renderConsultantAdvice(list) {
     $('#consultantAsOf').text("Advice as of " + cycleToYearWeek(list[0].cycle))
     list.forEach(function(n) {
         var stamp = "Yr " + Math.floor(n.cycle / 48) + " Wk " + (n.cycle % 48)
+        var parts = (n.message || '').split(' · ')
+        var route = parts.shift() || n.message
+        var detail = parts.join(' · ')
         $c.append(
             "<div class='py-1' style='border-bottom:1px solid rgba(255,255,255,0.1);'>" +
-            "<span>" + n.message + "</span> " +
-            "<span class='text-sm' style='opacity:0.55;'>(" + stamp + ")</span></div>"
+            "<div><strong>" + route + "</strong> <span class='text-sm' style='opacity:0.5;'>" + stamp + "</span></div>" +
+            "<div class='text-sm' style='opacity:0.8;'>" + detail + "</div>" +
+            "</div>"
         )
     })
 }
