@@ -76,6 +76,12 @@ done
 verify_mysql_mount_config
 verify_existing_mysql_mount
 
+if [ -z "${CLOUDFLARE_TUNNEL_TOKEN:-}" ]; then
+  echo "ERROR: CLOUDFLARE_TUNNEL_TOKEN is required for the HTTPS tunnel." >&2
+  echo "Set the GitHub Actions secret before deploying the small-server stack." >&2
+  exit 1
+fi
+
 echo "==> Starting containers"
 $COMPOSE up -d --build --force-recreate
 verify_running_mysql_mount
@@ -129,5 +135,12 @@ docker exec airline-app sh -lc 'pgrep -af "sbt-launch.jar run$|sbt-launch.jar ru
 
 echo "==> Container health"
 docker ps --format '{{.Names}} {{.Status}}'
+
+cloudflared_state=$(docker inspect -f '{{.State.Status}}' airline-cloudflared 2>/dev/null || true)
+if [ "$cloudflared_state" != "running" ]; then
+  echo "ERROR: airline-cloudflared is not running." >&2
+  docker logs --tail 50 airline-cloudflared >&2 || true
+  exit 1
+fi
 
 echo "==> Deploy complete: http://localhost:9000 is up"

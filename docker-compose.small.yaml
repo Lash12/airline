@@ -51,6 +51,16 @@ services:
     networks:
       - airline
 
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: airline-cloudflared
+    restart: unless-stopped
+    depends_on:
+      - airline-app
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    networks:
+      - airline
+
   airline-db:
     # bitnami/ images were removed from Docker Hub in 2025; bitnamilegacy is
     # the frozen archive of the same image.

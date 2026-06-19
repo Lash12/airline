@@ -15,9 +15,9 @@ in-app bell only updates when the tab is open. "Tier 2" is real **Web Push**: th
 a system notification even with the browser/app closed.
 
 Implementation status: **P-0 through P-4 code is built behind `solo.push.enabled`; HTTPS is
-the only remaining prerequisite before real browser push delivery can be validated on a
-phone.** The motivating use case is a QOL nudge ("your RDU–LHR negotiation is off cooldown"),
-but the mechanism is generic: any configured notification category can opt into being pushed.
+being provided by Cloudflare Tunnel at `https://airline.ashhome.org`.** The motivating use
+case is a QOL nudge ("your RDU–LHR negotiation is off cooldown"), but the mechanism is
+generic: any configured notification category can opt into being pushed.
 
 Design rule (as with every solo feature): gate behind a `solo.*` flag defaulting off, so
 default/multiplayer deploys are unchanged.
@@ -27,10 +27,9 @@ default/multiplayer deploys are unchanged.
 ## ⚠️ Hard prerequisite: HTTPS (secure context)
 
 Service workers and the Web Push API **only work in a secure context** — i.e. **HTTPS**, with
-the sole exception of `localhost`. The game is currently served over **plain HTTP**
-(`http://192.168.1.52:9000`, and over the LAN/Teleport). **Web Push cannot work until the web
-app is reachable over HTTPS on the device.** This is infra, not code, and is the real gating
-item. Options (pick one before building Tier 2):
+the sole exception of `localhost`. The LAN app still serves plain HTTP internally at
+`http://192.168.1.52:9000`; external HTTPS terminates at Cloudflare and reaches the app through
+the `airline-optiplex` tunnel.
 
 1. **Reverse proxy with a real cert** — put Caddy/nginx in front of the Play app on LXC 202,
    terminate TLS with a Let's Encrypt cert for a real domain (needs a domain pointed at the
@@ -41,8 +40,8 @@ item. Options (pick one before building Tier 2):
 3. **Trusted cert on a LAN hostname** — a cert (e.g. via an internal CA or mkcert) for a LAN
    name, trusted on the Samsung S24 Ultra. Works but fiddly to provision per-device.
 
-Recommendation: a **Tailscale Funnel / Cloudflare Tunnel** is likely the least-effort path to a
-valid HTTPS origin for one user on a phone, and also fixes remote access cleanly.
+Current choice: **Cloudflare Tunnel** with Cloudflare Access in front of
+`airline.ashhome.org`.
 
 ---
 

@@ -66,6 +66,7 @@ jobs:
           # economy display values so tooltips match the simulation.
           # alliance.minMembers must match the sim so alliance status agrees across JVMs;
           # lounge.allowWithoutAlliance gates the web-side lounge build.
+          CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
           WEB_SOLO_OPTS: >-
             -Dsolo.startingBalance=25000000
             -Dsolo.minRenewalBalance=100000
@@ -76,6 +77,10 @@ jobs:
             -Dsolo.consultant.enabled=true
             -Dsolo.lounge.allowWithoutAlliance=true
             -Dsolo.alliance.minMembers=2
+            -Dsolo.push.enabled=true
+            -Dsolo.push.vapidPublicKey=${{ secrets.SOLO_PUSH_VAPID_PUBLIC_KEY }}
+            -Dsolo.push.vapidPrivateKey=${{ secrets.SOLO_PUSH_VAPID_PRIVATE_KEY }}
+            -Dsolo.push.vapidSubject=${{ secrets.SOLO_PUSH_VAPID_SUBJECT }}
         run: bash scripts/optiplex-deploy.sh
 
       - name: Install e2e dependencies
