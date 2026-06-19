@@ -26,17 +26,20 @@ services:
       - "./.docker/data/start.sh:/home/airline/start-data.sh"
       - "./.docker/web/start.sh:/home/airline/start-web.sh"
       - "./.docker/web/clean.sh:/home/airline/clean-web.sh"
+      - "./.docker/app/start-small.sh:/home/airline/start-small.sh"
     environment:
       DB_HOST: airline-db
-    entrypoint: ["tail", "-f", "/dev/null"]
+      WEB_EXTRA_OPTS: "-Dmysqldb.host=airline-db:3306 ${WEB_SOLO_OPTS:--Dsolo.consultant.enabled=true -Dsolo.progression.enabled=true -Dsolo.news.enabled=true -Dsolo.lounge.allowWithoutAlliance=true -Dsolo.alliance.minMembers=2}"
+      SIM_EXTRA_OPTS: "-Dmysqldb.host=airline-db:3306 -Dsimulation.pauseWhenIdle=true ${SIM_SOLO_OPTS:--Dsolo.ap.generationRate=0.3 -Dsolo.loan.defaultAnnualRate=0.06 -Dsolo.bankruptcy.cashThreshold=-25000000 -Dsolo.bankruptcy.assetsThreshold=-150000000 -Dsolo.notify.enabled=true -Dsolo.demand.profile=true -Dsolo.ai.enabled=true -Dsolo.consultant.enabled=true -Dsolo.progression.enabled=true -Dsolo.news.enabled=true -Dsolo.lounge.allowWithoutAlliance=true -Dsolo.alliance.minMembers=2}"
+    entrypoint: ["sh", "/home/airline/start-small.sh"]
     # Required for docker inside an unprivileged LXC, where securityfs is
     # unreadable and the docker-default AppArmor profile can never load.
     # No-op on hosts without AppArmor.
     security_opt:
       - apparmor=unconfined
-    # Holds both the simulation JVM (~2.75G heap with the Step E-1 base-demand
-    # cache, solo.demand.memoize) and the web JVM (~1G heap).
-    mem_limit: 5632m
+    # Holds both the simulation JVM (~3G heap with demand/cache work) and the
+    # web JVM (~1G heap). The current OptiPlex guest has 16 GB RAM.
+    mem_limit: 7g
     ports:
       - "9000:9000"
     healthcheck:

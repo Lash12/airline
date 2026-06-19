@@ -223,7 +223,9 @@ function showOfficeCanvas() {
 	updateAirplaneRenewalDetails()
 	updateAirlineBases()
 	updateAirlineColorPicker()
-	updateHeadquartersMap($('#officeCanvas .headquartersMap'), activeAirline.id)
+	if (typeof updateHeadquartersMap === 'function') {
+		updateHeadquartersMap($('#officeCanvas .headquartersMap'), activeAirline.id)
+	}
 	updateLiveryInfo()
 	updateManagerStatus()
 	loadSlogan(function(slogan) { $('#officeCanvas .slogan').val(slogan)})

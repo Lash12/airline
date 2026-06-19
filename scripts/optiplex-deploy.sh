@@ -8,10 +8,6 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 COMPOSE="docker compose -f docker-compose.small.yaml"
-# application.conf hardcodes localhost:3306; override via Typesafe Config
-# system property (sbt does not fork, so SBT_OPTS reaches the app).
-DB_OVERRIDE="-Dmysqldb.host=airline-db:3306"
-SIM_EXTRA_OPTS="${SIM_EXTRA_OPTS:-} $DB_OVERRIDE"
 
 # Containers with our fixed names left behind by an older compose project
 # (different working dir) block `up` with a name conflict. Only stopped
@@ -28,7 +24,7 @@ for name in airline-app airline-db; do
 done
 
 echo "==> Starting containers"
-$COMPOSE up -d --build
+$COMPOSE up -d --build --force-recreate
 
 echo "==> Waiting for MySQL (up to 60s)"
 db_ready=""
@@ -45,22 +41,6 @@ if [ -z "$db_ready" ]; then
   exit 1
 fi
 
-echo "==> Stopping any prior simulation/web processes"
-# The matcher script's own cmdline contains the pattern strings, so it
-# must skip itself or it commits suicide (exit 143).
-docker exec airline-app sh -c '
-  for p in /proc/[0-9]*; do
-    pid=${p#/proc/}
-    [ "$pid" = 1 ] && continue
-    [ "$pid" = "$$" ] && continue
-    cmd=$(tr "\0" " " < "$p/cmdline" 2>/dev/null || true)
-    case "$cmd" in
-      *sbt*|*java*) kill "$pid" 2>/dev/null || true ;;
-    esac
-  done
-  true' || true
-sleep 3
-
 # Credentials come from the compose file via the running container's env.
 DB_USER=$(docker exec airline-db printenv MYSQL_USER)
 DB_PASS=$(docker exec airline-db printenv MYSQL_PASSWORD)
@@ -70,18 +50,10 @@ cycle_table=$(docker exec airline-db mysql -u"$DB_USER" -p"$DB_PASS" -N \
   -e "SHOW TABLES LIKE 'cycle'" "$DB_NAME" 2>/dev/null || true)
 if [ -z "$cycle_table" ]; then
   echo "==> Database not initialized; running init (publishLocal + MainInit)"
-  docker exec -e SBT_OPTS="$DB_OVERRIDE" airline-app sh /home/airline/init-data.sh
+  docker exec airline-app sh /home/airline/init-data.sh
 else
-  echo "==> Database already initialized; refreshing airline-data artifact"
-  docker exec airline-app sh -c \
-    'cd /home/airline/airline/airline-data && SBT_OPTS="-Xmx1536M -Xms512M -XX:MaxMetaspaceSize=512M" sbt publishLocal'
+  echo "==> Database already initialized; supervisor will refresh airline-data artifact"
 fi
-
-echo "==> Starting simulation (SIM_EXTRA_OPTS='$SIM_EXTRA_OPTS') and web"
-docker exec -d -e SIM_EXTRA_OPTS="$SIM_EXTRA_OPTS" airline-app \
-  sh -c 'sh /home/airline/start-data.sh > /home/airline/sim.log 2>&1'
-docker exec -d -e WEB_EXTRA_OPTS="$DB_OVERRIDE ${WEB_SOLO_OPTS:-}" airline-app \
-  sh -c 'sh /home/airline/start-web.sh > /home/airline/web.log 2>&1'
 
 echo "==> Waiting for HTTP 200 from :9000 (up to 10 min)"
 web_ready=""
@@ -97,5 +69,11 @@ if [ -z "$web_ready" ]; then
   docker exec airline-app sh -c 'tail -50 /home/airline/web.log' >&2 || true
   exit 1
 fi
+
+echo "==> Verifying supervisor-managed JVMs"
+docker exec airline-app sh -lc 'pgrep -af "sbt-launch.jar run$|sbt-launch.jar runMain com.patson.MainSimulation"'
+
+echo "==> Container health"
+docker ps --format '{{.Names}} {{.Status}}'
 
 echo "==> Deploy complete: http://localhost:9000 is up"

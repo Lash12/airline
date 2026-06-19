@@ -31,7 +31,7 @@ jobs:
           # affect this self-hosted instance.
           # -Xmx2816M: headroom for the ~635MB Step E-1 base-demand cache on top
           # of the ~1.8G working set (container mem_limit raised to match).
-          SIM_EXTRA_OPTS: >-
+          SIM_SOLO_OPTS: >-
             -Xmx2816M
             -Dsolo.ap.generationRate=0.3
             -Dsolo.loan.defaultAnnualRate=0.06
@@ -69,6 +69,8 @@ jobs:
           npx --prefix e2e playwright install chromium
 
       - name: Run Playwright tests
+        env:
+          BASE_URL: http://localhost:9000
         run: npm test --prefix e2e
 
       - name: Upload test results

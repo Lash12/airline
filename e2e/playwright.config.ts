@@ -5,7 +5,7 @@ export default defineConfig({
   timeout: 60_000,
   retries: 1, // enables trace-on-retry usefulness
   use: {
-    baseURL: "http://localhost:9000",
+    baseURL: process.env.BASE_URL || "http://localhost:9000",
     headless: true,
     screenshot: "only-on-failure",
     trace: "on-first-retry",

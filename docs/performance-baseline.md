@@ -7,6 +7,26 @@
 - **MySQL Version**: 8.0
 - **Docker Version**: 20.10.12
 
+## Current Baseline: OptiPlex `airline-dev` (2026-06-18)
+
+Measured after adding the small-server supervisor entrypoint, automatic
+`airline-data` `publishLocal`, Docker DB host defaults, and a 3 GB simulation heap.
+
+- **Host**: `airline-dev` at `192.168.1.52`
+- **Host memory**: 15,860 MB total, 10,357 MB available, 0 MB swap used
+- **Container state**: `airline-app` healthy, `airline-db` running
+- **Web health**: `/` returned HTTP 200 in 0.034 s; `/login/` returned HTTP 200 in 0.038 s
+- **Current cycle endpoint**: `{"cycle":432}` during measurement
+- **Active-cycle memory**: `airline-app` 4.424 GiB / 7 GiB, `airline-db` 446.3 MiB / 1.465 GiB
+- **Active-cycle CPU**: `airline-app` 138.20%, `airline-db` 0.73%
+- **Cycle 432 wall time**: 239 s
+- **Cycle 432 phase timings**: caches 11.859 s, link 218.873 s, airport 5.135 s,
+  airplane 1.222 s, airline 2.223 s, all other phases under 0.1 s except post-cycle work
+
+The first attempted 1.5 GB simulation heap spent 95-99% of wall time in GC. The 3 GB heap
+completed the cycle without that GC-thrashing pattern. LinkSimulation remains the clear
+optimization target.
+
 ## Startup Measurement
 - **Goal**: Measure time to first HTTP 200 response.
 - **Command**:
