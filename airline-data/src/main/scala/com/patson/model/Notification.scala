@@ -23,6 +23,11 @@ object NotificationCategory extends Enumeration {
    *   Deleted:     on successful negotiation for the same route pair; expired ones
    *                purged by NotificationSource.purgeExpiredNegotiationLoss on getNotifications.
    *
+   * NEGOTIATION_READY — Single-player: emitted once when a NEGOTIATION_LOSS
+   *   discount reaches its expiry cycle and the route can be attempted again
+   *   (gated by solo.negotiationReady.enabled). targetId uses the same
+   *   "{fromAirportId}-{toAirportId}" navigation contract.
+   *
    * LEVEL_UP — Airline reached a new level.
    *   targetId: none
    *
@@ -63,5 +68,5 @@ object NotificationCategory extends Enumeration {
    *   bell — excluded from the bell unread count so it never nags. targetId optional, e.g.
    *   "rival_{airlineId}" for navigation. Subject to the normal retention purge.
    */
-  val NEGOTIATION_LOSS, LEVEL_UP, LOYALIST, GAME_OVER, OLYMPICS_PRIZE, TUTORIAL, LINK_CANCELLATION, CASH_FLOW_WARNING, PROFIT_MILESTONE, MILESTONE_ACHIEVED, WORLD_NEWS, CONSULTANT_ADVICE, MARKET_OVERVIEW = Value
+  val NEGOTIATION_LOSS, NEGOTIATION_READY, LEVEL_UP, LOYALIST, GAME_OVER, OLYMPICS_PRIZE, TUTORIAL, LINK_CANCELLATION, CASH_FLOW_WARNING, PROFIT_MILESTONE, MILESTONE_ACHIEVED, WORLD_NEWS, CONSULTANT_ADVICE, MARKET_OVERVIEW = Value
 }

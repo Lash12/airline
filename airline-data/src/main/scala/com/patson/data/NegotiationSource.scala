@@ -41,6 +41,13 @@ object NegotiationSource {
     loadLinkDiscountsByCriteria(List(("airline", airlineId), ("from_airport", fromAirportId), ("to_airport", toAirportId)))
   }
 
+  def loadExpiredLinkDiscounts(cutoffCycle : Int) : List[LinkNegotiationDiscount] = {
+    loadLinkDiscountsByQueryString(
+      "SELECT * FROM " + LINK_NEGOTIATION_DISCOUNT_TABLE + " WHERE expiration_cycle <= ?",
+      List(cutoffCycle)
+    )
+  }
+
   def loadLinkDiscountsByCriteria(criteria : List[(String, Any)], loadArea : Boolean = false) = {
     var queryString = "SELECT * FROM " + LINK_NEGOTIATION_DISCOUNT_TABLE
 

@@ -37,6 +37,7 @@ object AirlineSimulation {
     println(s"Loaded ${allLinks.length} links")
     //purge old ledger entries
     AirlineSource.deleteLedgerEntries(cycle - BOOKKEEPING_ENTRIES_COUNT)
+    NegotiationReadyNotifier.emit(cycle)
 
     val flightLinkResultByAirline = flightLinkResult.groupBy(_.link.airline.id)
     println(s"Loaded ${flightLinkResultByAirline.size} airline lists of flight consumptions")

@@ -470,6 +470,11 @@ class LinkApplication @Inject()(cc: ControllerComponents) extends AbstractContro
           s"${resultLink.from.id}-${resultLink.to.id}",
           NotificationCategory.NEGOTIATION_LOSS
         )
+        NotificationSource.deleteNotificationsByTargetId(
+          airline.id,
+          s"${resultLink.from.id}-${resultLink.to.id}",
+          NotificationCategory.NEGOTIATION_READY
+        )
       }
 
       NegotiationUtil.getNextNegotiationDiscount(resultLink, negotiationResult).foreach { discount =>

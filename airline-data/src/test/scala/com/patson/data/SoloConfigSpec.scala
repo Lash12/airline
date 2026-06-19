@@ -16,5 +16,6 @@ class SoloConfigSpec extends AnyFlatSpec with Matchers {
     SoloConfig.loanDefaultAnnualRate shouldBe 0.11
     SoloConfig.bankruptcyCashThreshold shouldBe -10000000
     SoloConfig.bankruptcyAssetsThreshold shouldBe -100000000
+    SoloConfig.negotiationReadyEnabled shouldBe false
   }
 }

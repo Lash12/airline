@@ -39,6 +39,11 @@ object SoloConfig {
   val notifyProfitMilestone : Long = longAt("solo.notify.profitMilestone", 10_000_000L)
   val notifyIntervalCycles : Int = intAt("solo.notify.intervalCycles", 4)
 
+  // Negotiation reminder: when enabled, failed-route negotiation discounts emit
+  // a one-time bell notification when their cooldown expires and the route can
+  // be attempted again. Off by default so default/multiplayer deploys are unchanged.
+  val negotiationReadyEnabled : Boolean = boolAt("solo.negotiationReady.enabled", false)
+
   // Diagnostic: split DemandGenerator timing into base-demand vs chunk-generation
   // to decide whether memoizing the base layer is worthwhile (off by default).
   val demandProfile : Boolean = boolAt("solo.demand.profile", false)

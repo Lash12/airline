@@ -30,7 +30,7 @@ services:
     environment:
       DB_HOST: airline-db
       WEB_EXTRA_OPTS: "-Dmysqldb.host=airline-db:3306 ${WEB_SOLO_OPTS:--Dsolo.consultant.enabled=true -Dsolo.progression.enabled=true -Dsolo.news.enabled=true -Dsolo.lounge.allowWithoutAlliance=true -Dsolo.alliance.minMembers=2}"
-      SIM_EXTRA_OPTS: "-Dmysqldb.host=airline-db:3306 -Dsimulation.pauseWhenIdle=true ${SIM_SOLO_OPTS:--Dsolo.ap.generationRate=0.3 -Dsolo.loan.defaultAnnualRate=0.06 -Dsolo.bankruptcy.cashThreshold=-25000000 -Dsolo.bankruptcy.assetsThreshold=-150000000 -Dsolo.notify.enabled=true -Dsolo.demand.profile=true -Dsolo.ai.enabled=true -Dsolo.consultant.enabled=true -Dsolo.progression.enabled=true -Dsolo.news.enabled=true -Dsolo.lounge.allowWithoutAlliance=true -Dsolo.alliance.minMembers=2}"
+      SIM_EXTRA_OPTS: "-Dmysqldb.host=airline-db:3306 -Dsimulation.pauseWhenIdle=true ${SIM_SOLO_OPTS:--Dsolo.ap.generationRate=0.3 -Dsolo.loan.defaultAnnualRate=0.06 -Dsolo.bankruptcy.cashThreshold=-25000000 -Dsolo.bankruptcy.assetsThreshold=-150000000 -Dsolo.notify.enabled=true -Dsolo.negotiationReady.enabled=true -Dsolo.demand.profile=true -Dsolo.ai.enabled=true -Dsolo.consultant.enabled=true -Dsolo.progression.enabled=true -Dsolo.news.enabled=true -Dsolo.lounge.allowWithoutAlliance=true -Dsolo.alliance.minMembers=2}"
     entrypoint: ["sh", "/home/airline/start-small.sh"]
     # Required for docker inside an unprivileged LXC, where securityfs is
     # unreadable and the docker-default AppArmor profile can never load.

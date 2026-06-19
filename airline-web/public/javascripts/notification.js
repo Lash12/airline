@@ -149,6 +149,7 @@ function getCategoryIcon(category) {
         case 'GAME_OVER': return '!'
         case 'OLYMPICS_PRIZE': return '🏅'
         case 'TUTORIAL': return '→'
+        case 'NEGOTIATION_READY': return '✓'
         case 'NEGOTIATION_LOSS':
         case 'CASH_FLOW_WARNING':
         case 'LINK_CANCELLATION': return '⚠'

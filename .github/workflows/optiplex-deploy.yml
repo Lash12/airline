@@ -52,6 +52,7 @@ jobs:
             -Dsolo.bankruptcy.cashThreshold=-25000000
             -Dsolo.bankruptcy.assetsThreshold=-150000000
             -Dsolo.notify.enabled=true
+            -Dsolo.negotiationReady.enabled=true
             -Dsolo.ai.enabled=true
             -Dsolo.ai.growth.enabled=true
             -Dsolo.ai.pricetune.enabled=true
