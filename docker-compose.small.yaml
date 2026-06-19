@@ -68,7 +68,7 @@ services:
       ALLOW_EMPTY_PASSWORD: yes
     mem_limit: 1500m
     volumes:
-      - "mysql-data:/var/lib/mysql"
+      - "mysql-data:/bitnami/mysql"
       - "./.docker/db/small.cnf:/opt/bitnami/mysql/conf/my_custom.cnf:ro"
     networks:
       - airline
