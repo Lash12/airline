@@ -29,8 +29,14 @@ function createWsContext() {
   MockWebSocket.CLOSED = 3
   MockWebSocket.instances = wsInstances
 
+  const mockDocument = {
+    hidden: false,
+    addEventListener: jest.fn(),
+  }
+
   const ctx = {
     WebSocket: MockWebSocket,
+    document: mockDocument,
     window: {
       location: { protocol: 'http:', port: '9000', hostname: 'localhost' },
     },

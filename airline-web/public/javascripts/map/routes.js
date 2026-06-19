@@ -13,6 +13,25 @@ let highlightedLinkId = null;
 let highlightAnimation = null;
 let hoveredRouteId = null;
 let routeSelectable = true;
+let routeInteractionsSetup = false;
+let routeStyleRetryToken = 0;
+
+function retryWhenStyleLoaded(callback) {
+    const token = ++routeStyleRetryToken;
+    let done = false;
+    const retry = () => {
+        if (done || token !== routeStyleRetryToken || !state.map) return;
+        if (state.map.isStyleLoaded()) {
+            done = true;
+            callback();
+        } else {
+            setTimeout(retry, 100);
+        }
+    };
+
+    state.map.once('style.load', retry);
+    setTimeout(retry, 100);
+}
 
 /**
  * Generic route layer factory - creates source, layers, and refresh function.
@@ -21,20 +40,27 @@ function createRouteLayer(sourceId, layerId, options = {}) {
     const clickLayerId = options.clickLayer ? `${layerId}-click` : null;
 
     function ensure() {
-        if (!state.map || hasSource(sourceId)) return;
+        if (!state.map) return;
         // Insert route layers below airport markers if they exist
         const beforeId = hasLayer('airports-layer') ? 'airports-layer' : undefined;
-        addSource(sourceId, { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-        addLayer({
-            id: layerId, type: 'line', source: sourceId,
-            layout: options.layout || { 'line-cap': 'round', 'line-join': 'round' },
-            paint: options.paint || {
-                'line-color': ['get', 'color'],
-                'line-width': options.hoverWidth ? ['case', ['boolean', ['feature-state', 'hover'], false], 2, 1.5] : 1.5,
-                'line-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.9, ['get', 'opacity']]
-            }
-        }, beforeId);
-        if (clickLayerId) {
+
+        if (!hasSource(sourceId)) {
+            addSource(sourceId, { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+        }
+
+        if (hasSource(sourceId) && !hasLayer(layerId)) {
+            addLayer({
+                id: layerId, type: 'line', source: sourceId,
+                layout: options.layout || { 'line-cap': 'round', 'line-join': 'round' },
+                paint: options.paint || {
+                    'line-color': ['get', 'color'],
+                    'line-width': options.hoverWidth ? ['case', ['boolean', ['feature-state', 'hover'], false], 2, 1.5] : 1.5,
+                    'line-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.9, ['get', 'opacity']]
+                }
+            }, beforeId);
+        }
+
+        if (hasSource(sourceId) && clickLayerId && !hasLayer(clickLayerId)) {
             addLayer({
                 id: clickLayerId, type: 'line', source: sourceId,
                 layout: { 'line-cap': 'round', 'line-join': 'round' },
@@ -232,6 +258,10 @@ function enhanceLinksGeoJSON(geojson, colorOverride = null) {
  */
 export function setRoutesFromGeoJSON(geojson, colorOverride = null) {
     if (!state.map) return;
+    if (!state.map.isStyleLoaded()) {
+        retryWhenStyleLoaded(() => setRoutesFromGeoJSON(geojson, colorOverride));
+        return;
+    }
     ensureRoutesLayers();
 
     // Store links in flightPaths, including source coordinates so
@@ -263,9 +293,11 @@ export function setRoutesFromGeoJSON(geojson, colorOverride = null) {
  */
 function ensureRoutesLayers() {
     if (!state.map) return;
-    const wasNew = !hasSource(flightRoutes.sourceId);
     flightRoutes.ensure();
-    if (wasNew) setupRouteInteractions();
+    if (hasLayer(flightRoutes.clickLayerId) && !routeInteractionsSetup) {
+        setupRouteInteractions();
+        routeInteractionsSetup = true;
+    }
 }
 
 /**
