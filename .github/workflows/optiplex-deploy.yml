@@ -20,8 +20,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # Keep sbt/ivy build artifacts between runs for faster deploys.
-          clean: false
+          # Do not preserve untracked source files from prior runner workspaces.
+          # Build caches live outside the checkout; stale source files can break deploys.
+          clean: true
 
       - name: Deploy stack
         env:
