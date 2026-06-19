@@ -1,5 +1,8 @@
 function initNotificationDrawer() {
     loadNotificationBadge()
+    if (typeof renderPushStatus === 'function') {
+        renderPushStatus()
+    }
 
     $('#notificationBell, #notificationBellMobile').off('click.notification').on('click.notification', function(e) {
         e.stopPropagation()
@@ -36,6 +39,15 @@ function toggleNotificationDrawer() {
 
 function openNotificationDrawer() {
     loadNotifications()
+    if (typeof loadSubscriptionStatus === 'function') {
+        loadSubscriptionStatus().then(function() {
+            if (typeof renderPushStatus === 'function') {
+                renderPushStatus()
+            }
+        })
+    } else if (typeof renderPushStatus === 'function') {
+        renderPushStatus()
+    }
     var bell = document.getElementById('notificationBell')
     var drawer = document.getElementById('notificationDrawer')
     var rect = bell.getBoundingClientRect()

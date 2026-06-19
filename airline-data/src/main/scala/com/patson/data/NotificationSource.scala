@@ -111,6 +111,36 @@ object NotificationSource {
     }
   }
 
+  def loadNotificationsAfterId(airlineId: Int,
+                               afterId: Int,
+                               categories: Seq[NotificationCategory.Value],
+                               limit: Int): List[Notification] = {
+    if (categories.isEmpty) return List.empty
+    val placeholders = categories.map(_ => "?").mkString(", ")
+    val connection = Meta.getConnection()
+    try {
+      val statement = connection.prepareStatement(
+        s"SELECT * FROM $NOTIFICATION_TABLE WHERE airline = ? AND id > ? AND category IN ($placeholders) ORDER BY id ASC LIMIT ?"
+      )
+      try {
+        statement.setInt(1, airlineId)
+        statement.setInt(2, afterId)
+        categories.zipWithIndex.foreach { case (category, index) =>
+          statement.setString(index + 3, category.toString)
+        }
+        statement.setInt(categories.size + 3, limit)
+        val rs = statement.executeQuery()
+        val result = scala.collection.mutable.ListBuffer[Notification]()
+        while (rs.next()) result += rowToNotification(rs)
+        result.toList
+      } finally {
+        statement.close()
+      }
+    } finally {
+      connection.close()
+    }
+  }
+
   // Most recent notifications for one airline in a single category (e.g. the WORLD_NEWS
   // feed, rendered in its own News panel rather than the personal bell).
   def loadByCategory(airlineId: Int, category: NotificationCategory.Value, limit: Int = 50): List[Notification] = {

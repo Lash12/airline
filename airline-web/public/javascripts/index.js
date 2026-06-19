@@ -23,7 +23,7 @@ function asset(name) {
 
 // Only what login/signup pages need
 const LOGIN_SCRIPTS = [
-    'login.js', 'signup.js', 'routes.js', 'main.js', 'gadgets.js', 'local-storage.js'
+    'login.js', 'signup.js', 'push.js', 'routes.js', 'main.js', 'gadgets.js', 'local-storage.js'
 ].map(asset);
 
 // Needed once logged in (before routes fire)

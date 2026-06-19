@@ -1,0 +1,22 @@
+{
+  "name": "MyFly.Club",
+  "short_name": "MyFly",
+  "description": "Single-player airline management",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#101820",
+  "theme_color": "#101820",
+  "icons": [
+    {
+      "src": "/assets/images/icons/globe-with-airplane.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/images/icons/globe-with-airplane.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

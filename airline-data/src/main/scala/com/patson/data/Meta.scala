@@ -262,6 +262,7 @@ object Meta {
     createRankingLeaderboard(connection)
     createPrestige(connection)
     createNotification(connection)
+    createPushSubscription(connection)
 
     statement = connection.prepareStatement("CREATE TABLE " + AIRPORT_CITY_SHARE_TABLE + "(" +
       "airport INTEGER," +
@@ -1544,6 +1545,31 @@ object Meta {
     statement.close()
 
     statement = connection.prepareStatement("CREATE INDEX notification_index_1 ON " + NOTIFICATION_TABLE + "(category)")
+    statement.execute()
+    statement.close()
+  }
+
+  def createPushSubscription(connection : Connection) = {
+    var statement = connection.prepareStatement("DROP TABLE IF EXISTS " + PUSH_SUBSCRIPTION_TABLE)
+    statement.execute()
+    statement.close()
+
+    statement = connection.prepareStatement("CREATE TABLE " + PUSH_SUBSCRIPTION_TABLE + "(" +
+      "id INTEGER PRIMARY KEY AUTO_INCREMENT," +
+      "airline INTEGER NOT NULL REFERENCES " + AIRLINE_TABLE + "(id) ON DELETE CASCADE ON UPDATE CASCADE, " +
+      "endpoint VARCHAR(1024) NOT NULL, " +
+      "p256dh_key VARCHAR(256) NOT NULL, " +
+      "auth_key VARCHAR(256) NOT NULL, " +
+      "created_cycle INTEGER NOT NULL, " +
+      "last_pushed_notification_id INTEGER NOT NULL DEFAULT 0, " +
+      "failure_count INTEGER NOT NULL DEFAULT 0, " +
+      "user_agent VARCHAR(512) DEFAULT NULL, " +
+      "UNIQUE KEY push_subscription_endpoint_uq(endpoint)" +
+      ")")
+    statement.execute()
+    statement.close()
+
+    statement = connection.prepareStatement("CREATE INDEX push_subscription_airline_idx ON " + PUSH_SUBSCRIPTION_TABLE + "(airline)")
     statement.execute()
     statement.close()
   }

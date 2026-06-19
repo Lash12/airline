@@ -14,9 +14,10 @@ What does **not** exist yet is any way to reach the player when the game is **cl
 in-app bell only updates when the tab is open. "Tier 2" is real **Web Push**: the phone gets
 a system notification even with the browser/app closed.
 
-This is a planning doc only — nothing here is built yet. The motivating use case is a QOL
-nudge ("your RDU–LHR negotiation is off cooldown"), but the mechanism is generic: any
-notification category can opt into being pushed.
+Implementation status: **P-0 through P-4 code is built behind `solo.push.enabled`; HTTPS is
+the only remaining prerequisite before real browser push delivery can be validated on a
+phone.** The motivating use case is a QOL nudge ("your RDU–LHR negotiation is off cooldown"),
+but the mechanism is generic: any configured notification category can opt into being pushed.
 
 Design rule (as with every solo feature): gate behind a `solo.*` flag defaulting off, so
 default/multiplayer deploys are unchanged.
@@ -81,7 +82,7 @@ not spammy.
 
 ---
 
-## Approach (incremental, one gated PR per step)
+## Approach (implemented behind feature gate)
 
 Everything gates behind **`solo.push.enabled`** (default `false`). New config in
 `SoloConfig` / web config. Assumes the HTTPS prerequisite is met.
@@ -100,6 +101,8 @@ first real thing to push. (Tracked separately; do this regardless of Tier 2.)
   `index.scala.html`.
 - Register the SW from client JS only when `solo.push.enabled` and in a secure context.
 
+Status: implemented in `sw.js`, `manifest.json`, `push.js`, and the manifest/static routes.
+
 ### P-2 — Subscription flow + storage
 - **VAPID keys**: generate once; **public** key exposed to the client via a config endpoint or
   injected constant; **private** key kept server-side as a secret (env/`application.conf`,
@@ -112,9 +115,12 @@ first real thing to push. (Tracked separately; do this regardless of Tier 2.)
   created_cycle)`** with `*Source` load/save (mirror `NotificationSource`). Created in
   `Meta.scala` like other tables.
 
+Status: implemented with `PushApplication`, `PushSubscriptionSource`, and lazy
+`CREATE TABLE IF NOT EXISTS` protection for existing databases.
+
 ### P-3 — Push sender
-- Add a JVM web-push dependency (e.g. `nl.martijndwars:web-push`, which signs with VAPID and
-  posts to the endpoint). Wrap in a small `PushSender`.
+- Add a JVM push sender that signs with VAPID, encrypts payloads with Web Push `aes128gcm`,
+  and posts to the endpoint.
 - A **scheduled task** (Play Akka scheduler) every ~1 min: for each subscribed airline, load
   notifications created since a per-airline **push watermark** whose category is **pushable**;
   send one push each (or a small batch); advance the watermark. Persist the watermark (a column
@@ -123,12 +129,18 @@ first real thing to push. (Tracked separately; do this regardless of Tier 2.)
   (`NEGOTIATION_READY`, `CASH_FLOW_WARNING`, `MILESTONE_ACHIEVED`) — **not** `WORLD_NEWS`
   (too frequent → spam). Each pushed item carries `data.url` so the SW can deep-link.
 
+Status: implemented with `PushNotificationScheduler`, `WebPushClient`, `PushPayload`, and
+`solo.push.categories`.
+
 ### P-4 — Hardening / housekeeping
 - On send, handle **410 Gone / 404** from the push service by deleting the dead subscription
   (browsers rotate endpoints). Back off on transient errors.
 - Cap pushes per cycle per airline (anti-spam), and de-dupe by notification id.
 - Settings UI shows subscribed/again-prompt state; allow disabling (DELETE subscription +
   unsubscribe client-side).
+
+Status: implemented for 404/410 pruning, per-subscription notification watermarks,
+`solo.push.maxPerSubscription`, and device unsubscribe.
 
 ---
 

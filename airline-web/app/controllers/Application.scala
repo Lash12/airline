@@ -8,6 +8,7 @@ import com.patson.model.{Link, _}
 import com.patson.model.event.Olympics
 import com.patson.util.{AirlineCache, AirportCache, ChampionUtil}
 import controllers.AuthenticationObject.AuthenticatedAirline
+import push.PushConfig
 import play.api.libs.json.{Json, _}
 import play.api.mvc._
 
@@ -165,6 +166,16 @@ class Application @Inject()(cc: ControllerComponents, val configuration: play.ap
             ETAG -> s""""$currentCycle""""
           )
     }
+  }
+
+  def getPushConfig() = Action {
+    val pushConfig = PushConfig.from(configuration)
+    Ok(Json.obj(
+      "enabled" -> pushConfig.enabled,
+      "configured" -> PushConfig.configuredForDelivery(pushConfig),
+      "vapidPublicKey" -> pushConfig.vapidPublicKey,
+      "categories" -> pushConfig.categories.map(_.toString)
+    ))
   }
 
   /**
