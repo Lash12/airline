@@ -20,9 +20,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # Do not preserve untracked source files from prior runner workspaces.
-          # Build caches live outside the checkout; stale source files can break deploys.
-          clean: true
+          # Keep generated test artifacts out of checkout's full wipe path; some
+          # Playwright trace dirs can be owned by browser sandbox users.
+          clean: false
+
+      - name: Remove stale untracked source files
+        run: |
+          git clean -ffdx \
+            -e e2e/test-results/ \
+            -e e2e/playwright-report/
 
       - name: Deploy stack
         env:
