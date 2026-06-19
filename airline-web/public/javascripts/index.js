@@ -85,6 +85,14 @@ function loadScriptsParallel(scripts) {
     return Promise.all(promises);
 }
 
+async function loadScriptsSequential(scripts) {
+    const loaded = [];
+    for (const src of scripts) {
+        loaded.push(await loadScript(src));
+    }
+    return loaded;
+}
+
 /**
  * Loads airports static data from the server.
  */
@@ -186,7 +194,7 @@ async function loadPostLoginScripts() {
 
     try {
         // Load post-login scripts
-        await loadScriptsParallel(POST_LOGIN_SCRIPTS);
+        await loadScriptsSequential(POST_LOGIN_SCRIPTS);
         console.log('✓ Post-login scripts loaded');
 
         // Load deferred scripts in background
@@ -272,7 +280,7 @@ async function initializeApp() {
         ]);
 
         // Heavy assets — start now, await later
-        _bgSessionScripts = loadScriptsParallel(SESSION_SCRIPTS);
+        _bgSessionScripts = loadScriptsSequential(SESSION_SCRIPTS);
         _bgAirports = loadAirportsData();
         _bgConstants = loadGameConstants();
         loadStockBenchmarks();

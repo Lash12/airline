@@ -1,10 +1,17 @@
 var promptQueue
-var tutorialQueues
+var tutorialQueue
 var promptInterval
 var activePrompt
 var activeTutorial
 var tutorialsCompleted
 var noticesShown
+
+function ensurePromptState() {
+    if (!promptQueue) promptQueue = []
+    if (!tutorialQueue) tutorialQueue = []
+    if (!tutorialsCompleted) tutorialsCompleted = new Set()
+    if (!noticesShown) noticesShown = new Set()
+}
 
 function initPrompts() {
     promptQueue = []
@@ -46,6 +53,7 @@ function initPrompts() {
 }
 
 function queuePrompt(promptId, args) {
+    ensurePromptState()
     promptQueue.push({ htmlId : promptId, args : args }) //id here determines the ID of the html popup, not the prompt itself
     if (!promptInterval) {
         promptInterval = setInterval('showPrompt()', 100)
@@ -53,6 +61,7 @@ function queuePrompt(promptId, args) {
 }
 
 function queueNotice(noticeJson) {
+    ensurePromptState()
     //map the category to html element ID here
     var htmlId
     var category = noticeJson.category
@@ -197,6 +206,7 @@ function closePrompt($promptModal) {
 
 
 function queueTutorial(tutorial) {
+    ensurePromptState()
     if (!tutorialsCompleted.has(tutorial) && !tutorialQueue.includes(tutorial)) {
         tutorialQueue.push(tutorial)
     }
