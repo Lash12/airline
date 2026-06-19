@@ -1,3 +1,5 @@
+var notificationDrawerAnchor = null
+
 function initNotificationDrawer() {
     loadNotificationBadge()
     if (typeof renderPushStatus === 'function') {
@@ -6,6 +8,7 @@ function initNotificationDrawer() {
 
     $('#notificationBell, #notificationBellMobile').off('click.notification').on('click.notification', function(e) {
         e.stopPropagation()
+        notificationDrawerAnchor = this
         if (!$(e.target).closest('#notificationDrawer').length) {
             toggleNotificationDrawer()
         }
@@ -48,12 +51,49 @@ function openNotificationDrawer() {
     } else if (typeof renderPushStatus === 'function') {
         renderPushStatus()
     }
-    var bell = document.getElementById('notificationBell')
+    var bell = getNotificationDrawerAnchor()
     var drawer = document.getElementById('notificationDrawer')
-    var rect = bell.getBoundingClientRect()
-    drawer.style.top = (rect.bottom + 8) + 'px'
-    drawer.style.left = (rect.left - 80) + 'px'
+    drawer.style.top = '0px'
+    drawer.style.left = '0px'
     drawer.showPopover()
+    positionNotificationDrawer(drawer, bell)
+}
+
+function positionNotificationDrawer(drawer, bell) {
+    var rect = bell.getBoundingClientRect()
+    var margin = 8
+    var drawerRect = drawer.getBoundingClientRect()
+    var drawerWidth = Math.min(drawerRect.width || 380, window.innerWidth - margin * 2)
+    var drawerHeight = drawerRect.height || 0
+    var left = rect.left - 80
+    var top = rect.bottom + margin
+
+    left = Math.max(margin, Math.min(left, window.innerWidth - drawerWidth - margin))
+    if (top + drawerHeight + margin > window.innerHeight && rect.top - drawerHeight - margin >= margin) {
+        top = rect.top - drawerHeight - margin
+    } else {
+        top = Math.max(margin, Math.min(top, window.innerHeight - drawerHeight - margin))
+    }
+
+    drawer.style.top = top + 'px'
+    drawer.style.left = left + 'px'
+}
+
+function getNotificationDrawerAnchor() {
+    if (isVisibleNotificationAnchor(notificationDrawerAnchor)) {
+        return notificationDrawerAnchor
+    }
+    var mobileBell = document.getElementById('notificationBellMobile')
+    if (isVisibleNotificationAnchor(mobileBell)) {
+        return mobileBell
+    }
+    return document.getElementById('notificationBell')
+}
+
+function isVisibleNotificationAnchor(element) {
+    if (!element) return false
+    var style = window.getComputedStyle(element)
+    return style.display !== 'none' && style.visibility !== 'hidden' && element.getClientRects().length > 0
 }
 
 function closeNotificationDrawer() {
