@@ -8,6 +8,56 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 COMPOSE="docker compose -f docker-compose.small.yaml"
+MYSQL_CONTAINER="airline-db"
+MYSQL_VOLUME="mysql-data"
+MYSQL_MOUNT="/bitnami/mysql"
+LEGACY_MYSQL_MOUNT="/var/lib/mysql"
+
+mysql_mounts() {
+  docker inspect -f '{{range .Mounts}}{{println .Name .Destination}}{{end}}' "$MYSQL_CONTAINER" 2>/dev/null || true
+}
+
+verify_mysql_mount_config() {
+  echo "==> Verifying MySQL persistence config"
+  local config
+  config=$($COMPOSE config)
+
+  if printf '%s\n' "$config" | grep -q "target: ${LEGACY_MYSQL_MOUNT}"; then
+    echo "ERROR: docker-compose.small.yaml mounts MySQL at ${LEGACY_MYSQL_MOUNT}." >&2
+    echo "Bitnami MySQL persists data under ${MYSQL_MOUNT}; refusing deploy." >&2
+    exit 1
+  fi
+
+  if ! printf '%s\n' "$config" | grep -q "target: ${MYSQL_MOUNT}"; then
+    echo "ERROR: docker-compose.small.yaml does not mount ${MYSQL_VOLUME} at ${MYSQL_MOUNT}." >&2
+    exit 1
+  fi
+}
+
+verify_existing_mysql_mount() {
+  local mounts
+  mounts=$(mysql_mounts)
+  if [ -z "$mounts" ]; then
+    return
+  fi
+
+  if printf '%s\n' "$mounts" | grep -q " ${LEGACY_MYSQL_MOUNT}$"; then
+    echo "ERROR: existing ${MYSQL_CONTAINER} uses the legacy ${LEGACY_MYSQL_MOUNT} mount." >&2
+    echo "Stop here and take a database backup/migration before recreating containers." >&2
+    exit 1
+  fi
+}
+
+verify_running_mysql_mount() {
+  local mounts
+  mounts=$(mysql_mounts)
+  if ! printf '%s\n' "$mounts" | grep -q "${MYSQL_VOLUME}.* ${MYSQL_MOUNT}$"; then
+    echo "ERROR: running ${MYSQL_CONTAINER} is not using ${MYSQL_VOLUME} at ${MYSQL_MOUNT}." >&2
+    echo "Observed mounts:" >&2
+    printf '%s\n' "$mounts" >&2
+    exit 1
+  fi
+}
 
 # Containers with our fixed names left behind by an older compose project
 # (different working dir) block `up` with a name conflict. Only stopped
@@ -23,8 +73,12 @@ for name in airline-app airline-db; do
   fi
 done
 
+verify_mysql_mount_config
+verify_existing_mysql_mount
+
 echo "==> Starting containers"
 $COMPOSE up -d --build --force-recreate
+verify_running_mysql_mount
 
 echo "==> Waiting for MySQL (up to 60s)"
 db_ready=""
