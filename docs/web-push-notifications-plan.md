@@ -14,10 +14,11 @@ What does **not** exist yet is any way to reach the player when the game is **cl
 in-app bell only updates when the tab is open. "Tier 2" is real **Web Push**: the phone gets
 a system notification even with the browser/app closed.
 
-Implementation status: **P-0 through P-4 code is built behind `solo.push.enabled`; HTTPS is
-being provided by Cloudflare Tunnel at `https://airline.ashhome.org`.** The motivating use
-case is a QOL nudge ("your RDU–LHR negotiation is off cooldown"), but the mechanism is
-generic: any configured notification category can opt into being pushed.
+Implementation status: **P-0 through P-4 code is built, deployed on the OptiPlex behind
+`solo.push.enabled`, and end-to-end validated on Firefox Android. HTTPS is provided by
+Cloudflare Tunnel at `https://airline.ashhome.org`.** The motivating use case is a QOL nudge
+("your RDU–LHR negotiation is off cooldown"), but the mechanism is generic: any configured
+notification category can opt into being pushed.
 
 Design rule (as with every solo feature): gate behind a `solo.*` flag defaulting off, so
 default/multiplayer deploys are unchanged.
@@ -159,7 +160,32 @@ Status: implemented for 404/410 pruning, per-subscription notification watermark
 - Reuse: `NotificationSource` (read new notifications), `NotificationCategory` (+
   `NEGOTIATION_READY` from P-0).
 
-## Verification
+## Verified Production Result
+
+Validated on 2026-06-20 against Lash Air (`airline_id=34`) on the OptiPlex deployment.
+
+- Firefox Android successfully subscribed through the notification drawer.
+- `https://airline.ashhome.org` served a valid 65-byte uncompressed P-256 VAPID public key.
+- Manual workflow `Validate Web Push` inserted a `NEGOTIATION_READY` test notification and the
+  push sender delivered it through Mozilla autopush.
+- Passing workflow run: `27856841823`.
+- Validation evidence: inserted notification `10136`; subscription `2` advanced to
+  `last_pushed_notification_id = 10136` with `failure_count = 0`.
+- User confirmed the phone received the test notifications.
+
+Issues found and fixed during validation:
+
+- Initial VAPID public key was rejected by Firefox as an invalid raw ECDSA P-256 key; the keypair
+  was rotated in GitHub secrets.
+- New subscriptions originally started with `last_pushed_notification_id = 0`, causing historical
+  pushable notifications to be sent before the fresh test event. New subscriptions now start at
+  the current notification high-water mark.
+- Mozilla autopush rejected server sends with `401 InvalidSignature`; root cause was incorrect
+  DER-to-JOSE conversion of ECDSA signatures in `WebPushClient`.
+- The validation workflow now tails `/home/airline/web.log` inside `airline-app` for push sender
+  diagnostics.
+
+## Verification Checklist
 
 - **Secure context**: confirm the app loads over HTTPS on the phone and the SW registers
   (`navigator.serviceWorker.controller` non-null).
@@ -172,6 +198,20 @@ Status: implemented for 404/410 pruning, per-subscription notification watermark
   byte-identical (no SW registered, no table writes, no scheduled sends).
 - **Anti-spam**: a burst of `WORLD_NEWS` produces **no** pushes (not on the allowlist); cap
   respected.
+
+Manual production validation:
+
+```powershell
+gh workflow run "Validate Web Push" --repo Lash12/airline --ref master -f airline_id=34
+gh run watch <run-id> --repo Lash12/airline --exit-status
+```
+
+Direct OptiPlex diagnostics:
+
+```powershell
+ssh airline-dev "docker exec airline-app sh -c 'grep -ai \"\\[push\\]\" /home/airline/web.log | tail -40'"
+ssh airline-dev "docker exec airline-db mysql -u\"\$(docker exec airline-db printenv MYSQL_USER)\" -p\"\$(docker exec airline-db printenv MYSQL_PASSWORD)\" \"\$(docker exec airline-db printenv MYSQL_DATABASE)\" -e 'SELECT id, airline, last_pushed_notification_id, failure_count FROM push_subscription ORDER BY id;'"
+```
 
 ## Out of scope (future)
 
