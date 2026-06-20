@@ -141,6 +141,24 @@ object NotificationSource {
     }
   }
 
+  def latestNotificationId(airlineId: Int): Int = {
+    val connection = Meta.getConnection()
+    try {
+      val statement = connection.prepareStatement(
+        s"SELECT COALESCE(MAX(id), 0) FROM $NOTIFICATION_TABLE WHERE airline = ?"
+      )
+      try {
+        statement.setInt(1, airlineId)
+        val rs = statement.executeQuery()
+        if (rs.next()) rs.getInt(1) else 0
+      } finally {
+        statement.close()
+      }
+    } finally {
+      connection.close()
+    }
+  }
+
   // Most recent notifications for one airline in a single category (e.g. the WORLD_NEWS
   // feed, rendered in its own News panel rather than the personal bell).
   def loadByCategory(airlineId: Int, category: NotificationCategory.Value, limit: Int = 50): List[Notification] = {

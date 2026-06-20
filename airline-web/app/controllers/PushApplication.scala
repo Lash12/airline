@@ -1,6 +1,6 @@
 package controllers
 
-import com.patson.data.{CycleSource, PushSubscriptionSource}
+import com.patson.data.{CycleSource, NotificationSource, PushSubscriptionSource}
 import com.patson.model.PushSubscription
 import controllers.AuthenticationObject.AuthenticatedAirline
 import javax.inject.Inject
@@ -41,6 +41,7 @@ class PushApplication @Inject()(cc: ControllerComponents, configuration: Configu
                 p256dhKey = p256dhValue,
                 authKey = authValue,
                 createdCycle = CycleSource.loadCycle(),
+                lastPushedNotificationId = NotificationSource.latestNotificationId(airlineId),
                 userAgent = request.headers.get("User-Agent")
               ))
               Ok(Json.obj("subscribed" -> true, "id" -> saved.id))

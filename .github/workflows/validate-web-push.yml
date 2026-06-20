@@ -60,6 +60,19 @@ jobs:
           fi
 
           docker exec airline-db mysql -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" -N -e "
+            UPDATE push_subscription
+            SET last_pushed_notification_id = (
+              SELECT max_id FROM (
+                SELECT COALESCE(MAX(id), 0) AS max_id
+                FROM notification
+                WHERE airline = ${AIRLINE_ID}
+              ) AS current_notifications
+            ),
+            failure_count = 0
+            WHERE airline = ${AIRLINE_ID};
+          "
+
+          docker exec airline-db mysql -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" -N -e "
             INSERT INTO notification (airline, category, message, cycle, is_read, target_id, expiry_cycle)
             VALUES (${AIRLINE_ID}, 'NEGOTIATION_READY', CONCAT('Push delivery test ', '${STAMP}'), (SELECT cycle FROM cycle LIMIT 1), 0, '${STAMP}', NULL);
             SELECT LAST_INSERT_ID();
