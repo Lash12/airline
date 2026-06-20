@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-06-20-asset-decision-support-design.md`
 
-**v1 scope note (read first):** per-route rows show **volume + transfer% + premium-class%** (from `link_statistics`, accurate per-leg); the **airport summary** shows transfer% **and** the full passenger-type demographic mix (from `passenger_route_history`). Per-route *full pax-type* mix needs a heavier link→route join and is deliberately deferred (see Out of Scope). Already done in prior commits: the 29 asset PNGs under `airline-web/public/images/airport-assets/` and the root `NOTICE`.
+**Scope note (read first):** per-route rows show **volume + transfer% + premium% + passenger-type demographic mix**; the **airport summary** shows transfer% and the overall demographic mix. Transfer/volume/premium come from `link_statistics` (per arriving leg, accurate). Per-route demographics come from `passenger_route_history` grouped by **partner airport** for O-D journeys between this airport and that partner (a robust origin/destination grouping — not a fragile per-leg `link` id join). The two are merged by partner airport id; for hub legs they describe slightly different populations (O-D city-pair mix vs all pax on the leg), which is acceptable and clearly the "who travels between these two cities" view. Already done in prior commits: the 29 asset PNGs under `airline-web/public/images/airport-assets/` and the root `NOTICE`.
 
 ---
 
@@ -219,11 +219,40 @@ object AirportTrafficStats {
   }
 ```
 
+Then add the per-partner-airport demographics loader (for per-route demographics):
+
+```scala
+  /** Per-partner-airport passenger-type mix of O-D journeys between this airport and each partner:
+    * journeys terminating here grouped by origin, plus journeys originating here grouped by destination. */
+  def loadAirportPartnerDemographics(airportId : Int) : Map[Int, Map[PassengerType.Value, Int]] = {
+    val result = scala.collection.mutable.Map[Int, scala.collection.mutable.Map[PassengerType.Value, Int]]()
+    def add(partnerId : Int, pt : PassengerType.Value, pax : Int) : Unit = {
+      val m = result.getOrElseUpdate(partnerId, scala.collection.mutable.Map[PassengerType.Value, Int]())
+      m.put(pt, m.getOrElse(pt, 0) + pax)
+    }
+    Using.resource(Meta.getConnection()) { connection =>
+      Using.resource(connection.prepareStatement(
+        "SELECT home_airport AS partner, passenger_type, SUM(passenger_count) AS pax FROM " + PASSENGER_ROUTE_HISTORY_TABLE +
+        " WHERE destination_airport = ? GROUP BY home_airport, passenger_type")) { s =>
+        s.setInt(1, airportId)
+        Using.resource(s.executeQuery()) { rs => while (rs.next()) add(rs.getInt("partner"), PassengerType(rs.getInt("passenger_type")), rs.getInt("pax")) }
+      }
+      Using.resource(connection.prepareStatement(
+        "SELECT destination_airport AS partner, passenger_type, SUM(passenger_count) AS pax FROM " + PASSENGER_ROUTE_HISTORY_TABLE +
+        " WHERE home_airport = ? GROUP BY destination_airport, passenger_type")) { s =>
+        s.setInt(1, airportId)
+        Using.resource(s.executeQuery()) { rs => while (rs.next()) add(rs.getInt("partner"), PassengerType(rs.getInt("passenger_type")), rs.getInt("pax")) }
+      }
+    }
+    result.view.mapValues(_.toMap).toMap
+  }
+```
+
 Ensure imports cover `PassengerType` (`com.patson.model._` or add it) and `PASSENGER_ROUTE_HISTORY_TABLE` (from `Constants._`). Confirm both are already imported in the file; add if missing.
 
 - [ ] **Step 2: Compile.** `cd airline-data && sbt compile` — Expected: success.
 
-- [ ] **Step 3: Commit.** `git add airline-data && git commit -m "feat(analytics): airport passenger demographics query"`
+- [ ] **Step 3: Commit.** `git add airline-data && git commit -m "feat(analytics): airport + per-partner passenger demographics queries"`
 
 ---
 
@@ -246,6 +275,12 @@ Ensure imports cover `PassengerType` (`com.patson.model._` or add it) and `PASSE
     val routeRows = AirportTrafficStats.arrivalsByOrigin(arrivals).sortBy(-_.totalPax).take(50)
     val demo = ConsumptionHistorySource.loadAirportDemographics(airportId)
     val demoTotal = Math.max(1, demo.values.sum)
+    val partnerDemo = ConsumptionHistorySource.loadAirportPartnerDemographics(airportId)
+
+    def demoArray(mix : Map[com.patson.model.PassengerType.Value, Int]) : JsArray = {
+      val total = Math.max(1, mix.values.sum)
+      JsArray(mix.toList.sortBy(-_._2).map { case (pt, pax) => Json.obj("type" -> pt.toString, "share" -> pax.toDouble / total) })
+    }
 
     val routesJson = routeRows.map { r =>
       val originName = AirportCache.getAirport(r.airportId, false).map(a => a.iata + " " + a.city).getOrElse(r.airportId.toString)
@@ -255,7 +290,8 @@ Ensure imports cover `PassengerType` (`com.patson.model._` or add it) and `PASSE
         "terminatingPax" -> r.terminatingPax,
         "connectingPax" -> r.connectingPax,
         "transferShare" -> r.transferShare,
-        "premiumShare" -> (if (r.totalPax <= 0) 0.0 else r.premiumPax.toDouble / r.totalPax))
+        "premiumShare" -> (if (r.totalPax <= 0) 0.0 else r.premiumPax.toDouble / r.totalPax),
+        "demographics" -> demoArray(partnerDemo.getOrElse(r.airportId, Map.empty)))
     }
     val demoJson = demo.toList.sortBy(-_._2).map { case (pt, pax) =>
       Json.obj("type" -> pt.toString, "pax" -> pax, "share" -> pax.toDouble / demoTotal)
@@ -318,10 +354,11 @@ GET	 	 /airports/:airportId/traffic-analytics	controllers.Application.getAirport
 				  <div class="i-label" id="airportTrafficDemographics" style="margin-bottom: 10px;"></div>
 				  <div id="airportTrafficRouteList" style="width: 100%;" class="table data">
 					  <div class="table-header">
-						  <div class="cell" style="width: 34%">Route (origin)</div>
-						  <div class="cell" style="width: 22%; text-align: right;">Weekly Pax</div>
-						  <div class="cell" style="width: 22%; text-align: right;">Transfer %</div>
-						  <div class="cell" style="width: 22%; text-align: right;">Premium %</div>
+						  <div class="cell" style="width: 26%">Route (origin)</div>
+						  <div class="cell" style="width: 14%; text-align: right;">Weekly Pax</div>
+						  <div class="cell" style="width: 14%; text-align: right;">Transfer %</div>
+						  <div class="cell" style="width: 14%; text-align: right;">Premium %</div>
+						  <div class="cell" style="width: 32%">Demographics</div>
 					  </div>
 				  </div>
 			  </div>
@@ -358,10 +395,12 @@ function renderAirportTrafficAnalytics(data) {
     $list.children('.table-row').remove()
     $.each(data.routes, function(i, r) {
         var $row = $('<div class="table-row"></div>')
-        $row.append($('<div class="cell" style="width:34%"></div>').text(r.origin))
-        $row.append($('<div class="cell" style="width:22%; text-align:right;"></div>').text(r.totalPax.toLocaleString()))
-        $row.append($('<div class="cell" style="width:22%; text-align:right;"></div>').text(pct(r.transferShare)))
-        $row.append($('<div class="cell" style="width:22%; text-align:right;"></div>').text(pct(r.premiumShare)))
+        $row.append($('<div class="cell" style="width:26%"></div>').text(r.origin))
+        $row.append($('<div class="cell" style="width:14%; text-align:right;"></div>').text(r.totalPax.toLocaleString()))
+        $row.append($('<div class="cell" style="width:14%; text-align:right;"></div>').text(pct(r.transferShare)))
+        $row.append($('<div class="cell" style="width:14%; text-align:right;"></div>').text(pct(r.premiumShare)))
+        var demoText = (r.demographics || []).slice(0, 4).map(function(d) { return d.type + ' ' + pct(d.share) }).join(', ')
+        $row.append($('<div class="cell" style="width:32%"></div>').text(demoText || '—'))
         $list.append($row)
     })
 }
@@ -417,11 +456,54 @@ Expected: all tests pass; both compile.
 
 - [ ] **Step 3: Watch deploy.** `gh run watch <run-id> --repo Lash12/airline --exit-status` — Expected: success.
 
-- [ ] **Step 4: Live spot-check (manual).** Open a busy airport: Traffic Analytics shows summary (transfer/direct/premium), demographics line, and a per-route table; Assets section shows art + benefit/ROI tooltips. A quiet/new airport shows "No recent traffic data yet." If the analytics endpoint 500s, check `passenger_route_history`/`link_statistics` exist and have rows for the prior cycle.
+- [ ] **Step 4: Confirm deploy green** before UI validation (Task 9 validates the **live** OptiPlex screens, per the user — not local).
+
+---
+
+## Task 9: Post-deploy UI validation (Playwright + screenshot review)
+
+Runs **after** Task 8's deploy is green, against the **live** site `https://airline.ashhome.org`. Validate
+real screens with the changes in place; review the screenshots directly (Read the PNGs).
+
+**Credentials:** game login `Lash12` / (password supplied by the user at runtime). Pass via env vars
+(`AIRLINE_USER`, `AIRLINE_PASS`) — **never** commit them to a file, script, or memory.
+
+- [ ] **Step 1: Write a throwaway Playwright script** under `e2e/` (gitignored or deleted after) that:
+  logs in via the game's login form, opens a **busy** airport's detail panel (e.g. the Lash Air HQ
+  or a major hub), scrolls to the **Traffic Analytics** section and screenshots it, then scrolls to
+  the **Airport Assets** section, hovers a catalog row to surface the benefit/ROI tooltip, and
+  screenshots it (and the asset art). Save PNGs to `e2e/screenshots/`.
+
+```javascript
+// e2e/asset-ui-validate.spec.js  (throwaway; delete after review)
+const { test, expect } = require('@playwright/test');
+test('asset decision support UI', async ({ page }) => {
+  await page.goto('https://airline.ashhome.org');
+  // log in (selectors to confirm against the live login form)
+  await page.fill('#username, input[name="userName"]', process.env.AIRLINE_USER);
+  await page.fill('#password, input[name="password"]', process.env.AIRLINE_PASS);
+  await page.click('button:has-text("Login"), #loginButton');
+  await page.waitForLoadState('networkidle');
+  // open an airport detail (navigate via search or map; confirm flow live)
+  // ... screenshot #airportTrafficAnalyticsSection and #airportDetailsAssetsSection
+  await page.screenshot({ path: 'e2e/screenshots/analytics.png', fullPage: false });
+});
+```
+
+(The exact login selectors + airport-navigation flow must be confirmed against the live DOM — adapt
+during the run. If Cloudflare Access fronts the site with an SSO wall that blocks automated login,
+fall back to the deploy workflow's verification approach or ask the user to confirm access.)
+
+- [ ] **Step 2: Run it.** `cd e2e && AIRLINE_USER=Lash12 AIRLINE_PASS=*** npx playwright test asset-ui-validate.spec.js` (password from the user, not echoed/committed).
+
+- [ ] **Step 3: Review screenshots yourself.** Read `e2e/screenshots/*.png` and verify: analytics summary + demographics + per-route table render with real numbers; asset rows show art + working benefit/ROI tooltips; layout isn't broken on the airport panel. Note any visual issues and fix forward.
+
+- [ ] **Step 4: Clean up.** Delete the throwaway spec + screenshots (do not commit credentials or large PNGs).
 
 ---
 
 ## Out of scope (follow-ons)
-- Per-route **full passenger-type** mix (needs `passenger_link_history` → `link` → airport join); v1 gives per-route premium% + airport-level pax-type mix.
+- Exact **per-leg** demographics (attributing connecting pax to the specific arriving `link` via a
+  `passenger_link_history` → `link` join); we use the robust per-partner O-D grouping instead.
 - Historical trend charts; caching the analytics endpoint (add to `ResponseCache` if it proves heavy).
 - Using the remaining vendored asset images (we only reference 6 until the catalog grows).
