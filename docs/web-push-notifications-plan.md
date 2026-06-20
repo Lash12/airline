@@ -173,6 +173,24 @@ Validated on 2026-06-20 against Lash Air (`airline_id=34`) on the OptiPlex deplo
   `last_pushed_notification_id = 10136` with `failure_count = 0`.
 - User confirmed the phone received the test notifications.
 
+## Phase 2 (admin tooling) — shipped 2026-06-20
+
+`solo.push.adminAirlineId=34` (Lash Air) gates two additions, both reusing the existing
+`AuthenticatedAirline` guard and delivery pipeline (no new send path):
+
+- **Test-send button**: `POST /airlines/:id/push-test` inserts a real `NEGOTIATION_READY`
+  notification ("Test push - connectivity check"); the existing `PushNotificationScheduler`
+  tick delivers it within its normal interval (~60s), so the button exercises the actual
+  production pipeline. Shown in the drawer only when `status` reports `isAdmin: true`.
+- **`GET /airlines/:id/push-summary`**: bare JSON (no UI) returning per-subscription
+  `{id, lastPushedNotificationId, failureCount, userAgent, createdCycle}` plus in-process
+  scheduler counters (`sent`/`failed`/`pruned`/`lastTickAt`, reset on JVM restart — pruned
+  subscriptions are hard-deleted, so there's no persisted history beyond these counters).
+
+See `docs/superpowers/specs/2026-06-20-web-push-completeness-design.md` for the full design
+and `docs/current-development-state.md` for what's been verified live vs. still needs a
+device/session-based spot-check.
+
 Issues found and fixed during validation:
 
 - Initial VAPID public key was rejected by Firefox as an invalid raw ECDSA P-256 key; the keypair
