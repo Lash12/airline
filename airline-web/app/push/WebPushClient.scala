@@ -141,23 +141,26 @@ class WebPushClient {
   private def concat(parts: Array[Byte]*): Array[Byte] = parts.flatten.toArray
 
   private def derToJose(der: Array[Byte]): Array[Byte] = {
-    var offset = 3
-    var rLength = der(3) & 0xff
-    if (rLength == 33) {
-      offset += 1
-      rLength = 32
-    }
-    val r = Array.fill[Byte](32)(0)
-    System.arraycopy(der, offset, r, 32 - rLength, rLength)
-    offset += rLength + 1
-    var sLength = der(offset) & 0xff
+    var offset = 0
+    if (der(offset) != 0x30.toByte) throw new IllegalArgumentException("ECDSA signature is not a DER sequence")
     offset += 1
-    if (sLength == 33) {
-      offset += 1
-      sLength = 32
+    val sequenceLength = der(offset) & 0xff
+    offset += 1
+    if ((sequenceLength & 0x80) != 0) {
+      offset += sequenceLength & 0x7f
     }
-    val s = Array.fill[Byte](32)(0)
-    System.arraycopy(der, offset, s, 32 - sLength, sLength)
-    r ++ s
+
+    def readInteger(): Array[Byte] = {
+      if (der(offset) != 0x02.toByte) throw new IllegalArgumentException("ECDSA signature integer is missing")
+      offset += 1
+      val length = der(offset) & 0xff
+      offset += 1
+      val raw = der.slice(offset, offset + length)
+      offset += length
+      val trimmed = raw.dropWhile(_ == 0)
+      Array.fill[Byte](Math.max(0, 32 - trimmed.length))(0) ++ trimmed.takeRight(32)
+    }
+
+    readInteger() ++ readInteger()
   }
 }
