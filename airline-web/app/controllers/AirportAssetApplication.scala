@@ -22,6 +22,7 @@ class AirportAssetApplication @Inject()(cc: ControllerComponents) extends Abstra
     "id" -> asset.id,
     "assetType" -> asset.assetType.id,
     "label" -> asset.assetType.label,
+    "image" -> asset.assetType.image,
     "category" -> asset.assetType.category.toString,
     "level" -> asset.level,
     "maxLevel" -> asset.assetType.maxLevel,
@@ -51,6 +52,10 @@ class AirportAssetApplication @Inject()(cc: ControllerComponents) extends Abstra
       "nextLevelCost" -> assetType.constructionCost(airport, nextLevel),
       "nextLevelUpkeep" -> assetType.upkeep(airport, nextLevel),
       "nextLevelIncome" -> assetType.weeklyIncome(airport, nextLevel),
+      "image" -> assetType.image,
+      "benefit" -> assetType.benefit,
+      "nextLevelNet" -> assetType.netWeekly(airport, nextLevel),
+      "nextLevelPayback" -> assetType.paybackCycles(airport, nextLevel),
       "canUpgrade" -> (nextLevel <= assetType.maxLevel),
       "meetsSize" -> (airport.size >= assetType.sizeRequirement)
     )
