@@ -32,6 +32,7 @@ GET	 	 /airports/:airportId/loyalist-data	        controllers.Application.getAir
 GET	 	 /airports/:airportId/departures/:dayOfWeek/:hour/:minute controllers.DepartureApplication.getDepartures(airportId : Int, dayOfWeek : Int, hour : Int, minute : Int)
 GET		 /airports/:fromAirportId/to/:toAirportId				controllers.Application.getAirportLinkConsumptions(fromAirportId : Int, toAirportId : Int)
 GET		 /airports/:airportId/links	controllers.Application.getLinksByAirport(airportId : Int)
+GET	 	 /airports/:airportId/traffic-analytics	controllers.Application.getAirportTrafficAnalytics(airportId : Int)
 GET	 	 /airports/:airportId/demand	      controllers.Application.getAirportDemand(airportId : Int)
 GET	 	 /airports/:airportId/champions	      controllers.Application.getAirportChampions(airportId : Int, airlineId: Option[Int])
 GET      /airports/:airportId/generic-transits     controllers.GenericTransitApplication.getGenericTransits(airportId: Int)

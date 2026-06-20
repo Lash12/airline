@@ -71,6 +71,45 @@ object Application {
 
 class Application @Inject()(cc: ControllerComponents, val configuration: play.api.Configuration) extends AbstractController(cc) {
 
+  def getAirportTrafficAnalytics(airportId : Int) = Action {
+    import com.patson.data.{ConsumptionHistorySource, LinkStatisticsSource}
+    import com.patson.model.AirportTrafficStats
+    import com.patson.util.AirportCache
+
+    val arrivals = LinkStatisticsSource.loadLinkStatisticsByToAirport(airportId, LinkStatisticsSource.FULL_LOAD)
+    val summary = AirportTrafficStats.summary(arrivals)
+    val routeRows = AirportTrafficStats.arrivalsByOrigin(arrivals).sortBy(-_.totalPax).take(50)
+    val demo = ConsumptionHistorySource.loadAirportDemographics(airportId)
+    val demoTotal = Math.max(1, demo.values.sum)
+    val partnerDemo = ConsumptionHistorySource.loadAirportPartnerDemographics(airportId)
+
+    def demoArray(mix : Map[com.patson.model.PassengerType.Value, Int]) : JsArray = {
+      val total = Math.max(1, mix.values.sum)
+      JsArray(mix.toList.sortBy(-_._2).map { case (pt, pax) => Json.obj("type" -> pt.toString, "share" -> pax.toDouble / total) })
+    }
+
+    val routesJson = routeRows.map { r =>
+      val originName = AirportCache.getAirport(r.airportId, false).map(a => a.iata + " " + a.city).getOrElse(r.airportId.toString)
+      Json.obj(
+        "origin" -> originName,
+        "totalPax" -> r.totalPax,
+        "terminatingPax" -> r.terminatingPax,
+        "connectingPax" -> r.connectingPax,
+        "transferShare" -> r.transferShare,
+        "premiumShare" -> (if (r.totalPax <= 0) 0.0 else r.premiumPax.toDouble / r.totalPax),
+        "demographics" -> demoArray(partnerDemo.getOrElse(r.airportId, Map.empty)))
+    }
+    val demoJson = demo.toList.sortBy(-_._2).map { case (pt, pax) =>
+      Json.obj("type" -> pt.toString, "pax" -> pax, "share" -> pax.toDouble / demoTotal)
+    }
+    Ok(Json.obj(
+      "totalPax" -> summary.totalPax,
+      "transferShare" -> summary.transferShare,
+      "premiumShare" -> (if (summary.totalPax <= 0) 0.0 else summary.premiumPax.toDouble / summary.totalPax),
+      "demographics" -> demoJson,
+      "routes" -> routesJson))
+  }
+
   implicit object AirportShareWrites extends Writes[(Airport, Double)] {
     def writes(airportShare: (Airport, Double)): JsValue = {
       JsObject(List(
