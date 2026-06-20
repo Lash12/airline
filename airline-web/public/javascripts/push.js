@@ -1,5 +1,5 @@
 (function() {
-    var PUSH_DEBUG_VERSION = 'push-20260620-0048'
+    var PUSH_DEBUG_VERSION = 'push-20260620-0102'
     var pushState = {
         config: null,
         registration: null,
@@ -40,7 +40,10 @@
     async function registerServiceWorker() {
         var reason = pushUnavailableReason()
         if (reason) return { registered: false, reason: reason }
-        pushState.registration = await navigator.serviceWorker.register('/sw.js')
+        await navigator.serviceWorker.register('/sw.js')
+        pushState.lastAction = 'wait-service-worker-ready'
+        updatePushDebugState()
+        pushState.registration = await navigator.serviceWorker.ready
         pushState.subscription = await pushState.registration.pushManager.getSubscription()
         return { registered: true }
     }
@@ -255,7 +258,8 @@
             ' perm=' + permission +
             ' browser=' + (!!pushState.subscription) +
             ' server=' + (!!serverSubscribed) +
-            (pushState.error ? ' error=' + pushState.error : '')
+            (pushState.error ? ' error=' + pushState.error : '') +
+            (window.pushLastError ? ' raw=' + window.pushLastError.slice(0, 80) : '')
     }
 
     function handlePushDeepLink() {
