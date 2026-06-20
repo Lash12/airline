@@ -12,7 +12,8 @@ case class PushConfig(
   vapidSubject: String,
   categories: Seq[NotificationCategory.Value],
   maxPerSubscription: Int,
-  intervalSeconds: Int
+  intervalSeconds: Int,
+  adminAirlineId: Option[Int]
 )
 
 object PushConfig {
@@ -24,6 +25,8 @@ object PushConfig {
       if (config.hasPath(path)) config.getString(path) else default
     def int(path: String, default: Int): Int =
       if (config.hasPath(path)) config.getInt(path) else default
+    def intOpt(path: String): Option[Int] =
+      if (config.hasPath(path)) Some(config.getInt(path)) else None
 
     val categories =
       if (config.hasPath("solo.push.categories")) {
@@ -45,10 +48,14 @@ object PushConfig {
       vapidSubject = string("solo.push.vapidSubject", "mailto:admin@myfly.club"),
       categories = categories,
       maxPerSubscription = int("solo.push.maxPerSubscription", 3),
-      intervalSeconds = int("solo.push.intervalSeconds", 60)
+      intervalSeconds = int("solo.push.intervalSeconds", 60),
+      adminAirlineId = intOpt("solo.push.adminAirlineId")
     )
   }
 
   def configuredForDelivery(config: PushConfig): Boolean =
     config.enabled && config.vapidPublicKey.nonEmpty && config.vapidPrivateKey.nonEmpty
+
+  def isAdmin(airlineId: Int, config: PushConfig): Boolean =
+    config.adminAirlineId.contains(airlineId)
 }
