@@ -1,6 +1,6 @@
 package controllers
 
-import com.patson.data.{AirplaneSource, AirportSource, CountrySource, CycleSource, NotificationSource, SoloConfig}
+import com.patson.data.{AirplaneSource, AirportSource, CountrySource, CycleSource, NotificationSource, SoloConfig, WorldNewsSource}
 import com.patson.model.{ManagerTaskType, LevelingManagerTask, Notification, NotificationCategory}
 import com.patson.ConsultantAdvisor
 import controllers.AuthenticationObject.AuthenticatedAirline
@@ -32,9 +32,23 @@ class NotificationApplication @Inject()(cc: ControllerComponents) extends Abstra
     Ok(Json.toJson(personal))
   }
 
-  // World news feed (pull-based, separate from the personal bell).
+  // World news feed (pull-based, separate from the personal bell). Broadcast content shared
+  // across all airlines; isRead is derived per-airline from a watermark, not a per-row flag
+  // (see WorldNewsSource) -- the JSON shape still matches the personal-notification contract
+  // so the existing frontend rendering needs no changes.
   def getNews(airlineId: Int) = AuthenticatedAirline(airlineId) { _ =>
-    Ok(Json.toJson(NotificationSource.loadByCategory(airlineId, NotificationCategory.WORLD_NEWS, 50)))
+    val watermark = WorldNewsSource.getOrInitWatermark(airlineId)
+    val items = WorldNewsSource.loadRecent(50).map { item =>
+      val base = Json.obj(
+        "id"       -> item.id,
+        "category" -> NotificationCategory.WORLD_NEWS.toString,
+        "message"  -> item.message,
+        "cycle"    -> item.cycle,
+        "isRead"   -> WorldNewsSource.isRead(item.id, watermark)
+      )
+      item.targetId.fold(base)(tid => base + ("targetId" -> JsString(tid)))
+    }
+    Ok(Json.toJson(items))
   }
 
   // Route consultant advice — a pull-based, timestamped list (separate from the bell).
@@ -94,7 +108,7 @@ class NotificationApplication @Inject()(cc: ControllerComponents) extends Abstra
   }
 
   def markNewsRead(airlineId: Int) = AuthenticatedAirline(airlineId) { _ =>
-    NotificationSource.markCategoryRead(airlineId, NotificationCategory.WORLD_NEWS)
+    WorldNewsSource.markSeen(airlineId, WorldNewsSource.latestId())
     Ok(Json.obj())
   }
 

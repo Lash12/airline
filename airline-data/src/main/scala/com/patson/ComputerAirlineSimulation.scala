@@ -23,10 +23,6 @@ object ComputerAirlineSimulation {
       val npcAirlines = AirlineSource.loadAirlinesByCriteria(List(("airline_type", NonPlayerAirline.id)))
       if (npcAirlines.isEmpty) return
 
-      // Resolve the player airlines once so each drop can be reported to the news feed
-      // (no-op / empty unless solo.news.enabled).
-      val playerIds = WorldNews.playerAirlineIds()
-
       // Fleet renewal (H-3): seed an airplane-renewal threshold for NPCs so the sim keeps their
       // aging fleets alive (no-op unless aiFleetEnabled). Covers all NPCs, idempotent.
       val totalSeeded = if (SoloConfig.aiFleetEnabled) ComputerAirlineFleet.ensureRenewal(npcAirlines) else 0
@@ -50,7 +46,7 @@ object ComputerAirlineSimulation {
             losers.take(Math.max(0, SoloConfig.aiMaxDropsPerAirline)).foreach { case (linkId, totalProfit, link) =>
               LinkSource.deleteLink(linkId)
               totalDrops += 1
-              WorldNews.post(playerIds, s"${airline.name} dropped its ${link.from.iata}-${link.to.iata} route", cycle, Some(s"rival_${airline.id}"))
+              WorldNews.post(s"${airline.name} dropped its ${link.from.iata}-${link.to.iata} route", cycle, Some(s"rival_${airline.id}"))
               println(s"[ai] ${airline.name} dropped losing link $linkId (profit $totalProfit over ${SoloConfig.aiLossLookbackCycles} cycles)")
             }
           }
@@ -65,7 +61,7 @@ object ComputerAirlineSimulation {
       var totalOpens = 0
       if (SoloConfig.aiGrowthEnabled) {
         val allAirports = AirportSource.loadAllAirports(true)
-        totalOpens = ComputerAirlineGrowth.grow(acting, allAirports, playerIds, cycle)
+        totalOpens = ComputerAirlineGrowth.grow(acting, allAirports, cycle)
       }
 
       // Price tuning (H-2): each acting NPC nudges prices on a few existing links toward

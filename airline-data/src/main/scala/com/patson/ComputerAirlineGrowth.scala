@@ -57,7 +57,7 @@ object ComputerAirlineGrowth {
     * Attempt to open routes for each acting airline. `allAirports` is loaded once by the caller
     * and shared; `playerIds` drives the (optional) news feed. Returns the number of routes opened.
     */
-  def grow(acting : Seq[Airline], allAirports : List[Airport], playerIds : List[Int], cycle : Int) : Int = {
+  def grow(acting : Seq[Airline], allAirports : List[Airport], cycle : Int) : Int = {
     if (!SoloConfig.aiGrowthEnabled || Math.max(0, SoloConfig.aiMaxOpensPerAirline) == 0) return 0
 
     val airportById = allAirports.map(a => (a.id, a)).toMap
@@ -67,7 +67,7 @@ object ComputerAirlineGrowth {
     // Only a few of the acting NPCs grow per cycle, so the world changes slowly and legibly.
     acting.take(Math.max(0, SoloConfig.aiMaxGrowthAirlinesPerCycle)).foreach { airline =>
       try {
-        opened += growAirline(airline, allAirports, airportById, countryRelationships, playerIds, cycle)
+        opened += growAirline(airline, allAirports, airportById, countryRelationships, cycle)
       } catch {
         case e : Exception => println(s"[ai-growth] error processing airline ${airline.id}: ${e.getMessage}")
       }
@@ -88,7 +88,6 @@ object ComputerAirlineGrowth {
                           allAirports : List[Airport],
                           airportById : Map[Int, Airport],
                           countryRelationships : Map[(String, String), Int],
-                          playerIds : List[Int],
                           cycle : Int) : Int = {
     val maxOpens = Math.max(0, SoloConfig.aiMaxOpensPerAirline)
 
@@ -138,7 +137,7 @@ object ComputerAirlineGrowth {
       case Some(link) =>
         val profit = scoredAll.find(_._1 eq link).map(_._2).getOrElse(0L)
         LinkSource.saveLink(link)
-        WorldNews.post(playerIds, s"${airline.name} opened its ${link.from.iata}-${link.to.iata} route", cycle, Some(s"rival_${airline.id}"))
+        WorldNews.post(s"${airline.name} opened its ${link.from.iata}-${link.to.iata} route", cycle, Some(s"rival_${airline.id}"))
         println(s"[ai-growth] ${airline.name} opened ${link.from.iata}-${link.to.iata} (est weekly profit $profit)")
         1
       case None => 0
