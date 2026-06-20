@@ -277,7 +277,13 @@ function renderAirportAssets(airportId, data) {
         $.each(data.assets, function(i, asset) {
             var statusText = asset.status === 'ACTIVE' ? 'Active' : ('Building (' + asset.remainingCycles + ' cycles)')
             var $row = $('<div class="table-row"></div>')
-            $row.append($('<div class="cell" style="width:24%"></div>').text(asset.label))
+            var $assetName = $('<div class="cell" style="width:24%"></div>')
+            if (asset.image) {
+                $('<img loading="lazy" style="height:24px; vertical-align:middle; margin-right:6px;">')
+                    .attr('src', '/assets/images/airport-assets/' + asset.image).appendTo($assetName)
+            }
+            $assetName.append($('<span></span>').text(asset.label))
+            $row.append($assetName)
             $row.append($('<div class="cell" style="width:12%; text-align:right;"></div>').text(asset.level + '/' + asset.maxLevel))
             $row.append($('<div class="cell" style="width:16%"></div>').text(statusText))
             $row.append($('<div class="cell" style="width:16%; text-align:right;"></div>').text('$' + asset.weeklyIncome.toLocaleString()))
@@ -299,7 +305,18 @@ function renderAirportAssets(airportId, data) {
     $cat.children('.table-row').remove()
     $.each(data.catalog, function(i, entry) {
         var $row = $('<div class="table-row"></div>')
-        $row.append($('<div class="cell" style="width:22%"></div>').text(entry.label))
+        var payback = entry.nextLevelPayback ? (entry.nextLevelPayback + ' cycles') : 'n/a (boost only)'
+        var tip = entry.benefit
+            + '\nUpkeep: $' + entry.nextLevelUpkeep.toLocaleString() + '/wk'
+            + (entry.generatesIncome ? ('\nIncome: $' + entry.nextLevelIncome.toLocaleString() + '/wk'
+                + '\nNet: $' + entry.nextLevelNet.toLocaleString() + '/wk'
+                + '\nPayback: ' + payback) : '')
+        var $name = $('<div class="cell" style="width:22%"></div>')
+        $('<img loading="lazy" style="height:24px; vertical-align:middle; margin-right:6px;">')
+            .attr('src', '/assets/images/airport-assets/' + entry.image)
+            .attr('title', tip).appendTo($name)
+        $name.append($('<span></span>').attr('title', tip).text(entry.label))
+        $row.append($name)
         $row.append($('<div class="cell" style="width:22%"></div>').text(entry.boostType))
         $row.append($('<div class="cell" style="width:10%; text-align:right;"></div>').text(entry.sizeRequirement))
         $row.append($('<div class="cell" style="width:16%; text-align:right;"></div>').text('$' + entry.nextLevelCost.toLocaleString()))
