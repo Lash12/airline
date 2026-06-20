@@ -80,6 +80,22 @@ class AirportAssetSpec extends AnyWordSpecLike with Matchers {
     }
   }
 
+  "netWeekly / paybackCycles".must {
+    "give a positive net and finite payback for revenue assets".in {
+      SHOPPING_MALL.netWeekly(airport(), 1) should be > 0L
+      SHOPPING_MALL.paybackCycles(airport(), 1) shouldBe defined
+    }
+    "give no payback for infrastructure (no income, net negative)".in {
+      METRO.netWeekly(airport(), 1) should be < 0L
+      METRO.paybackCycles(airport(), 1) shouldBe None
+    }
+    "map each asset to an image file that exists in the assets directory".in {
+      AirportAssetType.values.foreach { t =>
+        new java.io.File(s"../airline-web/public/images/airport-assets/${t.image}").exists() shouldBe true
+      }
+    }
+  }
+
   "validateBuild".must {
     val a = airport(size = 6)
     "require a base at the airport".in {

@@ -36,9 +36,20 @@ sealed abstract class AirportAssetType(val id : String,
                                        val baseBoostPerLevel : Double,
                                        val baseCost : Long,
                                        val constructionDuration : Int,
-                                       val sizeRequirement : Int) {
+                                       val sizeRequirement : Int,
+                                       val image : String,
+                                       val benefit : String) {
 
   def maxLevel : Int = Math.max(1, SoloConfig.assetsMaxLevel)
+
+  /** Weekly income minus upkeep at a level. Negative for attraction/infrastructure by design. */
+  def netWeekly(airport : Airport, level : Int) : Long = weeklyIncome(airport, level) - upkeep(airport, level)
+
+  /** Cycles to recoup one level's construction cost from net weekly cash, if ever (None if net <= 0). */
+  def paybackCycles(airport : Airport, level : Int) : Option[Int] = {
+    val net = netWeekly(airport, level)
+    if (net <= 0) None else Some(Math.ceil(constructionCost(airport, level).toDouble / net).toInt)
+  }
 
   /** Infrastructure/transport assets grow the city but never earn; revenue/attraction types do. */
   def generatesIncome : Boolean = category != AirportAssetCategory.INFRASTRUCTURE
@@ -83,12 +94,12 @@ object AirportAssetType {
   val UPKEEP_RATE = 0.008
   val INCOME_RATE = 0.01
 
-  case object SHOPPING_MALL     extends AirportAssetType("SHOPPING_MALL", "Shopping Mall", REVENUE, AirportBoostType.INCOME, 3000, 150_000_000L, 16, 4)
-  case object GRAND_HOTEL       extends AirportAssetType("GRAND_HOTEL", "Grand Hotel", REVENUE, AirportBoostType.INCOME, 2500, 120_000_000L, 12, 5)
-  case object RESORT            extends AirportAssetType("RESORT", "Resort", ATTRACTION, AirportBoostType.VACATION_HUB, 4, 90_000_000L, 12, 3)
-  case object CONVENTION_CENTER extends AirportAssetType("CONVENTION_CENTER", "Convention Center", ATTRACTION, AirportBoostType.FINANCIAL_HUB, 5, 200_000_000L, 20, 6)
-  case object LANDMARK          extends AirportAssetType("LANDMARK", "Landmark", ATTRACTION, AirportBoostType.INTERNATIONAL_HUB, 4, 250_000_000L, 24, 7)
-  case object METRO             extends AirportAssetType("METRO", "Metro / Transit", INFRASTRUCTURE, AirportBoostType.POPULATION, 30000, 200_000_000L, 20, 5)
+  case object SHOPPING_MALL     extends AirportAssetType("SHOPPING_MALL", "Shopping Mall", REVENUE, AirportBoostType.INCOME, 3000, 150_000_000L, 16, 4, "SHOPPING_MALL.png", "Raises overall passenger demand at this airport by lifting its income level, and earns rent.")
+  case object GRAND_HOTEL       extends AirportAssetType("GRAND_HOTEL", "Grand Hotel", REVENUE, AirportBoostType.INCOME, 2500, 120_000_000L, 12, 5, "GRAND_HOTEL_BUSINESS.png", "Raises overall passenger demand at this airport by lifting its income level, and earns room revenue.")
+  case object RESORT            extends AirportAssetType("RESORT", "Resort", ATTRACTION, AirportBoostType.VACATION_HUB, 4, 90_000_000L, 12, 3, "BEACH_RESORT.png", "Strengthens this airport as a vacation hub, drawing more inbound tourist demand.")
+  case object CONVENTION_CENTER extends AirportAssetType("CONVENTION_CENTER", "Convention Center", ATTRACTION, AirportBoostType.FINANCIAL_HUB, 5, 200_000_000L, 20, 6, "CONVENTION_CENTER.png", "Strengthens this airport as a financial hub, drawing more inbound business demand.")
+  case object LANDMARK          extends AirportAssetType("LANDMARK", "Landmark", ATTRACTION, AirportBoostType.INTERNATIONAL_HUB, 4, 250_000_000L, 24, 7, "LANDMARK.png", "Strengthens this airport as an international hub, drawing more inbound long-haul tourist demand.")
+  case object METRO             extends AirportAssetType("METRO", "Metro / Transit", INFRASTRUCTURE, AirportBoostType.POPULATION, 30000, 200_000_000L, 20, 5, "SUBWAY.png", "Grows the catchment population around this airport, raising demand across the board. No direct income.")
 
   val values : List[AirportAssetType] = List(SHOPPING_MALL, GRAND_HOTEL, RESORT, CONVENTION_CENTER, LANDMARK, METRO)
   def fromId(id : String) : Option[AirportAssetType] = values.find(_.id == id)
