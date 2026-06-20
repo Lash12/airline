@@ -1,0 +1,86 @@
+name: Validate Web Push
+
+on:
+  workflow_dispatch:
+    inputs:
+      airline_id:
+        description: Airline id to validate
+        required: true
+        default: "34"
+
+concurrency:
+  group: optiplex-deploy
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: [self-hosted, optiplex]
+    timeout-minutes: 8
+    steps:
+      - name: Insert pushable notification and verify sender watermark
+        env:
+          AIRLINE_ID: ${{ inputs.airline_id }}
+        run: |
+          set -euo pipefail
+
+          DB_USER="$(docker exec airline-db printenv MYSQL_USER)"
+          DB_PASS="$(docker exec airline-db printenv MYSQL_PASSWORD)"
+          DB_NAME="$(docker exec airline-db printenv MYSQL_DATABASE)"
+          STAMP="push-test-$(date +%s)"
+          TMP="$(mktemp)"
+
+          echo "Validating web push for airline ${AIRLINE_ID}"
+          curl -fsS http://localhost:9000/push-config | node -e '
+            let body = "";
+            process.stdin.on("data", chunk => body += chunk);
+            process.stdin.on("end", () => {
+              const json = JSON.parse(body);
+              const key = json.vapidPublicKey || "";
+              const padded = key.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - key.length % 4) % 4);
+              const bytes = Buffer.from(padded, "base64");
+              console.log(JSON.stringify({
+                enabled: json.enabled,
+                configured: json.configured,
+                decodedBytes: bytes.length,
+                firstByte: bytes[0],
+                uncompressedP256: bytes.length === 65 && bytes[0] === 4
+              }));
+              if (!json.enabled || !json.configured || bytes.length !== 65 || bytes[0] !== 4) process.exit(1);
+            });
+          '
+
+          docker exec airline-db mysql -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" -N -e "
+            SELECT COUNT(*) FROM push_subscription WHERE airline = ${AIRLINE_ID};
+          " > "$TMP"
+          SUBSCRIPTION_COUNT="$(tr -d '\r\n' < "$TMP")"
+          echo "subscription_count=${SUBSCRIPTION_COUNT}"
+          if [ "$SUBSCRIPTION_COUNT" -lt 1 ]; then
+            echo "No push subscription is stored for airline ${AIRLINE_ID}" >&2
+            exit 1
+          fi
+
+          docker exec airline-db mysql -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" -N -e "
+            INSERT INTO notification (airline, category, message, cycle, is_read, target_id, expiry_cycle)
+            VALUES (${AIRLINE_ID}, 'NEGOTIATION_READY', CONCAT('Push delivery test ', '${STAMP}'), (SELECT cycle FROM cycle LIMIT 1), 0, '${STAMP}', NULL);
+            SELECT LAST_INSERT_ID();
+          " > "$TMP"
+          NOTIFICATION_ID="$(tail -1 "$TMP" | tr -d '\r\n')"
+          echo "inserted_notification_id=${NOTIFICATION_ID}"
+
+          sleep 90
+
+          docker exec airline-db mysql -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" -N -e "
+            SELECT id, last_pushed_notification_id, failure_count
+            FROM push_subscription
+            WHERE airline = ${AIRLINE_ID}
+            ORDER BY id;
+          " | tee "$TMP"
+
+          if ! awk -v notif="$NOTIFICATION_ID" 'BEGIN { ok = 0 } { if ($2 >= notif && $3 == 0) ok = 1 } END { exit ok ? 0 : 1 }' "$TMP"; then
+            echo "Push sender did not advance a healthy subscription watermark to notification ${NOTIFICATION_ID}" >&2
+            echo "Recent push log lines:"
+            docker logs --tail 200 airline-web 2>&1 | grep -i '\[push\]' || true
+            exit 1
+          fi
+
+          echo "Push sender advanced a healthy subscription watermark to notification ${NOTIFICATION_ID}"
