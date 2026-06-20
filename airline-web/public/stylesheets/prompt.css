@@ -109,6 +109,20 @@
     text-align: right;
 }
 
+.notification-push-meta {
+    min-width: 0;
+    text-align: right;
+}
+
+.notification-push-detail {
+    color: var(--text-color);
+    font-size: 10px;
+    line-height: 1.25;
+    max-width: 220px;
+    opacity: 0.5;
+    overflow-wrap: anywhere;
+}
+
 /* Airline Switcher */
 .airline-switcher-dropdown {
     position: fixed;
