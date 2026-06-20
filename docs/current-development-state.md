@@ -128,17 +128,61 @@ the OptiPlex in two pushes:
   The actual button-click-to-phone-notification round trip still needs the user to try it from
   a logged-in session — not yet exercised end-to-end.
 - `NEGOTIATION_READY` live-cycle verification (the original item: confirming a real
-  cooldown-driven push, not just a test insert) was **not completed** in this pass. See the
-  session report for why. `AirlineSimulation.scala:40` already calls
-  `NegotiationReadyNotifier.emit(cycle)` every cycle and `PushPayload.urlFor` already builds the
-  correct deep link, so this is believed to already work; it just hasn't been observed firing
-  from a real (non-test) cooldown expiry yet.
+  cooldown-driven push, not just a test insert) was **closed as code-verified, not live-observed**
+  — by user decision, given `AirlineSimulation.scala:40` already calls
+  `NegotiationReadyNotifier.emit(cycle)` every cycle, `PushPayload.urlFor` already builds the
+  correct deep link, and there's an existing unit test. No live cooldown expired during this
+  session to watch it fire for real; not blocking further work.
+
+## Performance roadmap Phase 3 & 4 — already shipped (docs were stale)
+
+A research pass on 2026-06-20 found that `docs/single-player-performance-roadmap.md`'s Phase 3
+("cheaper cycles") and Phase 4 ("real DB index audit") were already fully implemented and live,
+contradicting this doc's previous "suggested next feature" pointer to them. Confirmed directly:
+the per-phase cycle profiler (`MainSimulation.scala`), demand memoization
+(`solo.demand.memoize=true` live in `optiplex-deploy.yml`, implemented in `DemandGenerator.scala`),
+`PassengerSimulation`'s early-exit-on-zero-capacity (`demandChunks.nonEmpty` in its consumption
+loop), and the measured `link_consumption` airport-pair index (`Meta.scala`) are all in place.
+`INDEXES.md` is already deleted. Nothing left to do here.
+
+## World News redesign — shipped 2026-06-20 (root cause not fully resolved, mechanism replaced)
+
+While evaluating whether to build AI-growth Phase H-4 (NPC new bases), a live check found the
+player's own airline (34, "Lash Air") had received zero `WORLD_NEWS` notifications ever, despite
+real drop/open events firing and reaching 95+ other (mostly unclaimed/leftover) airline records.
+Investigation (see the session transcript for the full trail) ruled out airline-type
+misclassification, a missing `airline_info` join row, duplicate airline rows, and "too new to
+have seen one" — `airline_base.founded_cycle=3` for airline 34, vs. current cycle ~196 at the
+time. The exact historical root cause inside the old per-recipient fan-out was never pinned down
+with certainty (no live forensic trail remained — binlog off, sim log rotated).
+
+Decision: replace the mechanism rather than keep chasing it. `WorldNews.post` used to write one
+notification row per non-NPC airline (`WorldNews.playerAirlineIds()`, confirmed ~104 such rows in
+this world, almost all unclaimed leftover slots from multiplayer world-seeding) to deliver a
+single event. It now writes once to a new `world_news` table (no `airline` column — it's global
+broadcast content) and each airline tracks its own read position via a lazily-created
+`world_news_watermark` row, mirroring the push-subscription watermark pattern (including
+defaulting a new watermark to "caught up as of now," not 0). `NotificationApplication.getNews`/
+`markNewsRead` produce the same JSON shape as before, so no frontend changes were needed.
+
+Verified live: both new tables get lazily created correctly (confirmed via the user's own News
+page visit, which created airline 34's watermark at `0` — correct, since the table was empty at
+the time); a fresh throwaway test account (user `claudetest1`, airline 136 — safe to delete
+later) round-tripped `GET /airlines/136/news` (`[]`, no error) and `POST /airlines/136/news/read`
+(`{}`, correctly created its watermark) over real HTTP with real session auth. **Not yet
+verified**: an actual drop/open event landing in the new `world_news` table — none fired between
+deploy and end of session (a 66-cycle dry spell, cycle 175→241, vs. roughly 48 events across the
+prior 175 cycles). Check `SELECT * FROM world_news ORDER BY id DESC LIMIT 5;` next session; if
+still empty, consider asking the user to fast-forward a few cycles, since the code path itself is
+otherwise fully exercised and correct.
+
+Optional follow-up, not yet done: the ~10,000+ old per-airline `WORLD_NEWS` rows in the
+`notification` table are now permanently orphaned (nothing reads or writes them anymore) and
+could be bulk-deleted to reclaim space — destructive, needs explicit go-ahead, do not run
+automatically.
 
 ## Suggested Next Feature Phase
 
-With Web Push now product-complete, the next natural candidates (pick one, don't combine):
-
-- Finish the `NEGOTIATION_READY` live-cycle spot-check noted above.
-- Resume the performance roadmap's Phase 3 (cheaper cycles): demand memoization and
-  `PassengerSimulation` early-exit-on-zero-capacity are still open per
-  `docs/single-player-performance-roadmap.md`.
+- Confirm the World News fix above with a live event, then resume AI-growth Phase H-4 (NPC new
+  bases) per `docs/ai-growth-plan.md` — H-1 through H-3 are live, only H-4 remains unbuilt, and
+  it was deliberately deferred pending this investigation.
