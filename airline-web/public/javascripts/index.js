@@ -9,6 +9,7 @@ let airports = null;
 let gameConstants = null;
 let stockBenchmarks = {};
 let postLoginScriptsLoaded = false;
+let buildWatcherStarted = false;
 
 // Self-hosted (was external CDNs unpkg/cdnjs, which a browser's tracking protection, an
 // ad-blocker, or the network can block — breaking login since boot awaits maplibre).
@@ -19,6 +20,49 @@ const MAPLIBRE_CSS = '/assets/stylesheets/vendor/maplibre-gl.css';
 
 function asset(name) {
     return (window.VERSIONED_ASSETS && window.VERSIONED_ASSETS[name]) || `/assets/javascripts/${name}`;
+}
+
+function reloadForNewBuild(buildId) {
+    if (!buildId || buildId === window.APP_BUILD_ID) return;
+    if (sessionStorage.getItem('buildReloadTarget') === buildId) return;
+    sessionStorage.setItem('buildReloadTarget', buildId);
+
+    const url = new URL(window.location.href);
+    url.searchParams.set('__build', buildId);
+    window.location.replace(url.toString());
+}
+
+async function checkBuildUpdate() {
+    try {
+        const response = await fetch('/build-info', {
+            cache: 'no-store',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        });
+        if (!response.ok) return;
+        const info = await response.json();
+        if (!window.APP_BUILD_ID) {
+            window.APP_BUILD_ID = info.buildId;
+            return;
+        }
+        reloadForNewBuild(info.buildId);
+    } catch (error) {
+        console.warn('Build update check failed', error);
+    }
+}
+
+function startBuildWatcher() {
+    if (buildWatcherStarted) return;
+    buildWatcherStarted = true;
+    if (sessionStorage.getItem('buildReloadTarget') === window.APP_BUILD_ID) {
+        sessionStorage.removeItem('buildReloadTarget');
+    }
+    checkBuildUpdate();
+    setInterval(checkBuildUpdate, 60000);
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) checkBuildUpdate();
+    });
+    window.addEventListener('pageshow', checkBuildUpdate);
 }
 
 // Only what login/signup pages need
@@ -273,6 +317,7 @@ window.ensureFullBoot = ensureFullBoot;
 
 async function initializeApp() {
     try {
+        startBuildWatcher();
         // Phase 1: Start ALL loads in parallel
         const loginReady = Promise.all([
             loadScriptsParallel(LOGIN_SCRIPTS),

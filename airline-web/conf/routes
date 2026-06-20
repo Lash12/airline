@@ -14,6 +14,7 @@ GET		 /api/:version/game/tooltips			  controllers.Application.getTooltips(versio
 POST	 /user-login							  controllers.UserApplication.login
 POST	 /user-logout						  controllers.UserApplication.logout
 GET      /current-cycle                   controllers.Application.getCurrentCycle()
+GET      /build-info                      controllers.Application.getBuildInfo()
 GET      /sim-control                     controllers.SimControlApplication.getSimControl()
 PUT      /sim-control/cycle-minutes/:minutes		controllers.SimControlApplication.setCycleMinutes(minutes : Int)
 PUT      /sim-control/fast-forward/:cycles		controllers.SimControlApplication.fastForward(cycles : Int)

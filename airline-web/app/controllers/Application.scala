@@ -19,6 +19,7 @@ import scala.math.BigDecimal.RoundingMode
 
 
 object Application {
+  val buildId: String = s"build-${java.lang.management.ManagementFactory.getRuntimeMXBean.getStartTime}"
   private val airportsJsonLock = new Object()
   private var airportsJsonCycle: Int = -1 // guarded by airportsJsonLock
   private var airportsJson: JsValue = Json.obj() // guarded by airportsJsonLock
@@ -140,7 +141,7 @@ class Application @Inject()(cc: ControllerComponents, val configuration: play.ap
   // changed between deploys. With Cache-Control: no-cache the browser revalidates, the static ETag
   // always matched → 304 → the browser kept the OLD HTML (and thus loaded OLD JS) forever. Keying
   // the ETag to the JVM start time makes each deploy (new process) invalidate the cached HTML.
-  private val indexEtag: String = s""""build-${java.lang.management.ManagementFactory.getRuntimeMXBean.getStartTime}""""
+  private val indexEtag: String = s""""${Application.buildId}""""
 
   // path parameter is captured but ignored - page.js handles routing
   def index(path: String = "") = Action { implicit request =>
@@ -176,6 +177,11 @@ class Application @Inject()(cc: ControllerComponents, val configuration: play.ap
       "vapidPublicKey" -> pushConfig.vapidPublicKey,
       "categories" -> pushConfig.categories.map(_.toString)
     ))
+  }
+
+  def getBuildInfo() = Action {
+    Ok(Json.obj("buildId" -> Application.buildId))
+      .withHeaders(CACHE_CONTROL -> "no-store, max-age=0")
   }
 
   /**
