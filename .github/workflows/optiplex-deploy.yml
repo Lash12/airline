@@ -35,7 +35,9 @@ jobs:
         run: |
           git clean -ffdx \
             -e e2e/test-results/ \
-            -e e2e/playwright-report/
+            -e e2e/playwright-report/ \
+            -e airline-data/target/ \
+            -e airline-web/target/
 
       - name: Deploy stack
         env:
