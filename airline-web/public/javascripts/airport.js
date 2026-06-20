@@ -237,6 +237,7 @@ async function showAirportDetails(airportId) {
     updateAirportDetails(airportDetailed)
     activeAirport = airportDetailed
     loadAirportAssets(airportId)
+    loadAirportTrafficAnalytics(airportId)
 }
 
 /**
@@ -340,6 +341,44 @@ function sellAirportAsset(airportId, assetId) {
         url: "/airlines/" + activeAirline.id + "/assets/" + airportId + "/" + assetId,
         success: function() { loadAirportAssets(airportId) },
         error: function(xhr) { alert(xhr.responseText || 'Could not sell asset') }
+    })
+}
+
+function loadAirportTrafficAnalytics(airportId) {
+    $.ajax({
+        type: 'GET',
+        url: "/airports/" + airportId + "/traffic-analytics",
+        dataType: 'json',
+        success: function(data) { renderAirportTrafficAnalytics(data) },
+        error: function() { $('#airportTrafficAnalyticsSection').hide() }
+    })
+}
+
+function renderAirportTrafficAnalytics(data) {
+    var pct = function(x) { return (x * 100).toFixed(0) + '%' }
+    if (!data || data.totalPax === 0) {
+        $('#airportTrafficSummary').text('No recent traffic data for this airport yet.')
+        $('#airportTrafficDemographics').empty()
+        $('#airportTrafficRouteList').children('.table-row').remove()
+        return
+    }
+    $('#airportTrafficSummary').text('Weekly passengers: ' + data.totalPax.toLocaleString()
+        + ' — ' + pct(data.transferShare) + ' transferring, ' + pct(1 - data.transferShare) + ' direct'
+        + ' — ' + pct(data.premiumShare) + ' premium')
+    $('#airportTrafficDemographics').text('Demographics: '
+        + (data.demographics || []).map(function(d) { return d.type + ' ' + pct(d.share) }).join(', '))
+
+    var $list = $('#airportTrafficRouteList')
+    $list.children('.table-row').remove()
+    $.each(data.routes, function(i, r) {
+        var $row = $('<div class="table-row"></div>')
+        $row.append($('<div class="cell" style="width:26%"></div>').text(r.origin))
+        $row.append($('<div class="cell" style="width:14%; text-align:right;"></div>').text(r.totalPax.toLocaleString()))
+        $row.append($('<div class="cell" style="width:14%; text-align:right;"></div>').text(pct(r.transferShare)))
+        $row.append($('<div class="cell" style="width:14%; text-align:right;"></div>').text(pct(r.premiumShare)))
+        var demoText = (r.demographics || []).slice(0, 4).map(function(d) { return d.type + ' ' + pct(d.share) }).join(', ')
+        $row.append($('<div class="cell" style="width:32%"></div>').text(demoText || '—'))
+        $list.append($row)
     })
 }
 /**
