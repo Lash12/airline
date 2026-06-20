@@ -28,21 +28,25 @@ class PushApplication @Inject()(cc: ControllerComponents, configuration: Configu
       request.body.asJson match {
         case None => BadRequest("Subscription JSON body is required")
         case Some(json) =>
-          val endpoint = (json \ "endpoint").as[String]
+          val endpoint = (json \ "endpoint").asOpt[String].filter(_.nonEmpty)
           val keys = json \ "keys"
-          val p256dh = (keys \ "p256dh").as[String]
-          val auth = (keys \ "auth").as[String]
-          val userAgent = request.headers.get("User-Agent")
+          val p256dh = (keys \ "p256dh").asOpt[String].filter(_.nonEmpty)
+          val auth = (keys \ "auth").asOpt[String].filter(_.nonEmpty)
 
-          val saved = PushSubscriptionSource.upsert(PushSubscription(
-            airlineId = airlineId,
-            endpoint = endpoint,
-            p256dhKey = p256dh,
-            authKey = auth,
-            createdCycle = CycleSource.loadCycle(),
-            userAgent = userAgent
-          ))
-          Ok(Json.obj("subscribed" -> true, "id" -> saved.id))
+          (endpoint, p256dh, auth) match {
+            case (Some(endpointValue), Some(p256dhValue), Some(authValue)) =>
+              val saved = PushSubscriptionSource.upsert(PushSubscription(
+                airlineId = airlineId,
+                endpoint = endpointValue,
+                p256dhKey = p256dhValue,
+                authKey = authValue,
+                createdCycle = CycleSource.loadCycle(),
+                userAgent = request.headers.get("User-Agent")
+              ))
+              Ok(Json.obj("subscribed" -> true, "id" -> saved.id))
+            case _ =>
+              BadRequest("Subscription endpoint and keys are required")
+          }
       }
     }
   }
