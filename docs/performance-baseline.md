@@ -27,6 +27,75 @@ The first attempted 1.5 GB simulation heap spent 95-99% of wall time in GC. The 
 completed the cycle without that GC-thrashing pattern. LinkSimulation remains the clear
 optimization target.
 
+## LinkSimulation Follow-up
+
+Cycle 432 spent 218.873 s in LinkSimulation, mostly inside passenger route finding. The
+first optimization removes the unsafe mutable route cache from the parallel demand-chunk
+loop and precomputes one route map per passenger group before chunk consumption. To split
+the next measured run between route calculation and seat consumption, enable:
+
+```bash
+SIM_EXTRA_OPTS="-Dsolo.link.profile=true"
+```
+
+Look for `[link-profile]` log lines with `routePrecomputeMs`, `consumeMs`,
+`passengerGroups`, `chunks`, and `availableLinks` per consumption pass.
+
+## Current Measurement: Fresh DB / Lash Air JFK Scenario (2026-06-19)
+
+Measured during a live fast-forward run after recreating Lash Air, adding the LAX-JFK
+A350-900 route, and leaving a pending A350-900 delivery in progress.
+
+- **Current cycle endpoint**: `{"cycle":1}` at the start of observation.
+- **Active-cycle memory**: `airline-app` 5.15 GiB / 7 GiB, `airline-db` 597 MiB / 1.465 GiB.
+- **Active-cycle CPU**: `airline-app` 378.91%, `airline-db` 0.42%.
+- **Cycle 3 wall time**: 221 s; phase timings: caches 8.525 s, link 205.003 s,
+  airport 5.285 s, airplane 1.141 s, airline 1.403 s.
+- **Cycle 4 wall time**: 217 s; phase timings: caches 8.407 s, link 201.186 s,
+  airport 5.194 s, airplane 1.129 s, airline 1.306 s.
+- **Cycle 4 demand/link profile**: 1,970,629 generated demand chunks, pruned to
+  1,347,701; 5,593 available links at loop 0; 128,730 consumption entries saved.
+- **Cycle 4 route finding**: route precompute totaled 110.521 s across loops 0-9;
+  seat consumption totaled 1.682 s. Route finding remains the dominant measured
+  inner-loop cost, with additional LinkSimulation time in demand generation,
+  tallying, DB writes, and table rotation.
+
+## OptiPlex Deploy Check: Indexed Route Search WIP (2026-06-20)
+
+Deployed the indexed route-search/concurrent route-cache WIP to `airline-dev` and
+measured cycle 136. The stack was healthy and Playwright passed, but this first
+cycle is not a confirmed performance win versus the prior 201 s LinkSimulation
+sample.
+
+- **Current cycle endpoint**: `{"cycle":136}` during observation.
+- **Container memory/CPU during active sim**: `airline-app` 4.977 GiB / 7 GiB at
+  339% CPU; `airline-db` 490.8 MiB / 1.465 GiB at 6% CPU.
+- **Cycle 136 wall time**: 257 s; phase timings: caches 12.413 s, link 235.141 s,
+  airport 5.556 s, airplane 1.211 s, airline 2.056 s.
+- **Route-search profile**: per-pass index build was negligible (2-19 ms). The
+  largest pass handled 1,015,614 chunks and 24,821 passenger groups with aggregate
+  route compute of 155.332 s and pass wall time of 40.944 s.
+- **Interpretation**: the index itself is cheap and the route work is parallelized,
+  but the full LinkSimulation phase remains too slow. Treat this as a functional
+  profiling checkpoint, not a completed optimization.
+
+## OptiPlex Tuning Pass: Lazy Origin-Indexed Route Solve (2026-06-20)
+
+After the 257 s checkpoint, route solving was changed to use the route-search index
+by active origin airport. Instead of materializing passenger-specific
+`LinkConsideration` objects for nearly every candidate link before shortest-path
+search, the solver now creates them lazily only for outgoing edges from vertices it
+actually reaches.
+
+- **Current cycle endpoint**: `{"cycle":139}` during observation.
+- **Cycle 139 wall time**: 176 s; phase timings: caches 12.187 s, link 153.546 s,
+  airport 5.399 s, airplane 1.206 s, airline 2.193 s.
+- **Route-search profile**: loop 0 route compute dropped to 37.051 s with pass
+  wall time 10.693 s for 1,022,125 chunks and 24,542 passenger groups. Later
+  loops stayed below 23.454 s aggregate route compute.
+- **Result**: keep this tuning pass. It improves the deployed checkpoint from
+  257 s to 176 s total cycle time, and LinkSimulation from 235.141 s to 153.546 s.
+
 ## Startup Measurement
 - **Goal**: Measure time to first HTTP 200 response.
 - **Command**:

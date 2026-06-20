@@ -1527,9 +1527,10 @@ function loadOwnedAirplaneDetails(airplaneId, selectedItem, closeCallback, disab
         			$("#airplaneDetailsAge").show()
         			$("#airplaneDetailsDelivery").hide()
         		} else {
+                    var weeksUntilDelivery = airplane.constructedCycle - currentCycle
         			$("#airplaneDetailsAge").hide()
-        			$("#airplaneDetailsDelivery").text("Will be available in " + -age * -1 + "week(s)")
-        			$("#airplaneDetailsDeliver").show()
+                    $("#airplaneDetailsDelivery").text("Will be available in " + weeksUntilDelivery + " week(s)")
+                    $("#airplaneDetailsDelivery").show()
         		}
     	    	$("#sellAirplaneButton").text("Sell for $" + commaSeparateNumber(airplane.sellValue))
     	    	var replaceCost = model.price - airplane.sellValue

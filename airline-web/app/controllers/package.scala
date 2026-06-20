@@ -234,7 +234,7 @@ package object controllers {
 
       val constructingAirplanes = link.getAssignedAirplanes().filter(!_._1.isReady)
       if (!constructingAirplanes.isEmpty) {
-        val waitTime = CycleSource.loadCycle() - constructingAirplanes.keys.map(_.constructedCycle).max
+        val waitTime = constructingAirplanes.keys.map(_.constructedCycle).max - CycleSource.loadCycle()
         json = json + ("future" -> Json.obj("frequency" -> link.futureFrequency(), "capacity" -> link.futureCapacity(), "waitTime" -> waitTime))
       }
 

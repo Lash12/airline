@@ -48,6 +48,10 @@ object SoloConfig {
   // to decide whether memoizing the base layer is worthwhile (off by default).
   val demandProfile : Boolean = boolAt("solo.demand.profile", false)
 
+  // Diagnostic: emit per-pass LinkSimulation route precompute and demand-consume
+  // timings. Off by default because the sim log is already noisy in normal play.
+  val linkProfile : Boolean = boolAt("solo.link.profile", false)
+
   // Memoize the deterministic base-demand layer across cycles (Step E-1). The base
   // layer is ~55x the per-cycle chunk cost but its inputs (airport demographics +
   // country relationships) barely change, so a fingerprint-invalidated cache serves
@@ -92,6 +96,13 @@ object SoloConfig {
   val aiGrowthMinAvailableMinutes : Int = intAt("solo.ai.growth.minSpareFlightMinutes", 600)
   // Service quality assumed for an NPC-opened route (feeds price/cost estimation).
   val aiGrowthRawQuality : Int = intAt("solo.ai.growth.rawQuality", 40)
+
+  // Living-world AI strategy bias (H-5). Off by default. When enabled, NPC route
+  // growth keeps the same profitability gate but applies a small deterministic
+  // preference so carriers expand in more legible patterns instead of every NPC
+  // chasing the same top route.
+  val aiStrategyEnabled : Boolean = boolAt("solo.ai.strategy.enabled", false)
+  val aiStrategyMaxBonus : Double = doubleAt("solo.ai.strategy.maxBonus", 0.25)
 
   // Living-world AI price tuning (Phase H-2). Off by default; independent of the other ai flags.
   // When on, each acting NPC nudges prices on a few of its existing links toward equilibrium by

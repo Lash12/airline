@@ -129,7 +129,8 @@ object ComputerAirlineGrowth {
         buildCandidateLink(airline, home, toAirport, airplane, minutes, fwdDemand).map { link =>
           // A link serves both directions, so estimate captured seats from outbound + return demand.
           val bothWays = demandByClass(home, toAirport, countryRelationships) + demandByClass(toAirport, home, countryRelationships)
-          (link, estimateWeeklyProfit(link, bothWays, cycle))
+          val estimatedProfit = estimateWeeklyProfit(link, bothWays, cycle)
+          (link, ComputerAirlineStrategy.scoreProfit(airline.id, home, toAirport, bothWays, estimatedProfit))
         }
       }
     }

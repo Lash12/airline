@@ -17,5 +17,7 @@ class SoloConfigSpec extends AnyFlatSpec with Matchers {
     SoloConfig.bankruptcyCashThreshold shouldBe -10000000
     SoloConfig.bankruptcyAssetsThreshold shouldBe -100000000
     SoloConfig.negotiationReadyEnabled shouldBe false
+    SoloConfig.linkProfile shouldBe false
+    SoloConfig.aiStrategyEnabled shouldBe false
   }
 }

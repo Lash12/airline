@@ -110,6 +110,10 @@ Give each NPC a lightweight, persistent bias (e.g. a focus region/market type) s
 cluster into a legible narrative rather than independent decisions. Cheap: a derived or
 stored per-airline tag, no heavy planning.
 
+Status: implemented as a deterministic `ComputerAirlineStrategy` scoring bias behind
+`solo.ai.strategy.enabled` (default false) with `solo.ai.strategy.maxBonus` controlling the
+route-open preference strength. The small-server profile enables it for solo play.
+
 ---
 
 ## Critical files

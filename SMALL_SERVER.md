@@ -8,6 +8,16 @@ and mounts as the full `docker-compose.yaml`, with memory limits, a tuned MySQL
 ## Prerequisites
 - Docker with the compose plugin
 
+## Deployment safety checklist
+
+- Use `scripts/optiplex-deploy.sh` for OptiPlex deploys; it verifies the MySQL
+  volume before and after container recreation.
+- The Bitnami MySQL image must mount `mysql-data` at `/bitnami/mysql`. Do not
+  mount it at `/var/lib/mysql`; that path does not preserve this image's data.
+- Before any intentional reset, take a DB backup first. A reset should be an
+  explicit `docker compose -f docker-compose.small.yaml down -v`, never a side
+  effect of rebuilding.
+
 ## First-time setup
 
 1. **Start the stack**
