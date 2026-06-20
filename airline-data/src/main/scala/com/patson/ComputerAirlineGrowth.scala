@@ -123,15 +123,7 @@ object ComputerAirlineGrowth {
     val framesToConsider = spareFrames.take(Math.max(1, SoloConfig.aiGrowthFramesConsidered))
     val scoredAll : List[(Link, Long)] = framesToConsider.flatMap { case (airplane, minutes) =>
       val home = baseById.getOrElse(airplane.home.id, baseAirports.head)
-      val candidates = bestCandidates(home, airplane.model, allAirports, served, countryRelationships, SoloConfig.aiGrowthCandidateLimit)
-      candidates.flatMap { case (toAirport, fwdDemand) =>
-        buildCandidateLink(airline, home, toAirport, airplane, minutes, fwdDemand).map { link =>
-          // A link serves both directions, so estimate captured seats from outbound + return demand.
-          val bothWays = demandByClass(home, toAirport, countryRelationships) + demandByClass(toAirport, home, countryRelationships)
-          val estimatedProfit = estimateWeeklyProfit(link, bothWays, cycle)
-          (link, ComputerAirlineStrategy.scoreProfit(airline.id, home, toAirport, bothWays, estimatedProfit))
-        }
-      }
+      bestRouteFromBase(airline, home, airplane, minutes, allAirports, served, countryRelationships, cycle)
     }
     selectBestOpen(networkSize, SoloConfig.aiMaxNetworkSize, scoredAll, SoloConfig.aiOpenProfitThreshold) match {
       case Some(link) =>
@@ -142,6 +134,30 @@ object ComputerAirlineGrowth {
         1
       case None => 0
     }
+  }
+
+  /** Best (link, score) route to open from `home`, flown by `airplane` with `spareMinutes` idle, or
+    * None if no flyable candidate exists. Encapsulates the H-1 per-frame evaluation so H-4 can seed
+    * a freshly opened base's first route with the exact same candidate/profit machinery — passing
+    * the prospective base airport as `home` (it need not be a saved base yet for the estimate). */
+  private[patson] def bestRouteFromBase(airline : Airline,
+                                        home : Airport,
+                                        airplane : Airplane,
+                                        spareMinutes : Int,
+                                        allAirports : List[Airport],
+                                        served : Set[(Int, Int)],
+                                        countryRelationships : Map[(String, String), Int],
+                                        cycle : Int) : Option[(Link, Long)] = {
+    val candidates = bestCandidates(home, airplane.model, allAirports, served, countryRelationships, SoloConfig.aiGrowthCandidateLimit)
+    val scored = candidates.flatMap { case (toAirport, fwdDemand) =>
+      buildCandidateLink(airline, home, toAirport, airplane, spareMinutes, fwdDemand).map { link =>
+        // A link serves both directions, so estimate captured seats from outbound + return demand.
+        val bothWays = demandByClass(home, toAirport, countryRelationships) + demandByClass(toAirport, home, countryRelationships)
+        val estimatedProfit = estimateWeeklyProfit(link, bothWays, cycle)
+        (link, ComputerAirlineStrategy.scoreProfit(airline.id, home, toAirport, bothWays, estimatedProfit))
+      }
+    }
+    if (scored.isEmpty) None else Some(scored.maxBy(_._2))
   }
 
   /** Top reachable destinations from `from` by cached base demand, cheaply pre-filtered. */

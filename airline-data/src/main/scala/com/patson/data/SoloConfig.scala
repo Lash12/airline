@@ -129,6 +129,29 @@ object SoloConfig {
   val aiFleetEnabled : Boolean = boolAt("solo.ai.fleet.enabled", false)
   val aiFleetRenewalThreshold : Int = intAt("solo.ai.fleet.renewalThreshold", 40)
 
+  // Living-world AI base expansion (Phase H-4). Off by default; independent of the other ai flags.
+  // H-1 can only open routes from airports where an NPC already has a base AND a spare frame is
+  // homed, so each NPC's reach is permanently capped by its existing bases. When on, a thriving NPC
+  // may occasionally open ONE new base by promoting a city it already flies to (a destination of its
+  // existing links) into a base, re-homing one fully-idle owned frame there and launching that
+  // frame's best profitable first route in the same cycle — so the hub is productive immediately and
+  // H-1 grows the cluster around it on later cycles. Deliberately the most conservative growth step:
+  // - at most maxOpeningsPerCycle base(s) open across ALL acting NPCs per cycle (rare/legible),
+  // - a per-NPC base ceiling (maxBasesPerAirline),
+  // - self-limiting economics: the real base construction cost is paid via the ledger and the NPC
+  //   must hold cash >= cost * cashCushion AND have a profitable first route clearing
+  //   openProfitThreshold, so only genuinely thriving carriers expand. No aircraft purchases here
+  //   (re-homes an existing idle frame only; buying stays H-3's domain).
+  val aiBasesEnabled : Boolean = boolAt("solo.ai.bases.enabled", false)
+  val aiBasesMaxOpeningsPerCycle : Int = intAt("solo.ai.bases.maxOpeningsPerCycle", 1)
+  val aiBasesMaxPerAirline : Int = intAt("solo.ai.bases.maxBasesPerAirline", 6)
+  // Evaluate at most this many of the NPC's most-served destinations as candidate base sites.
+  val aiBasesCandidateLimit : Int = intAt("solo.ai.bases.candidateLimit", 8)
+  // The best first route from the new base must clear this projected weekly profit to commit.
+  val aiBasesOpenProfitThreshold : Long = longAt("solo.ai.bases.openProfitThreshold", 0L)
+  // Require balance >= constructionCost * cashCushion, so a base never leaves an NPC cash-starved.
+  val aiBasesCashCushion : Double = doubleAt("solo.ai.bases.cashCushion", 3.0)
+
   // Route/fleet consultant (single-player QOL). A manager assigned to the CONSULTANT task studies
   // the player's network and surfaces profitable route opportunities (+ a suggested aircraft) that
   // would otherwise require clicking every airport. Advice-only. Depth scales with the consultant's

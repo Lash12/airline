@@ -16,8 +16,8 @@ import com.patson.model.NonPlayerAirline
   */
 object ComputerAirlineSimulation {
   def simulate(cycle : Int) : Unit = {
-    // Drops, growth, price tuning and fleet renewal are independent flags; run if any is on.
-    if (!SoloConfig.aiEnabled && !SoloConfig.aiGrowthEnabled && !SoloConfig.aiPriceTuneEnabled && !SoloConfig.aiFleetEnabled) return
+    // Drops, growth, price tuning, fleet renewal and base expansion are independent flags; run if any is on.
+    if (!SoloConfig.aiEnabled && !SoloConfig.aiGrowthEnabled && !SoloConfig.aiPriceTuneEnabled && !SoloConfig.aiFleetEnabled && !SoloConfig.aiBasesEnabled) return
 
     try {
       val npcAirlines = AirlineSource.loadAirlinesByCriteria(List(("airline_type", NonPlayerAirline.id)))
@@ -55,13 +55,23 @@ object ComputerAirlineSimulation {
         }
       }
 
+      // Growth (H-1) and base expansion (H-4) both need the airport list; load it once if either is
+      // on, so drop-only/default deploys pay nothing here.
+      val allAirports = if (SoloConfig.aiGrowthEnabled || SoloConfig.aiBasesEnabled) AirportSource.loadAllAirports(true) else Nil
+
       // Growth path (H-1): each acting NPC may open one profitable route from a base using a
-      // spare frame. Airports are only loaded when growth is enabled, so drop-only/default
-      // deploys pay nothing here.
+      // spare frame.
       var totalOpens = 0
       if (SoloConfig.aiGrowthEnabled) {
-        val allAirports = AirportSource.loadAllAirports(true)
         totalOpens = ComputerAirlineGrowth.grow(acting, allAirports, cycle)
+      }
+
+      // Base expansion (H-4): a thriving NPC may open one new base (promoting a served city), re-home
+      // an idle frame there and launch its first route. Runs after H-1 so the new hub is fresh this
+      // cycle and H-1 grows it on the NPC's next rotation. No-op unless aiBasesEnabled.
+      var totalBasesOpened = 0
+      if (SoloConfig.aiBasesEnabled) {
+        totalBasesOpened = ComputerAirlineBases.expand(acting, allAirports, cycle)
       }
 
       // Price tuning (H-2): each acting NPC nudges prices on a few existing links toward
@@ -71,7 +81,7 @@ object ComputerAirlineSimulation {
         totalTuned = ComputerAirlinePriceTuning.tune(acting, cycle)
       }
 
-      println(s"[ai] cycle $cycle: ${acting.size} NPC airline(s) acted, $totalDrops dropped, $totalOpens opened, $totalTuned repriced, $totalSeeded renewal-seeded")
+      println(s"[ai] cycle $cycle: ${acting.size} NPC airline(s) acted, $totalDrops dropped, $totalOpens opened, $totalBasesOpened base(s) opened, $totalTuned repriced, $totalSeeded renewal-seeded")
     } catch {
       case e : Exception => println(s"[ai] ComputerAirlineSimulation failed (skipping): ${e.getClass.getSimpleName}: ${e.getMessage}")
     }
