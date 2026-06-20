@@ -114,6 +114,15 @@
             return
         }
 
+        if (typeof Notification !== 'undefined' && Notification.permission === 'denied') {
+            if (row) row.style.display = 'flex'
+            toggle.checked = false
+            toggle.disabled = true
+            label.textContent = "Blocked - enable in your browser's site settings, then reload"
+            renderPushDiagnostic(detail)
+            return
+        }
+
         if (row) {
             row.style.display = 'flex'
         }
@@ -221,7 +230,7 @@
         window.pushLastError = message
         pushState.saving = false
         updatePushDebugState()
-        if (/permission/i.test(message)) return 'Permission denied'
+        if (/permission/i.test(message)) return "Blocked - enable in your browser's site settings, then reload"
         if (/insecure-context/i.test(message)) return 'Requires HTTPS'
         if (/status failed|save failed/i.test(message)) return 'Server save failed'
         if (/incomplete/i.test(message)) return 'Browser subscription failed'
@@ -245,8 +254,16 @@
         }
     }
 
+    function debugQueryEnabled() {
+        return new URLSearchParams(window.location.search).get('pushDebug') === '1'
+    }
+
     function renderPushDiagnostic(detail) {
         if (!detail) return
+        if (!debugQueryEnabled()) {
+            detail.textContent = ''
+            return
+        }
         var serverSubscribed = pushState.status && pushState.status.subscribed
         var permission = typeof Notification !== 'undefined' ? Notification.permission : 'unavailable'
         if (!pushState.attemptedSubscribe && !pushState.error && !window.pushLastError) {
