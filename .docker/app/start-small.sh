@@ -1,6 +1,12 @@
 #!/bin/sh
 set -eu
 
+if [ "$(id -u)" = "0" ]; then
+  mkdir -p /home/airline/data
+  chown -R airline:airline /home/airline/data
+  exec sudo -E -u airline env HOME=/home/airline sh /home/airline/start-small.sh
+fi
+
 echo "===== START OF SMALL-SERVER APP SUPERVISOR ====="
 
 wait_for_db() {

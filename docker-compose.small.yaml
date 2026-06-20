@@ -21,6 +21,7 @@ services:
       dockerfile: .docker/Dockerfile
     depends_on:
       - airline-db
+    user: root
     volumes:
       - ".:/home/airline/airline"
       - "app-data:/home/airline/data"
