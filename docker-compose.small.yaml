@@ -7,6 +7,7 @@ networks:
 
 volumes:
   mysql-data: {}
+  app-data: {}
 
 services:
   airline-app:
@@ -22,6 +23,7 @@ services:
       - airline-db
     volumes:
       - ".:/home/airline/airline"
+      - "app-data:/home/airline/data"
       - "./.docker/data/init.sh:/home/airline/init-data.sh"
       - "./.docker/data/start.sh:/home/airline/start-data.sh"
       - "./.docker/web/start.sh:/home/airline/start-web.sh"

@@ -14,6 +14,8 @@ and mounts as the full `docker-compose.yaml`, with memory limits, a tuned MySQL
   volume before and after container recreation.
 - The Bitnami MySQL image must mount `mysql-data` at `/bitnami/mysql`. Do not
   mount it at `/var/lib/mysql`; that path does not preserve this image's data.
+- Uploaded app assets, including airline logos under `data/logos`, must persist
+  in the `app-data` volume mounted at `/home/airline/data`.
 - Before any intentional reset, take a DB backup first. A reset should be an
   explicit `docker compose -f docker-compose.small.yaml down -v`, never a side
   effect of rebuilding.

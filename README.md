@@ -1,93 +1,115 @@
-An opensource airline game. 
+# Airline
 
-Forked from https://www.airline-club.com/
-Live at https://myfly.club/
+An open-source airline simulation game (forked from the original `airline-club` repo), now maintained and
+deployed as a working single-player/ops-oriented codebase.
 
-## Dependencies
-- Java openjdk 17
+Current state snapshot: **2026-06-20**
+
+Repository structure
+--------------------
+
+- `airline-data`: simulation engine, DB schema/migrations, and single-player feature logic.
+- `airline-web`: Play web app, REST/API layer, and browser-side assets.
+- `e2e`: Playwright tests used for deployment smoke validation.
+- `.docker`: container entrypoint and MySQL tuning scripts.
+- `scripts`: deployment scripts and OptiPlex workflows.
+- `docs`: architecture/status roadmaps and runbooks.
+
+Quick start (local development)
+-------------------------------
+
+### 1) Prerequisites
+
+- Java 17 (local runtime target)
+- Scala 2.13.18
+- sbt
 - MySQL 8
-- Sbt
+- Node.js + npm (for `e2e` tests)
 
-## Setup
-1. Create MySQL database matching values defined [here](https://github.com/patsonluk/airline/blob/master/airline-data/src/main/scala/com/patson/data/Constants.scala#L184).
-1. Maps are built using Protomaps. https://protomaps.com/
-  1. For a small private game, you can probably use their dev host for free. Create a key and update web application.conf `protomaps.apiKey` 
-  1. Or, we can probably host the map for you – reach out! 
-  1. Or, follow the protomaps.com instructions to setup your own Cloudflare R2 solution.
-1. For airport images, you will need a Google Places API key. Create one and update the web application.conf `google.apiKey`
-1. Now let's run the app! Navigate to `airline-data` and run `sbt publishLocal`.
-1. In `airline-data`, run `sbt run`, 
-    1. Then, choose #1 i.e. `MainInit`. It will take awhile to build the game universe.
-1. Open another terminal, navigate to `airline-web`, run the web server by `sbt run`
-1. The application should be accessible at `localhost:9000`
+### 2) Build + local boot
 
-## Alternate Docker Setup
-*This hasn't been update in awhile*
-1. Install Docker & Docker-compose
-1. run `cp docker-compose.override.yaml.dist docker-compose.override.yaml` and then edit the new file with your preferred ports. Mysql only has to have exposed ports if you like to connect from outside docker
-   1. If you plan to use this anything else than for development, adjust the credentials via environment variables
-2. start the stack with `docker compose up -d` and confirm both containers are running
-3. open a shell inside the container via `docker compose exec airline-app bash`
-4. run the init scripts:
-   1. `sh init-data.sh` (might need to run it a couple of times because migration seems to be spotty)
-5. To boot up both front and backend, use the start scripts `sh start-data.sh` and `sh start-web.sh` in separate sessions
-6. The application should be accessible at your hosts ip address and port 9000. If docker networks aren't limited by firewalls or network settings, it should be available without any reverse-proxying. (Dev only!)
+1. Update DB credentials in:
+   - `airline-data/src/main/resources/application.conf`
+   - `airline-web/conf/application.conf`
+2. Build and publish local data artifacts:
+   - `cd airline-data`
+   - `sbt publishLocal`
+3. Initialize DB on fresh installs:
+   - `sbt "runMain com.patson.init.MainInit"`
+4. Start simulation and web in separate terminals:
+   - Terminal A: `cd airline-data && sbt "runMain com.patson.MainSimulation"`
+   - Terminal B: `cd airline-web && sbt run`
+5. Open: [http://localhost:9000](http://localhost:9000)
 
+### 3) Quick verification
 
-## Nginx Proxy w/ Cloudflare HTTPS
+- App routes and API smoke checks should be run via Playwright:
+  - `cd e2e`
+  - `npm ci`
+  - `npm test`
 
-In Cloudflare go to your domain and then SSL/TLS > Origin Server. Click Create Certificate > Generate private key and CSR with Cloudflare > Drop down choose ECC > Create
+Deployment / Operations
+-----------------------
 
-Save your Origin Certificate and your Private Key to a file. Example:
+### Small-server profile (recommended for LAN/single-box)
 
-Orgin Certificate: domain.com.crt
+1. Start containers:
+   - `docker compose -f docker-compose.small.yaml up -d`
+2. First run database init:
+   - `docker exec -it airline-app sh /home/airline/init-data.sh`
+3. Start/run both JVMs + guardrails:
+   - `scripts/optiplex-deploy.sh`
 
-Private Key: domain.com.key
+`scripts/optiplex-deploy.sh` is the canonical deploy path in this repo because it:
 
-Example nginx virtualhost conf file:
+- Verifies MySQL mounts use Bitnami path `/bitnami/mysql`.
+- Checks container health and supervisor-managed JVM presence.
+- Initializes DB only on first boot.
+- Waits for HTTP readiness on `:9000`.
 
-```
-server {
+### Important constraints
 
-  listen 443 ssl http2;
-  listen [::] ssl http2;
-  server_name domain.com;
+- Small-server persistence is mounted at `/bitnami/mysql` in this deployment path.
+- `docker-compose.yaml` is not the preferred single-player entrypoint profile.
+- Avoid destructive DB volume operations without a backup.
 
-  ssl_certificate      /usr/local/nginx/conf/ssl/domain.com/domain.com.crt;
-  ssl_certificate_key  /usr/local/nginx/conf/ssl/domain.com/domain.com.key;
+### CI/CD ops references
 
-  add_header X-Frame-Options SAMEORIGIN;
-  add_header X-Xss-Protection "1; mode=block" always;
-  add_header X-Content-Type-Options "nosniff" always;
-  add_header Referrer-Policy "strict-origin-when-cross-origin";
+- `.github/workflows/optiplex-deploy.yml` (self-hosted deploy + e2e verification)
+- `.github/workflows/validate-web-push.yml` (production push sender validation)
 
-  access_log /home/nginx/domains/domain.com/log/access.log combined buffer=256k flush=5m;
-  error_log /home/nginx/domains/domain.com/log/error.log;
+Testing
+-------
 
-  location /assets  {
-    alias    /home/airline/airline-web/public/;
-    access_log on;
-    expires 30d;
-  }
+- Data module: `cd airline-data && sbt test`
+- Web module: `cd airline-web && sbt test`
+- Front-end JS tests: `cd airline-web && npm test`
+- End-to-end: `cd e2e && npm test`
+- CI compile/check flow: `npm --prefix e2e run test:list`
 
-  location / {
-    proxy_pass http://localhost:9000;
-    proxy_pass_header Content-Type;
-    proxy_read_timeout     60;
-    proxy_connect_timeout  60;
-    proxy_redirect         off;
+Configuration and feature highlights
+----------------------------------
 
-    # Allow the use of websockets
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection 'upgrade';
-    proxy_set_header Host $host;
-    proxy_cache_bypass $http_upgrade;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-  }
+- Single-player behavior is feature-gated by `solo.*` flags in config (consultant, AI growth, news, push, etc.).
+- AI routes can now include growth/pricing/fleet-oriented behavior under solo gates.
+- Web push is implemented and configured under `solo.push.*` keys; HTTPS is required for production flow.
+- JVM/DB tuning guidance lives in:
+  - [SMALL_SERVER.md](SMALL_SERVER.md)
+  - [HIKARI_TUNING.md](HIKARI_TUNING.md)
+- Cache observability:
+  - [OBSERVABILITY.md](OBSERVABILITY.md)
 
-}
-```
+Reference docs
+--------------
 
-## Attribution
-1. Some icons by [Yusuke Kamiyamane](http://p.yusukekamiyamane.com/). Licensed under a [Creative Commons Attribution 3.0 License](http://creativecommons.org/licenses/by/3.0/)
+- [docs/current-development-state.md](docs/current-development-state.md)
+- [docs/optiplex-ci-plan.md](docs/optiplex-ci-plan.md)
+- [docs/single-player-performance-roadmap.md](docs/single-player-performance-roadmap.md)
+- [docs/ai-growth-plan.md](docs/ai-growth-plan.md)
+- [docs/web-push-notifications-plan.md](docs/web-push-notifications-plan.md)
+
+Attribution
+-----------
+
+Icons by [Yusuke Kamiyamane](http://p.yusukekamiyamane.com/) under
+[Creative Commons Attribution 3.0](http://creativecommons.org/licenses/by/3.0/).

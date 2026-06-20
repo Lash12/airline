@@ -12,9 +12,16 @@ MYSQL_CONTAINER="airline-db"
 MYSQL_VOLUME="mysql-data"
 MYSQL_MOUNT="/bitnami/mysql"
 LEGACY_MYSQL_MOUNT="/var/lib/mysql"
+APP_CONTAINER="airline-app"
+APP_DATA_VOLUME="app-data"
+APP_DATA_MOUNT="/home/airline/data"
 
 mysql_mounts() {
   docker inspect -f '{{range .Mounts}}{{println .Name .Destination}}{{end}}' "$MYSQL_CONTAINER" 2>/dev/null || true
+}
+
+app_mounts() {
+  docker inspect -f '{{range .Mounts}}{{println .Name .Destination}}{{end}}' "$APP_CONTAINER" 2>/dev/null || true
 }
 
 verify_mysql_mount_config() {
@@ -30,6 +37,12 @@ verify_mysql_mount_config() {
 
   if ! printf '%s\n' "$config" | grep -q "target: ${MYSQL_MOUNT}"; then
     echo "ERROR: docker-compose.small.yaml does not mount ${MYSQL_VOLUME} at ${MYSQL_MOUNT}." >&2
+    exit 1
+  fi
+
+  if ! printf '%s\n' "$config" | grep -q "target: ${APP_DATA_MOUNT}"; then
+    echo "ERROR: docker-compose.small.yaml does not mount ${APP_DATA_VOLUME} at ${APP_DATA_MOUNT}." >&2
+    echo "Uploaded logos would be lost on container recreation; refusing deploy." >&2
     exit 1
   fi
 }
@@ -53,6 +66,17 @@ verify_running_mysql_mount() {
   mounts=$(mysql_mounts)
   if ! printf '%s\n' "$mounts" | grep -q "${MYSQL_VOLUME}.* ${MYSQL_MOUNT}$"; then
     echo "ERROR: running ${MYSQL_CONTAINER} is not using ${MYSQL_VOLUME} at ${MYSQL_MOUNT}." >&2
+    echo "Observed mounts:" >&2
+    printf '%s\n' "$mounts" >&2
+    exit 1
+  fi
+}
+
+verify_running_app_data_mount() {
+  local mounts
+  mounts=$(app_mounts)
+  if ! printf '%s\n' "$mounts" | grep -q "${APP_DATA_VOLUME}.* ${APP_DATA_MOUNT}$"; then
+    echo "ERROR: running ${APP_CONTAINER} is not using ${APP_DATA_VOLUME} at ${APP_DATA_MOUNT}." >&2
     echo "Observed mounts:" >&2
     printf '%s\n' "$mounts" >&2
     exit 1
@@ -85,6 +109,7 @@ fi
 echo "==> Starting containers"
 $COMPOSE up -d --build --force-recreate
 verify_running_mysql_mount
+verify_running_app_data_mount
 
 echo "==> Waiting for MySQL (up to 60s)"
 db_ready=""
