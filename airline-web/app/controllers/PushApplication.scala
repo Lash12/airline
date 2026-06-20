@@ -1,23 +1,27 @@
 package controllers
 
 import com.patson.data.{CycleSource, NotificationSource, PushSubscriptionSource}
-import com.patson.model.PushSubscription
+import com.patson.model.{Notification, NotificationCategory, PushSubscription}
 import controllers.AuthenticationObject.AuthenticatedAirline
 import javax.inject.Inject
 import play.api.Configuration
 import play.api.libs.json._
 import play.api.mvc._
+import push.{PushConfig, PushNotificationScheduler}
 
-class PushApplication @Inject()(cc: ControllerComponents, configuration: Configuration) extends AbstractController(cc) {
+class PushApplication @Inject()(cc: ControllerComponents, configuration: Configuration, scheduler: PushNotificationScheduler) extends AbstractController(cc) {
   private def pushEnabled: Boolean =
     configuration.underlying.hasPath("solo.push.enabled") && configuration.underlying.getBoolean("solo.push.enabled")
+
+  private def pushConfig: PushConfig = PushConfig.from(configuration)
 
   def status(airlineId: Int) = AuthenticatedAirline(airlineId) { _ =>
     val subscriptions = PushSubscriptionSource.loadByAirline(airlineId)
     Ok(Json.obj(
       "enabled" -> pushEnabled,
       "subscribed" -> subscriptions.nonEmpty,
-      "subscriptionCount" -> subscriptions.size
+      "subscriptionCount" -> subscriptions.size,
+      "isAdmin" -> PushConfig.isAdmin(airlineId, pushConfig)
     ))
   }
 
@@ -58,5 +62,45 @@ class PushApplication @Inject()(cc: ControllerComponents, configuration: Configu
       PushSubscriptionSource.loadByAirline(airlineId).map(s => PushSubscriptionSource.delete(s.id)).sum
     }
     Ok(Json.obj("subscribed" -> false, "deleted" -> deleted))
+  }
+
+  def testSend(airlineId: Int) = AuthenticatedAirline(airlineId) { _ =>
+    if (!PushConfig.isAdmin(airlineId, pushConfig)) {
+      Forbidden("Not authorized for test sends")
+    } else {
+      NotificationSource.insertNotification(Notification(
+        airlineId,
+        NotificationCategory.NEGOTIATION_READY,
+        "Test push - connectivity check",
+        CycleSource.loadCycle()
+      ))
+      Ok(Json.obj("queued" -> true))
+    }
+  }
+
+  def summary(airlineId: Int) = AuthenticatedAirline(airlineId) { _ =>
+    if (!PushConfig.isAdmin(airlineId, pushConfig)) {
+      Forbidden("Not authorized")
+    } else {
+      val subscriptions = PushSubscriptionSource.loadAll().map { s =>
+        Json.obj(
+          "id" -> s.id,
+          "airlineId" -> s.airlineId,
+          "lastPushedNotificationId" -> s.lastPushedNotificationId,
+          "failureCount" -> s.failureCount,
+          "userAgent" -> s.userAgent,
+          "createdCycle" -> s.createdCycle
+        )
+      }
+      Ok(Json.obj(
+        "subscriptions" -> subscriptions,
+        "scheduler" -> Json.obj(
+          "sent" -> scheduler.sentCount,
+          "failed" -> scheduler.failedCount,
+          "pruned" -> scheduler.prunedCount,
+          "lastTickAt" -> scheduler.lastTickAt
+        )
+      ))
+    }
   }
 }
