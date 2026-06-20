@@ -1,0 +1,14 @@
+This product is a fork of the Airline Club project and is distributed under the
+Apache License 2.0 (see LICENSE).
+
+Upstream projects:
+  - Airline Club          https://github.com/patsonluk/airline   (Apache License 2.0)
+  - myflyclub/airline     https://github.com/myflyclub/airline   (Apache License 2.0)
+
+Third-party assets:
+  - Airport asset artwork in airline-web/public/images/airport-assets/ is reused
+    from patsonluk/airline (https://github.com/patsonluk/airline) under the
+    Apache License 2.0.
+
+Apache License 2.0 grants cover only rights the licensor holds; asset provenance
+beyond the upstream repository has not been independently verified.
