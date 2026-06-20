@@ -83,6 +83,7 @@ jobs:
             -Dsolo.push.vapidPublicKey=${{ secrets.SOLO_PUSH_VAPID_PUBLIC_KEY }}
             -Dsolo.push.vapidPrivateKey=${{ secrets.SOLO_PUSH_VAPID_PRIVATE_KEY }}
             -Dsolo.push.vapidSubject=${{ secrets.SOLO_PUSH_VAPID_SUBJECT }}
+            -Dsolo.push.adminAirlineId=34
         run: bash scripts/optiplex-deploy.sh
 
       - name: Install e2e dependencies
