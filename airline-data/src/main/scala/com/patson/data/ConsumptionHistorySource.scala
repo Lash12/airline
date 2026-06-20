@@ -427,4 +427,49 @@ object ConsumptionHistorySource {
       case None => List.empty
     }
   }
+
+  /** Recent passenger-type mix for journeys originating or terminating at this airport. */
+  def loadAirportDemographics(airportId : Int) : Map[PassengerType.Value, Int] = {
+    Using.resource(Meta.getConnection()) { connection =>
+      Using.resource(connection.prepareStatement(
+        "SELECT passenger_type, SUM(passenger_count) AS pax FROM " + PASSENGER_ROUTE_HISTORY_TABLE +
+        " WHERE home_airport = ? OR destination_airport = ? GROUP BY passenger_type")) { statement =>
+        statement.setInt(1, airportId)
+        statement.setInt(2, airportId)
+        Using.resource(statement.executeQuery()) { rs =>
+          val result = scala.collection.mutable.Map[PassengerType.Value, Int]()
+          while (rs.next()) {
+            val pt = PassengerType(rs.getInt("passenger_type"))
+            result.put(pt, rs.getInt("pax"))
+          }
+          result.toMap
+        }
+      }
+    }
+  }
+
+  /** Per-partner-airport passenger-type mix of O-D journeys between this airport and each partner:
+    * journeys terminating here grouped by origin, plus journeys originating here grouped by destination. */
+  def loadAirportPartnerDemographics(airportId : Int) : Map[Int, Map[PassengerType.Value, Int]] = {
+    val result = scala.collection.mutable.Map[Int, scala.collection.mutable.Map[PassengerType.Value, Int]]()
+    def add(partnerId : Int, pt : PassengerType.Value, pax : Int) : Unit = {
+      val m = result.getOrElseUpdate(partnerId, scala.collection.mutable.Map[PassengerType.Value, Int]())
+      m.put(pt, m.getOrElse(pt, 0) + pax)
+    }
+    Using.resource(Meta.getConnection()) { connection =>
+      Using.resource(connection.prepareStatement(
+        "SELECT home_airport AS partner, passenger_type, SUM(passenger_count) AS pax FROM " + PASSENGER_ROUTE_HISTORY_TABLE +
+        " WHERE destination_airport = ? GROUP BY home_airport, passenger_type")) { s =>
+        s.setInt(1, airportId)
+        Using.resource(s.executeQuery()) { rs => while (rs.next()) add(rs.getInt("partner"), PassengerType(rs.getInt("passenger_type")), rs.getInt("pax")) }
+      }
+      Using.resource(connection.prepareStatement(
+        "SELECT destination_airport AS partner, passenger_type, SUM(passenger_count) AS pax FROM " + PASSENGER_ROUTE_HISTORY_TABLE +
+        " WHERE home_airport = ? GROUP BY destination_airport, passenger_type")) { s =>
+        s.setInt(1, airportId)
+        Using.resource(s.executeQuery()) { rs => while (rs.next()) add(rs.getInt("partner"), PassengerType(rs.getInt("passenger_type")), rs.getInt("pax")) }
+      }
+    }
+    result.view.mapValues(_.toMap).toMap
+  }
 }
