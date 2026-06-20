@@ -181,8 +181,43 @@ Optional follow-up, not yet done: the ~10,000+ old per-airline `WORLD_NEWS` rows
 could be bulk-deleted to reclaim space — destructive, needs explicit go-ahead, do not run
 automatically.
 
+## AI growth Phase H-4 (NPC base expansion) — shipped 2026-06-20
+
+The last unbuilt living-world AI phase is done; **all of H-1…H-5 now ship**. `ComputerAirlineBases`
+(behind `solo.ai.bases.enabled`, enabled in the OptiPlex deploy) lets a thriving NPC promote a city
+it already serves into a new base, re-home one fully-idle frame there, and launch its best
+profitable first route in the same cycle (reusing `ComputerAirlineGrowth.bestRouteFromBase`, which
+was extracted from H-1's per-frame loop). Self-limiting: ≤1 opening/cycle across all NPCs, per-NPC
+base ceiling, ledger-charged cost + cash cushion, profitable-route gate. See `docs/ai-growth-plan.md`.
+
+## Airport Assets (single-player) — shipped 2026-06-20
+
+Player-facing investment layer adapted from `patsonluk/airline`, gated by `solo.airportAssets.enabled`
+(enabled in the OptiPlex deploy, sim + web). See `docs/airport-assets.md` for the full design,
+catalog, config knobs, and integration points. Highlights:
+
+- Build assets at airports where you hold a **base**; multi-cycle construction; build/upgrade one
+  level at a time; sell for half the invested cash.
+- Per-type economics: **revenue** assets boost `INCOME` + earn modest income; **attraction** assets
+  boost a hub type (`VACATION/FINANCIAL/INTERNATIONAL_HUB`) + small income; **infrastructure** (Metro)
+  is a pure `POPULATION` boost with **no income**. All carry weekly upkeep — a self-limiting cash sink
+  whose real payoff is the demand it creates at your fortress markets.
+- The demand-boost half **reuses the existing `AirportBoostContributor` pipeline** (the hard part was
+  already in the code via base specializations); assets feed a new `assetBoostFactors` map on `Airport`.
+
+**Operational gotcha (important for future schema additions):** this codebase only runs
+`Meta.createSchema` on a fresh init, so a new table is **absent on the existing OptiPlex DB**. The
+first deploy crashed app startup (`Table 'airline.airport_asset' doesn't exist`) because the airport
+load queried it. Fixed by the `HeartbeatSource` pattern: `AirportAssetSource.ensureTable()`
+(idempotent `CREATE TABLE IF NOT EXISTS`) called by the DAO, plus gating the airport-load query on
+the feature flag. **Any future feature that adds a table must self-create it this way (or run a
+manual migration on the live DB) — do not rely on `createSchema`.**
+
 ## Suggested Next Feature Phase
 
-- Confirm the World News fix above with a live event, then resume AI-growth Phase H-4 (NPC new
-  bases) per `docs/ai-growth-plan.md` — H-1 through H-3 are live, only H-4 remains unbuilt, and
-  it was deliberately deferred pending this investigation.
+- **Air Cargo** — see `docs/air-cargo-plan.md`. Model cargo as a parallel demand layer reusing the
+  existing demand/link/aircraft machinery; start with belly cargo on passenger links, then a
+  "Cargo Terminal" airport asset (the natural bridge to the assets feature), then optionally
+  dedicated freighters. Gated behind a new `solo.cargo.*` flag like every prior solo phase.
+- Tuning backlog: the `solo.airportAssets.*` cost/upkeep/income multipliers and `solo.ai.bases.*`
+  knobs can be adjusted live once playtest shows how the cadence/economy feel.

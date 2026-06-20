@@ -104,6 +104,15 @@ allows), bounded. Prevents NPC networks from quietly decaying to nothing over lo
 Allow a thriving NPC to open a new base occasionally, enabling regional expansion. Hard caps;
 only after H-1–H-3 feel right in playtest.
 
+Status: **implemented and live** (2026-06-20) as `ComputerAirlineBases` behind
+`solo.ai.bases.enabled` (default false). A thriving NPC promotes a city it already serves into a
+new scale-1 base, re-homes one fully-idle owned frame there, and launches that frame's best
+profitable first route in the same cycle (reusing `ComputerAirlineGrowth.bestRouteFromBase`); H-1
+then grows the cluster on later cycles. Self-limiting: ≤1 base opening/cycle across all NPCs
+(`solo.ai.bases.maxOpeningsPerCycle`), per-NPC ceiling (`maxBasesPerAirline`), real ledger-charged
+construction cost with a cash cushion (`cashCushion`), and a profitable first route required.
+Enabled in the OptiPlex deploy. **All five H-phases (H-1…H-5) are now shipped.**
+
 ### H-5 — (optional) Coarse "strategy" layer
 
 Give each NPC a lightweight, persistent bias (e.g. a focus region/market type) so its opens
