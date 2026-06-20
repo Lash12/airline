@@ -1558,13 +1558,14 @@ object Meta {
       "id INTEGER PRIMARY KEY AUTO_INCREMENT," +
       "airline INTEGER NOT NULL REFERENCES " + AIRLINE_TABLE + "(id) ON DELETE CASCADE ON UPDATE CASCADE, " +
       "endpoint VARCHAR(1024) NOT NULL, " +
+      "endpoint_hash CHAR(64) NOT NULL, " +
       "p256dh_key VARCHAR(256) NOT NULL, " +
       "auth_key VARCHAR(256) NOT NULL, " +
       "created_cycle INTEGER NOT NULL, " +
       "last_pushed_notification_id INTEGER NOT NULL DEFAULT 0, " +
       "failure_count INTEGER NOT NULL DEFAULT 0, " +
       "user_agent VARCHAR(512) DEFAULT NULL, " +
-      "UNIQUE KEY push_subscription_endpoint_uq(endpoint)" +
+      "UNIQUE KEY push_subscription_endpoint_uq(endpoint_hash)" +
       ")")
     statement.execute()
     statement.close()
