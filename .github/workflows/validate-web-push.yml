@@ -92,7 +92,7 @@ jobs:
           if ! awk -v notif="$NOTIFICATION_ID" 'BEGIN { ok = 0 } { if ($2 >= notif && $3 == 0) ok = 1 } END { exit ok ? 0 : 1 }' "$TMP"; then
             echo "Push sender did not advance a healthy subscription watermark to notification ${NOTIFICATION_ID}" >&2
             echo "Recent push log lines:"
-            docker logs --tail 200 airline-web 2>&1 | grep -i '\[push\]' || true
+            docker exec airline-app sh -c 'grep -ai "\[push\]" /home/airline/web.log | tail -40' || true
             exit 1
           fi
 
