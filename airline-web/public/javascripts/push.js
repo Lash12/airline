@@ -5,6 +5,8 @@
         subscription: null,
         status: null,
         error: null,
+        saving: false,
+        lastAction: null,
         initialized: false
     }
 
@@ -106,57 +108,77 @@
             row.style.display = 'flex'
         }
         toggle.disabled = false
-        toggle.checked = statusOverride === 'saving' ? true : !!pushState.subscription || !!(pushState.status && pushState.status.subscribed)
-        label.textContent = statusOverride === 'saving' ? 'Saving...' :
+        var saving = statusOverride === 'saving' || (!statusOverride && pushState.saving)
+        toggle.checked = saving ? true : !!pushState.subscription || !!(pushState.status && pushState.status.subscribed)
+        label.textContent = saving ? 'Saving...' :
             statusOverride === 'error' ? pushState.error || 'Could not enable' :
             toggle.checked ? 'Enabled on this device' : 'Off'
+        updatePushDebugState()
     }
 
     async function subscribeToPush() {
         pushState.error = null
+        pushState.saving = true
+        pushState.lastAction = 'subscribe-start'
+        updatePushDebugState()
         renderPushStatus('saving')
-        if (!pushState.registration) {
-            var registrationState = await registerServiceWorker()
-            if (!registrationState.registered) throw new Error(registrationState.reason || 'Service worker unavailable')
-        }
-        if (Notification.permission !== 'granted') {
-            var permission = await Notification.requestPermission()
-            if (permission !== 'granted') throw new Error('Notification permission denied')
-        }
-        pushState.subscription = await pushState.registration.pushManager.getSubscription()
-        if (!pushState.subscription) {
-            pushState.subscription = await pushState.registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(pushState.config.vapidPublicKey)
+        try {
+            if (!pushState.registration) {
+                var registrationState = await registerServiceWorker()
+                if (!registrationState.registered) throw new Error(registrationState.reason || 'Service worker unavailable')
+            }
+            if (Notification.permission !== 'granted') {
+                var permission = await Notification.requestPermission()
+                if (permission !== 'granted') throw new Error('Notification permission denied')
+            }
+            pushState.subscription = await pushState.registration.pushManager.getSubscription()
+            if (!pushState.subscription) {
+                pushState.subscription = await pushState.registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(pushState.config.vapidPublicKey)
+                })
+            }
+            var subscriptionJson = serializePushSubscription(pushState.subscription)
+            const response = await fetch('/airlines/' + activeAirline.id + '/push-subscription', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(subscriptionJson)
             })
+            if (!response.ok) throw new Error('Subscription save failed: ' + response.status + ' ' + (await response.text()).slice(0, 120))
+            await loadSubscriptionStatus()
+            pushState.lastAction = 'subscribe-success'
+        } finally {
+            pushState.saving = false
+            updatePushDebugState()
         }
-        var subscriptionJson = serializePushSubscription(pushState.subscription)
-        const response = await fetch('/airlines/' + activeAirline.id + '/push-subscription', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(subscriptionJson)
-        })
-        if (!response.ok) throw new Error('Subscription save failed: ' + response.status + ' ' + (await response.text()).slice(0, 120))
-        await loadSubscriptionStatus()
         renderPushStatus()
     }
 
     async function unsubscribeFromPush() {
         pushState.error = null
+        pushState.saving = true
+        pushState.lastAction = 'unsubscribe-start'
+        updatePushDebugState()
         renderPushStatus('saving')
-        var endpoint = pushState.subscription && pushState.subscription.endpoint
-        if (pushState.subscription) {
-            await pushState.subscription.unsubscribe()
+        try {
+            var endpoint = pushState.subscription && pushState.subscription.endpoint
+            if (pushState.subscription) {
+                await pushState.subscription.unsubscribe()
+            }
+            pushState.subscription = null
+            await fetch('/airlines/' + activeAirline.id + '/push-subscription', {
+                method: 'DELETE',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(endpoint ? { endpoint: endpoint } : {})
+            })
+            await loadSubscriptionStatus()
+            pushState.lastAction = 'unsubscribe-success'
+        } finally {
+            pushState.saving = false
+            updatePushDebugState()
         }
-        pushState.subscription = null
-        await fetch('/airlines/' + activeAirline.id + '/push-subscription', {
-            method: 'DELETE',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(endpoint ? { endpoint: endpoint } : {})
-        })
-        await loadSubscriptionStatus()
         renderPushStatus()
     }
 
@@ -170,11 +192,29 @@
 
     function userFacingPushError(error) {
         var message = error && error.message ? error.message : String(error)
+        window.pushLastError = message
+        pushState.saving = false
+        updatePushDebugState()
         if (/permission/i.test(message)) return 'Permission denied'
         if (/insecure-context/i.test(message)) return 'Requires HTTPS'
         if (/status failed|save failed/i.test(message)) return 'Server save failed'
         if (/incomplete/i.test(message)) return 'Browser subscription failed'
         return 'Could not enable'
+    }
+
+    function updatePushDebugState() {
+        window.pushDebugState = {
+            saving: pushState.saving,
+            lastAction: pushState.lastAction,
+            hasConfig: !!pushState.config,
+            hasRegistration: !!pushState.registration,
+            hasSubscription: !!pushState.subscription,
+            serverStatus: pushState.status,
+            error: pushState.error,
+            lastError: window.pushLastError || null,
+            permission: typeof Notification !== 'undefined' ? Notification.permission : 'unavailable',
+            secureContext: window.isSecureContext
+        }
     }
 
     function handlePushDeepLink() {
@@ -209,6 +249,7 @@
             console.warn('Push shell unavailable', e)
             renderPushStatus('unavailable')
         }
+        updatePushDebugState()
         handlePushDeepLink()
     }
 
