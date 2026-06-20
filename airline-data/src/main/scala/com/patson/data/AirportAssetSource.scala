@@ -15,6 +15,38 @@ import scala.util.Using
   */
 object AirportAssetSource {
 
+  @volatile private var tableEnsured = false
+
+  /**
+    * Create the airport_asset table if it is missing. Mirrors HeartbeatSource's self-creating
+    * pattern so the feature works on a pre-existing database (Meta.createSchema only runs on a fresh
+    * init). Idempotent and cheap after the first call. Indexes are declared inline so we avoid
+    * "CREATE INDEX IF NOT EXISTS" (unsupported on older MySQL).
+    */
+  def ensureTable() : Unit = {
+    if (tableEnsured) return
+    synchronized {
+      if (tableEnsured) return
+      Using.resource(Meta.getConnection()) { connection =>
+        Using.resource(connection.prepareStatement("CREATE TABLE IF NOT EXISTS " + AIRPORT_ASSET_TABLE + "(" +
+          "id INTEGER PRIMARY KEY AUTO_INCREMENT, " +
+          "airport INTEGER, " +
+          "airline INTEGER, " +
+          "asset_type VARCHAR(64) NOT NULL, " +
+          "level INTEGER, " +
+          "status VARCHAR(32) NOT NULL, " +
+          "completion_cycle INTEGER, " +
+          "KEY " + AIRPORT_ASSET_INDEX_1 + " (airport), " +
+          "KEY " + AIRPORT_ASSET_INDEX_2 + " (airline), " +
+          "FOREIGN KEY(airport) REFERENCES " + AIRPORT_TABLE + "(id) ON DELETE CASCADE ON UPDATE CASCADE, " +
+          "FOREIGN KEY(airline) REFERENCES " + AIRLINE_TABLE + "(id) ON DELETE CASCADE ON UPDATE CASCADE)")) { statement =>
+          statement.execute()
+        }
+      }
+      tableEnsured = true
+    }
+  }
+
   private def rowToAsset(airport : Airport,
                          airlineId : Int,
                          assetTypeId : String,
@@ -30,6 +62,7 @@ object AirportAssetSource {
 
   /** Load assets for one airport, reusing an already-resolved Airport (used during airport load). */
   def loadAirportAssetsByAirport(airport : Airport) : List[AirportAsset] = {
+    ensureTable()
     Using.resource(Meta.getConnection()) { connection =>
       Using.resource(connection.prepareStatement("SELECT * FROM " + AIRPORT_ASSET_TABLE + " WHERE airport = ?")) { statement =>
         statement.setInt(1, airport.id)
@@ -55,6 +88,7 @@ object AirportAssetSource {
   def loadAllAirportAssets() : List[AirportAsset] = loadByCriteria(List.empty)
 
   private def loadByCriteria(criteria : List[(String, Any)]) : List[AirportAsset] = {
+    ensureTable()
     Using.resource(Meta.getConnection()) { connection =>
       var queryString = "SELECT * FROM " + AIRPORT_ASSET_TABLE
       if (criteria.nonEmpty) {
@@ -79,6 +113,7 @@ object AirportAssetSource {
 
   /** Insert a new asset, returning it with the generated id. */
   def saveAirportAsset(asset : AirportAsset) : AirportAsset = {
+    ensureTable()
     Using.resource(Meta.getConnection()) { connection =>
       Using.resource(connection.prepareStatement("INSERT INTO " + AIRPORT_ASSET_TABLE +
         "(airport, airline, asset_type, level, status, completion_cycle) VALUES(?, ?, ?, ?, ?, ?)", Statement.RETURN_GENERATED_KEYS)) { statement =>
@@ -101,6 +136,7 @@ object AirportAssetSource {
 
   /** Update mutable fields (level, status, completion cycle) of an existing asset. */
   def updateAirportAsset(asset : AirportAsset) : Unit = {
+    ensureTable()
     Using.resource(Meta.getConnection()) { connection =>
       Using.resource(connection.prepareStatement("UPDATE " + AIRPORT_ASSET_TABLE +
         " SET level = ?, status = ?, completion_cycle = ? WHERE id = ?")) { statement =>
