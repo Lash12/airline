@@ -92,6 +92,34 @@
         })
     }
 
+    function appendTestSendButton() {
+        var row = document.getElementById('pushNotificationSetting')
+        if (!row || document.getElementById('pushTestSendButton')) return
+        var button = document.createElement('button')
+        button.id = 'pushTestSendButton'
+        button.type = 'button'
+        button.className = 'notification-push-test'
+        button.textContent = 'Send test notification'
+        button.addEventListener('click', function() {
+            button.disabled = true
+            button.textContent = 'Sending...'
+            fetch('/airlines/' + activeAirline.id + '/push-test', {
+                method: 'POST',
+                credentials: 'same-origin'
+            }).then(function(response) {
+                button.textContent = response.ok ? 'Sent - should arrive within a minute' : 'Send failed'
+            }).catch(function() {
+                button.textContent = 'Send failed'
+            }).finally(function() {
+                setTimeout(function() {
+                    button.disabled = false
+                    button.textContent = 'Send test notification'
+                }, 5000)
+            })
+        })
+        row.insertAdjacentElement('afterend', button)
+    }
+
     function renderPushStatus(statusOverride) {
         appendPushToggle()
         var row = document.getElementById('pushNotificationSetting')
@@ -134,6 +162,9 @@
             toggle.checked ? 'Enabled on this device' :
             pushState.attemptedSubscribe ? 'Off - not saved' : 'Off'
         renderPushDiagnostic(detail)
+        if (pushState.status && pushState.status.isAdmin) {
+            appendTestSendButton()
+        }
         updatePushDebugState()
     }
 

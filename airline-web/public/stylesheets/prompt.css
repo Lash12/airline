@@ -123,6 +123,22 @@
     overflow-wrap: anywhere;
 }
 
+.notification-push-test {
+    margin: 4px 10px 8px;
+    padding: 6px 10px;
+    font-size: 11px;
+    border: 1px solid rgba(128, 128, 128, 0.35);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-color);
+    cursor: pointer;
+}
+
+.notification-push-test:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
 /* Airline Switcher */
 .airline-switcher-dropdown {
     position: fixed;
