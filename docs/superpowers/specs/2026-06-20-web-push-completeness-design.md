@@ -121,17 +121,32 @@ test-send button — default/multiplayer-equivalent behavior is unchanged.
 
 ## Testing
 
+This codebase has no Play functional-test infrastructure anywhere (no
+`FakeRequest`/`PlaySpec` in `airline-web`) — the one existing controller spec,
+`NegotiationUtilSpec`, tests pure functions directly rather than HTTP actions
+through a running app. This phase follows that same convention rather than
+introducing new test scaffolding:
+
 - `NegotiationReadyNotifierSpec` already covers Phase 2's emission logic; no
   new data-side tests needed unless the live verification in Phase 2 surfaces
   a bug.
-- New `PushApplication` controller tests (none currently exist for this
-  controller) covering: test-send route returns `Forbidden` when
-  `adminAirlineId` is unset or doesn't match the caller; returns success and
-  inserts a notification when it matches. Same `Forbidden`/success shape for
-  the summary route.
-- `PushConfig` gains `adminAirlineId` parsing; extend its existing config
-  parsing tests (mirroring how `categories`/`maxPerSubscription` are tested)
-  to cover the unset/set cases.
+- `PushConfig` gains `adminAirlineId: Option[Int]` parsing plus a pure
+  `isAdmin(airlineId, config)` helper. Both are directly unit-testable
+  without Play/DB (a `play.api.Configuration` can be built standalone from a
+  parsed `Config` string). New `PushConfigSpec.scala` covers: unset →
+  `adminAirlineId = None` and `isAdmin` always false; set → parses correctly
+  and `isAdmin` true only for the matching airline ID.
+- The new `PushApplication` actions (`push-test`, `push-summary`) stay thin:
+  authenticate, call `PushConfig.isAdmin` (already tested), then a DB
+  call/read. No new Play test harness is built for the HTTP layer — these are
+  verified live against the real OptiPlex deploy (curl/browser), matching how
+  the rest of this feature was already validated.
+- `PushNotificationScheduler`'s new counters (`sent`/`failed`/`pruned`/
+  `lastTickAt`) are simple in-process state updated inline in the existing
+  `tick()` method, which already has no unit test coverage (it's constructed
+  via `@Inject()` against a live actor system). Verified live via the
+  `/push-summary` endpoint output during deploy verification, not by new unit
+  tests.
 - `push.js` UI changes (diagnostic gating, permission-denied copy, test-send
   button) are verified manually against a real deploy per the project's
   existing convention (no JS unit test scaffolding currently covers `push.js`
