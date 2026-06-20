@@ -52,6 +52,7 @@ class PushNotificationScheduler @Inject()(configuration: Configuration, lifecycl
           } else if (result.status >= 200 && result.status < 300) {
             PushSubscriptionSource.markPushed(subscription.id, notification.id)
           } else {
+            println(s"[push] send returned ${result.status} for subscription ${subscription.id}: ${result.body.take(240)}")
             PushSubscriptionSource.markFailure(subscription.id)
           }
         } catch {

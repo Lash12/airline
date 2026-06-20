@@ -15,7 +15,7 @@ import java.util.Base64
 import javax.crypto.{Cipher, KeyAgreement, Mac}
 import javax.crypto.spec.{GCMParameterSpec, SecretKeySpec}
 
-case class PushDeliveryResult(status: Int, permanentFailure: Boolean)
+case class PushDeliveryResult(status: Int, permanentFailure: Boolean, body: String)
 
 class WebPushClient {
   private val http = HttpClient.newBuilder().build()
@@ -35,8 +35,8 @@ class WebPushClient {
       .header("Content-Type", "application/octet-stream")
       .header("Authorization", s"vapid t=$jwt, k=${config.vapidPublicKey}")
       .build()
-    val response = http.send(request, HttpResponse.BodyHandlers.discarding())
-    PushDeliveryResult(response.statusCode(), response.statusCode() == 404 || response.statusCode() == 410)
+    val response = http.send(request, HttpResponse.BodyHandlers.ofString())
+    PushDeliveryResult(response.statusCode(), response.statusCode() == 404 || response.statusCode() == 410, response.body())
   }
 
   private def vapidJwt(endpoint: URI, config: PushConfig): String = {
