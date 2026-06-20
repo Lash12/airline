@@ -49,6 +49,9 @@ object Constants {
   val AIRLINE_BASE_INDEX_1 = "airline_base_index_1"
   val AIRLINE_BASE_INDEX_2 = "airline_base_index_2"
   val AIRLINE_BASE_INDEX_3 = "airline_base_index_3"
+  val AIRPORT_ASSET_TABLE = "airport_asset"
+  val AIRPORT_ASSET_INDEX_1 = "airport_asset_index_1"
+  val AIRPORT_ASSET_INDEX_2 = "airport_asset_index_2"
   val DESTINATIONS_TABLE = "destinations"
   val PRESTIGE_TABLE = "prestige"
 

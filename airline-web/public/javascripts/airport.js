@@ -236,6 +236,111 @@ async function showAirportDetails(airportId) {
     populateAirportDetails(airportDetailed)
     updateAirportDetails(airportDetailed)
     activeAirport = airportDetailed
+    loadAirportAssets(airportId)
+}
+
+/**
+ * Airport assets (single-player feature). The section stays hidden unless the server reports the
+ * feature enabled. Players build/upgrade assets at airports where they have a base; assets boost
+ * demand and (for revenue/attraction types) earn a modest income.
+ */
+function loadAirportAssets(airportId) {
+    var $section = $('#airportDetailsAssetsSection')
+    $.ajax({
+        type: 'GET',
+        url: "/airlines/" + activeAirline.id + "/assets/" + airportId,
+        contentType: 'application/json; charset=utf-8',
+        dataType: 'json',
+        success: function(result) {
+            if (!result.enabled) {
+                $section.hide()
+                return
+            }
+            $section.show()
+            renderAirportAssets(airportId, result)
+        },
+        error: function() { $section.hide() }
+    })
+}
+
+function renderAirportAssets(airportId, data) {
+    $('#airportAssetsHint').text(data.hasBase
+        ? "Assets boost demand at this airport; revenue and attraction assets also earn a modest income."
+        : "Build a base at this airport to construct assets here.")
+
+    var $list = $('#airportDetailsAssetList')
+    $list.children('.table-row').remove()
+    if (!data.assets || data.assets.length === 0) {
+        $list.append($('<div class="table-row"><div class="cell" style="width:100%">No assets built here yet.</div></div>'))
+    } else {
+        $.each(data.assets, function(i, asset) {
+            var statusText = asset.status === 'ACTIVE' ? 'Active' : ('Building (' + asset.remainingCycles + ' cycles)')
+            var $row = $('<div class="table-row"></div>')
+            $row.append($('<div class="cell" style="width:24%"></div>').text(asset.label))
+            $row.append($('<div class="cell" style="width:12%; text-align:right;"></div>').text(asset.level + '/' + asset.maxLevel))
+            $row.append($('<div class="cell" style="width:16%"></div>').text(statusText))
+            $row.append($('<div class="cell" style="width:16%; text-align:right;"></div>').text('$' + asset.weeklyIncome.toLocaleString()))
+            $row.append($('<div class="cell" style="width:16%; text-align:right;"></div>').text('$' + asset.weeklyUpkeep.toLocaleString()))
+            var $action = $('<div class="cell" style="width:16%; text-align:right;"></div>')
+            var $sell = $('<button class="button"></button>').text('Sell ($' + asset.sellValue.toLocaleString() + ')')
+            $sell.click(function() {
+                if (confirm('Sell ' + asset.label + ' for $' + asset.sellValue.toLocaleString() + '?')) {
+                    sellAirportAsset(airportId, asset.id)
+                }
+            })
+            $action.append($sell)
+            $row.append($action)
+            $list.append($row)
+        })
+    }
+
+    var $cat = $('#airportDetailsAssetCatalog')
+    $cat.children('.table-row').remove()
+    $.each(data.catalog, function(i, entry) {
+        var $row = $('<div class="table-row"></div>')
+        $row.append($('<div class="cell" style="width:22%"></div>').text(entry.label))
+        $row.append($('<div class="cell" style="width:22%"></div>').text(entry.boostType))
+        $row.append($('<div class="cell" style="width:10%; text-align:right;"></div>').text(entry.sizeRequirement))
+        $row.append($('<div class="cell" style="width:16%; text-align:right;"></div>').text('$' + entry.nextLevelCost.toLocaleString()))
+        $row.append($('<div class="cell" style="width:14%; text-align:right;"></div>').text(entry.constructionDuration))
+        var $action = $('<div class="cell" style="width:16%; text-align:right;"></div>')
+        var label = entry.ownedLevel === 0 ? 'Build' : ('Upgrade to ' + (entry.ownedLevel + 1))
+        var $build = $('<button class="button"></button>').text(label)
+        var affordable = data.balance >= entry.nextLevelCost
+        var disabled = !data.hasBase || !entry.meetsSize || !entry.canUpgrade || !affordable
+        if (disabled) {
+            $build.addClass('disabled').prop('disabled', true)
+            if (!entry.canUpgrade) { $build.text('Max level') }
+            else if (!entry.meetsSize) { $build.text('Airport too small') }
+            else if (!affordable) { $build.text('Not enough cash') }
+        } else {
+            $build.click(function() { buildAirportAsset(airportId, entry.assetType) })
+        }
+        $action.append($build)
+        $row.append($action)
+        $cat.append($row)
+    })
+}
+
+function buildAirportAsset(airportId, assetType) {
+    $.ajax({
+        type: 'PUT',
+        url: "/airlines/" + activeAirline.id + "/assets/" + airportId,
+        contentType: 'application/json; charset=utf-8',
+        data: JSON.stringify({ assetType: assetType }),
+        dataType: 'json',
+        success: function() { loadAirportAssets(airportId) },
+        error: function(xhr) { alert(xhr.responseText || 'Could not build asset') }
+    })
+}
+
+function sellAirportAsset(airportId, assetId) {
+    $.ajax({
+        type: 'DELETE',
+        url: "/airlines/" + activeAirline.id + "/assets/" + airportId + "/" + assetId,
+        success: function() { loadAirportAssets(airportId) },
+        error: function(xhr) { alert(xhr.responseText || 'Could not sell asset') }
+    })
 }
 /**
  * Airport view update

@@ -320,6 +320,22 @@ object AirportSource {
           airlineBaseStatement.close()
           airport.initAirlineBases(airlineBases.toList)
 
+          //airport assets (single-player). Same per-airport-query style as bases, on the shared connection.
+          val assetStatement = connection.prepareStatement("SELECT * FROM " + AIRPORT_ASSET_TABLE + " WHERE airport = ?")
+          assetStatement.setInt(1, airport.id)
+          val assetResultSet = assetStatement.executeQuery()
+          val airportAssets = ListBuffer[AirportAsset]()
+          while (assetResultSet.next()) {
+            AirportAssetType.fromId(assetResultSet.getString("asset_type")).foreach { assetType =>
+              val assetAirlineId = assetResultSet.getInt("airline")
+              val assetAirline = AirlineCache.getAirline(assetAirlineId).getOrElse(Airline.fromId(assetAirlineId))
+              airportAssets += AirportAsset(assetAirline, airport, assetType, assetResultSet.getInt("level"),
+                AirportAssetStatus.withName(assetResultSet.getString("status")), assetResultSet.getInt("completion_cycle"), assetResultSet.getInt("id"))
+            }
+          }
+          assetStatement.close()
+          airport.initAirportAssets(airportAssets.toList)
+
           val titleBonuses = getAirlineTitleBonuses(airport)
           val campaignBonuses = getCampaignBonuses(airport, currentCycle)
           val airlineBonusesMutable = mutable.Map[Int, ListBuffer[AirlineBonus]]()

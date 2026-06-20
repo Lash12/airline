@@ -152,6 +152,20 @@ object SoloConfig {
   // Require balance >= constructionCost * cashCushion, so a base never leaves an NPC cash-starved.
   val aiBasesCashCushion : Double = doubleAt("solo.ai.bases.cashCushion", 3.0)
 
+  // Airport assets (single-player). Off by default; player-facing investment layer adapted from
+  // patsonluk/airline. A player spends cash to build assets at airports where they have a BASE; the
+  // asset takes several cycles to construct, then contributes an AirportBoost (reusing the existing
+  // AirportBoostContributor demand pipeline) and, for revenue/attraction types, a modest weekly
+  // income — while infrastructure/transport types give a pure boost with no income. Every asset
+  // carries weekly upkeep, so it is a self-limiting cash sink that pays off mainly via the demand it
+  // creates at your fortress markets. Cost/upkeep/income are scaled by these multipliers so the whole
+  // system can be tuned live without code changes.
+  val assetsEnabled : Boolean = boolAt("solo.airportAssets.enabled", false)
+  val assetsMaxLevel : Int = intAt("solo.airportAssets.maxLevel", 3)
+  val assetsCostMultiplier : Double = doubleAt("solo.airportAssets.costMultiplier", 1.0)
+  val assetsUpkeepMultiplier : Double = doubleAt("solo.airportAssets.upkeepMultiplier", 1.0)
+  val assetsIncomeMultiplier : Double = doubleAt("solo.airportAssets.incomeMultiplier", 1.0)
+
   // Route/fleet consultant (single-player QOL). A manager assigned to the CONSULTANT task studies
   // the player's network and surfaces profitable route opportunities (+ a suggested aircraft) that
   // would otherwise require clicking every airport. Advice-only. Depth scales with the consultant's

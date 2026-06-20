@@ -26,6 +26,7 @@ case class Airport(iata: String, icao: String, name: String, latitude: Double, l
 
   private[model] var boostFactors : Map[AirportBoostType.Value, List[(AirportBoost)]] = Map.empty
   private[model] var specializationBoostFactors : Map[AirportBoostType.Value, List[(String, Double)]] = Map.empty
+  private[model] var assetBoostFactors : Map[AirportBoostType.Value, List[(String, Double)]] = Map.empty
 
   /**
    * These are the four critical variables for demand generation, modded by dynamic boost factors
@@ -245,6 +246,23 @@ case class Airport(iata: String, icao: String, name: String, latitude: Double, l
 
     airlineBasesLoaded = true
   }
+
+  /**
+   * Collect AirportBoost contributions from this airport's COMPLETED (operational) assets into
+   * assetBoostFactors, mirroring how initAirlineBases collects specialization boosts. Assets still
+   * under construction contribute nothing.
+   */
+  def initAirportAssets(assets : List[AirportAsset]) = {
+    val result = mutable.HashMap[AirportBoostType.Value, ListBuffer[(String, Double)]]()
+    assets.filter(_.isOperational).foreach { asset =>
+      asset.currentBoosts.foreach { boost =>
+        val list = result.getOrElseUpdate(boost.boostType, ListBuffer[(String, Double)]())
+        list.append((asset.assetType.label, boost.value))
+      }
+    }
+    assetBoostFactors = result.view.mapValues(_.toList).toMap
+  }
+
   def initFeatures(features : List[AirportFeature]) = {
     this.baseFeatures.clear()
     this.baseFeatures ++= features
@@ -335,13 +353,16 @@ case class Airport(iata: String, icao: String, name: String, latitude: Double, l
       com.patson.model.AirportBoostType.FINANCIAL_HUB,
       com.patson.model.AirportBoostType.ELITE_CHARM
     )
-    val allBoostedHubTypes = (boostFactors.keySet ++ specializationBoostFactors.keySet).filter(hubBoostTypes)
+    val allBoostedHubTypes = (boostFactors.keySet ++ specializationBoostFactors.keySet ++ assetBoostFactors.keySet).filter(hubBoostTypes)
 
     allBoostedHubTypes.foreach { boostType =>
       val specBoosts = specializationBoostFactors.getOrElse(boostType, List.empty).map {
         case (_, value) => AirportBoost(boostType, value)
       }
-      val allBoosts = specBoosts
+      val assetBoosts = assetBoostFactors.getOrElse(boostType, List.empty).map {
+        case (_, value) => AirportBoost(boostType, value)
+      }
+      val allBoosts = specBoosts ++ assetBoosts
       boostType match {
         case com.patson.model.AirportBoostType.INTERNATIONAL_HUB => newFeatures.append(InternationalHubFeature(0, allBoosts, isDynamic = true))
         case com.patson.model.AirportBoostType.VACATION_HUB      => newFeatures.append(VacationHubFeature(0, allBoosts, isDynamic = true))
@@ -469,8 +490,9 @@ object Airport {
     new CacheLoader[AirportBoostType.Value, List[(String, Double)]] {
       override def load(boostType: AirportBoostType.Value): List[(String, Double)] = {
         val specializationFactors = airport.specializationBoostFactors.getOrElse(boostType, List.empty)
+        val assetFactors = airport.assetBoostFactors.getOrElse(boostType, List.empty)
 
-        specializationFactors
+        specializationFactors ++ assetFactors
       }
     }
   }

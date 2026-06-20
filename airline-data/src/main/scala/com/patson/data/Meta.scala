@@ -215,6 +215,7 @@ object Meta {
     createTransitConsumption(connection)
     createPassengerHistoryTables(connection)
     createAirlineLedger(connection)
+    createAirportAssets(connection)
     createIncome(connection)
     createLoan(connection)
     createCountryMarketShare(connection)
@@ -636,6 +637,34 @@ object Meta {
     statement.close()
 
     statement = connection.prepareStatement("CREATE INDEX " + AIRLINE_LEDGER_INDEX_2 + " ON " + AIRLINE_LEDGER_TABLE + "(cycle)")
+    statement.execute()
+    statement.close()
+  }
+
+  def createAirportAssets(connection : Connection) {
+    var statement = connection.prepareStatement("DROP TABLE IF EXISTS " + AIRPORT_ASSET_TABLE)
+    statement.execute()
+    statement.close()
+
+    statement = connection.prepareStatement("CREATE TABLE " + AIRPORT_ASSET_TABLE + "(" +
+      "id INTEGER PRIMARY KEY AUTO_INCREMENT, " +
+      "airport INTEGER, " +
+      "airline INTEGER, " +
+      "asset_type VARCHAR(64) NOT NULL, " +
+      "level INTEGER, " +
+      "status VARCHAR(32) NOT NULL, " +
+      "completion_cycle INTEGER, " +
+      "FOREIGN KEY(airport) REFERENCES " + AIRPORT_TABLE + "(id) ON DELETE CASCADE ON UPDATE CASCADE, " +
+      "FOREIGN KEY(airline) REFERENCES " + AIRLINE_TABLE + "(id) ON DELETE CASCADE ON UPDATE CASCADE" +
+      ")")
+    statement.execute()
+    statement.close()
+
+    statement = connection.prepareStatement("CREATE INDEX " + AIRPORT_ASSET_INDEX_1 + " ON " + AIRPORT_ASSET_TABLE + "(airport)")
+    statement.execute()
+    statement.close()
+
+    statement = connection.prepareStatement("CREATE INDEX " + AIRPORT_ASSET_INDEX_2 + " ON " + AIRPORT_ASSET_TABLE + "(airline)")
     statement.execute()
     statement.close()
   }

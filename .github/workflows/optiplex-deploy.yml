@@ -60,6 +60,7 @@ jobs:
             -Dsolo.ai.pricetune.enabled=true
             -Dsolo.ai.fleet.enabled=true
             -Dsolo.ai.bases.enabled=true
+            -Dsolo.airportAssets.enabled=true
             -Dsolo.news.enabled=true
             -Dsolo.demand.memoize=true
             -Dsolo.progression.enabled=true
@@ -78,6 +79,7 @@ jobs:
             -Dsolo.bankruptcy.cashThreshold=-25000000
             -Dsolo.bankruptcy.assetsThreshold=-150000000
             -Dsolo.consultant.enabled=true
+            -Dsolo.airportAssets.enabled=true
             -Dsolo.lounge.allowWithoutAlliance=true
             -Dsolo.alliance.minMembers=2
             -Dsolo.push.enabled=true

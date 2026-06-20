@@ -240,6 +240,11 @@ object LedgerType extends Enumeration {
       BUY_BACK,
       CREATE_LINK,
       ADMIN_INJECT = Value
+  // Airport assets (single-player). Construction is a capital event; income/upkeep are weekly
+  // aggregates. Appended at the end so existing ordinals (persisted as entry_type) are unchanged.
+  val AIRPORT_ASSET_CONSTRUCTION,
+      AIRPORT_ASSET_INCOME,
+      AIRPORT_ASSET_UPKEEP = Value
 }
 
 case class AirlineLedgerEntry(airlineId : Int, cycle : Int, entryType : LedgerType.Value, amount : Long, description : Option[String] = None, id : Int = 0)

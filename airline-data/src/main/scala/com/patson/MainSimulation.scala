@@ -138,6 +138,12 @@ object MainSimulation extends App {
     }
     println("Airport simulation done")
 
+    println("Airport asset simulation")
+    timed("airportAsset") {
+      AirportAssetSimulation.simulate(cycle)
+    }
+    println("Airport asset simulation done")
+
     println("Alliance simulation")
     timed("alliance") {
       AllianceSimulation.simulate(flightLinkResult, loungeResult, paxStatsByAirlineId, airportChampionInfo, cycle)
