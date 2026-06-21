@@ -62,31 +62,36 @@ object AllianceSource {
   }
   
   private def loadAlliancesByQueryString(queryString : String, parameters : List[Any], fullLoad : Boolean = false) : List[Alliance] = {
-    val connection = Meta.getConnection()
-    try {
-        val preparedStatement = connection.prepareStatement(queryString)
-        
-        for (i <- 0 until parameters.size) {
-          preparedStatement.setObject(i + 1, parameters(i))
-        }
+    case class AllianceRow(id : Int, name : String, creationCycle : Int)
+    val allianceRows = {
+      val connection = Meta.getConnection()
+      try {
+          val preparedStatement = connection.prepareStatement(queryString)
 
-        val resultSet = preparedStatement.executeQuery()
-        
-        val alliances = ListBuffer[Alliance]()
-        
-        while (resultSet.next()) {
-          val allianceId = resultSet.getInt("id")
-          val alliance = Alliance(name = resultSet.getString("name"), creationCycle = resultSet.getInt("creation_cycle"), members = loadAllianceMembersByAllianceId(allianceId, fullLoad), id = allianceId)
-          alliances.append(alliance)
+          for (i <- 0 until parameters.size) {
+            preparedStatement.setObject(i + 1, parameters(i))
+          }
+
+          val resultSet = preparedStatement.executeQuery()
+
+          val rows = ListBuffer[AllianceRow]()
+
+          while (resultSet.next()) {
+            rows.append(AllianceRow(resultSet.getInt("id"), resultSet.getString("name"), resultSet.getInt("creation_cycle")))
+          }
+
+          resultSet.close()
+          preparedStatement.close()
+
+          rows.toList
+        } finally {
+          connection.close()
         }
-        
-        resultSet.close()
-        preparedStatement.close()
-        
-        alliances.toList
-      } finally {
-        connection.close()
-      }
+    }
+    // connection released above; enrichment below each takes its own connection
+    allianceRows.map { row =>
+      Alliance(name = row.name, creationCycle = row.creationCycle, members = loadAllianceMembersByAllianceId(row.id, fullLoad), id = row.id)
+    }
   }
   
   private def loadAllianceMembersByAllianceId(allianceId : Int, fullLoad : Boolean = false) : List[AllianceMember] = {
