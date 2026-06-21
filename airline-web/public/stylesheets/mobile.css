@@ -259,6 +259,10 @@
        we convert the airport tables to a block scroller with flex rows. The global rules
        use !important, so these overrides must too. Scoped to #airportCanvas so other pages
        and the #linksCanvas opt-out are unaffected. */
+    /* Make the table a block scroll viewport; its table-row children then get wrapped in a
+       single browser-generated anonymous table, so columns stay aligned and size to their
+       content (table-layout:auto). The table only grows past the viewport — and thus only
+       scrolls — when its content is actually too wide, so narrow tables don't scroll. */
     #airportCanvas .table.data {
         display: block !important;
         overflow-x: auto !important;
@@ -267,22 +271,18 @@
     }
     #airportCanvas .table.data .table-header,
     #airportCanvas .table.data .table-row {
-        display: flex !important;
-        flex-wrap: nowrap !important;
-        min-width: 560px;        /* force the row wider than the viewport so it scrolls */
-        height: auto;
+        display: table-row !important;
     }
     #airportCanvas .table.data .cell {
-        display: block !important;
-        flex: 1 0 auto !important;
+        display: table-cell !important;
         width: auto !important;
-        min-width: 84px !important;   /* override global min-width:0 !important */
-        white-space: nowrap !important;  /* override global white-space:normal !important */
+        min-width: 0 !important;
+        white-space: nowrap !important;  /* content on one line so columns size to content, not wrap */
         word-break: normal !important;
         overflow-wrap: normal !important;
         font-size: 11px;
-        padding-left: 4px;
-        padding-right: 4px;
+        padding: 4px 8px !important;
+        vertical-align: middle;
     }
     #airportCanvas .table.data .table-header .cell {
         font-size: 10px;
