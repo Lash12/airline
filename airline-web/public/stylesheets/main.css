@@ -3158,3 +3158,15 @@ body.solo-mode #live-chat {
     transform: scale(1.2);
     box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
 }
+
+/* Airport asset detail modal: show the asset art prominently (24px thumbnails in
+   the tables are too small to read on mobile). */
+#airportAssetDetailsModal #assetModalImage {
+    width: auto;
+    image-rendering: auto;
+    border-radius: 6px;
+}
+#airportAssetDetailsModal #assetModalImageWrap:empty,
+#airportAssetDetailsModal #assetModalImageWrap.hidden {
+    display: none;
+}

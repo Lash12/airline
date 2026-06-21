@@ -264,6 +264,44 @@ function loadAirportAssets(airportId) {
     })
 }
 
+// Generic renderer for the asset detail modal. Task 3 builds the descriptor.
+function openAssetDetailsModal(d) {
+	$('#assetModalName').text(d.name)
+	var $imgWrap = $('#assetModalImageWrap')
+	if (d.image) {
+		$('#assetModalImage').attr('src', '/assets/images/airport-assets/' + d.image).attr('alt', d.name)
+		$imgWrap.removeClass('hidden')
+	} else {
+		$imgWrap.addClass('hidden')
+	}
+	$('#assetModalBenefit').text(d.benefit || '')
+	$('#assetModalBoost').text(d.boost || '-')
+	$('#assetModalLevel').text(d.levelText || '-')
+
+	var $rows = $('#assetModalRows').empty()
+	;(d.rows || []).forEach(function(r) {
+		$rows.append($('<div class="table-row"></div>')
+			.append($('<div class="label" style="width:55%"></div>').text(r.label))
+			.append($('<div class="value"></div>').text(r.value)))
+	})
+
+	var $btn = $('#assetModalActionButton').off('click')
+	var $reason = $('#assetModalReason')
+	$btn.text(d.actionLabel)
+	if (d.reason) {
+		$btn.addClass('disabled').prop('disabled', true)
+		$reason.text(d.reason).show()
+	} else {
+		$btn.removeClass('disabled').prop('disabled', false)
+		$reason.hide()
+		$btn.on('click', function() {
+			closeModal($('#airportAssetDetailsModal'))
+			d.actionFn()
+		})
+	}
+	$('#airportAssetDetailsModal').fadeIn(200)
+}
+
 function renderAirportAssets(airportId, data) {
     $('#airportAssetsHint').text(data.hasBase
         ? "Assets boost demand at this airport; revenue and attraction assets also earn a modest income."

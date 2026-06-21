@@ -367,6 +367,24 @@
 	  </div>
 	</div>
 
+	<div id="airportAssetDetailsModal" class="modal">
+	  <div class="modal-content" style="width: 460px; max-width: 92vw;">
+	    <span class="close" onclick="closeModal($(this).closest('.modal'))">&times;</span>
+	    <h4 class="modalHeader"><span id="assetModalName"></span></h4>
+	    <div id="assetModalImageWrap" style="text-align:center; margin: 8px 0;">
+	      <img id="assetModalImage" loading="lazy" alt="" style="max-width: 200px; max-height: 200px;">
+	    </div>
+	    <p id="assetModalBenefit" class="leading-snug" style="margin-bottom: 8px;"></p>
+	    <div class="table" style="width:100%">
+	      <div class="table-row"><div class="label" style="width:55%">Boost:</div><div class="value" id="assetModalBoost"></div></div>
+	      <div class="table-row"><div class="label" style="width:55%">Level:</div><div class="value" id="assetModalLevel"></div></div>
+	      <div id="assetModalRows"></div>
+	    </div>
+	    <div id="assetModalReason" class="warning" style="display:none; margin-top:8px;"></div>
+	    <button id="assetModalActionButton" class="button" style="width:100%; margin-top:12px;"></button>
+	  </div>
+	</div>
+
     <div id="genericTransitModal" class="modal facility">
 	  <div class="modal-content"  style="width : 500px;">
 		  <h4>Nearby metro connected airports</h4>
