@@ -448,26 +448,39 @@ object ConsumptionHistorySource {
     }
   }
 
-  /** Per-partner-airport passenger-type mix of O-D journeys between this airport and each partner:
-    * journeys terminating here grouped by origin, plus journeys originating here grouped by destination. */
-  def loadAirportPartnerDemographics(airportId : Int) : Map[Int, Map[PassengerType.Value, Int]] = {
+  /**
+   * Per-route passenger-type mix for flights ARRIVING at this airport, keyed by the arriving leg's
+   * origin airport (so it aligns with the link_statistics arrival rows, which are keyed by origin).
+   * Unlike an O-D grouping, this captures connecting passengers too: it attributes each journey's
+   * passenger_type to the specific leg that lands here, via passenger_link_history -> link ->
+   * passenger_route_history. `inverted` flips the link's stored from/to for that traversal.
+   */
+  def loadAirportArrivalDemographics(airportId : Int) : Map[Int, Map[PassengerType.Value, Int]] = {
     val result = scala.collection.mutable.Map[Int, scala.collection.mutable.Map[PassengerType.Value, Int]]()
-    def add(partnerId : Int, pt : PassengerType.Value, pax : Int) : Unit = {
-      val m = result.getOrElseUpdate(partnerId, scala.collection.mutable.Map[PassengerType.Value, Int]())
-      m.put(pt, m.getOrElse(pt, 0) + pax)
-    }
     Using.resource(Meta.getConnection()) { connection =>
-      Using.resource(connection.prepareStatement(
-        "SELECT home_airport AS partner, passenger_type, SUM(passenger_count) AS pax FROM " + PASSENGER_ROUTE_HISTORY_TABLE +
-        " WHERE destination_airport = ? GROUP BY home_airport, passenger_type")) { s =>
+      // Drive from the small set of links touching this airport (so idx_link_history(link) is used),
+      // then keep only the legs whose traversal actually arrives here, keyed by the origin end.
+      val query =
+        "SELECT origin, passenger_type, SUM(pax) AS pax FROM (" +
+        "  SELECT (CASE WHEN plh.inverted = 0 THEN l.from_airport ELSE l.to_airport END) AS origin," +
+        "         (CASE WHEN plh.inverted = 0 THEN l.to_airport ELSE l.from_airport END) AS arrive," +
+        "         prh.passenger_type AS passenger_type, prh.passenger_count AS pax" +
+        "  FROM " + LINK_TABLE + " l" +
+        "  JOIN " + PASSENGER_LINK_HISTORY_TABLE + " plh ON plh.link = l.id" +
+        "  JOIN " + PASSENGER_ROUTE_HISTORY_TABLE + " prh ON prh.route_id = plh.route_id" +
+        "  WHERE l.from_airport = ? OR l.to_airport = ?" +
+        ") t WHERE t.arrive = ? GROUP BY origin, passenger_type"
+      Using.resource(connection.prepareStatement(query)) { s =>
         s.setInt(1, airportId)
-        Using.resource(s.executeQuery()) { rs => while (rs.next()) add(rs.getInt("partner"), PassengerType(rs.getInt("passenger_type")), rs.getInt("pax")) }
-      }
-      Using.resource(connection.prepareStatement(
-        "SELECT destination_airport AS partner, passenger_type, SUM(passenger_count) AS pax FROM " + PASSENGER_ROUTE_HISTORY_TABLE +
-        " WHERE home_airport = ? GROUP BY destination_airport, passenger_type")) { s =>
-        s.setInt(1, airportId)
-        Using.resource(s.executeQuery()) { rs => while (rs.next()) add(rs.getInt("partner"), PassengerType(rs.getInt("passenger_type")), rs.getInt("pax")) }
+        s.setInt(2, airportId)
+        s.setInt(3, airportId)
+        Using.resource(s.executeQuery()) { rs =>
+          while (rs.next()) {
+            val origin = rs.getInt("origin")
+            val m = result.getOrElseUpdate(origin, scala.collection.mutable.Map[PassengerType.Value, Int]())
+            m.put(PassengerType(rs.getInt("passenger_type")), rs.getInt("pax"))
+          }
+        }
       }
     }
     result.view.mapValues(_.toMap).toMap

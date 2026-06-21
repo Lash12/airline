@@ -81,7 +81,7 @@ class Application @Inject()(cc: ControllerComponents, val configuration: play.ap
     val routeRows = AirportTrafficStats.arrivalsByOrigin(arrivals).sortBy(-_.totalPax).take(50)
     val demo = ConsumptionHistorySource.loadAirportDemographics(airportId)
     val demoTotal = Math.max(1, demo.values.sum)
-    val partnerDemo = ConsumptionHistorySource.loadAirportPartnerDemographics(airportId)
+    val partnerDemo = ConsumptionHistorySource.loadAirportArrivalDemographics(airportId)
 
     def demoArray(mix : Map[com.patson.model.PassengerType.Value, Int]) : JsArray = {
       val total = Math.max(1, mix.values.sum)
