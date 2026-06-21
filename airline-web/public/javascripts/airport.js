@@ -989,6 +989,7 @@ function populateAirportDetails(airport) {
     updateAirportCities(airport)
     updateAirportDestinations(airport)
     loadAirportDemand(airport.id)
+    loadAirportCargoDemand(airport.id)
 
     if (holidayEvent === "christmas") {
         initSantaClaus()
@@ -1597,6 +1598,62 @@ function showBaseDetailsModal() {
 }
 
 var _demandEtag = null
+
+var _cargoDemandEtag = null
+
+async function loadAirportCargoDemand(airportId) {
+    const section = document.getElementById('airportCargoDemandSection')
+    const container = document.getElementById('airportCargoDemandCards')
+    if (!container) return
+    try {
+        const headers = {}
+        if (_cargoDemandEtag) headers['If-None-Match'] = _cargoDemandEtag
+        const response = await fetch('/airports/' + airportId + '/cargo-demand', { headers })
+        if (response.status === 304) return
+        if (!response.ok) { if (section) section.style.display = 'none'; return }
+        _cargoDemandEtag = response.headers.get('ETag')
+        renderCargoDemandCards(await response.json())
+    } catch (e) {
+        console.error('loadAirportCargoDemand failed', e)
+        if (section) section.style.display = 'none'
+    }
+}
+
+function renderCargoDemandCards(demands) {
+    const section = document.getElementById('airportCargoDemandSection')
+    const container = document.getElementById('airportCargoDemandCards')
+    if (!container) return
+    container.innerHTML = ''
+    if (!demands || demands.length === 0) {
+        if (section) section.style.display = 'none'
+        return
+    }
+    if (section) section.style.display = ''
+
+    const header = document.createElement('h3')
+    header.textContent = `${activeAirport.city} Cargo Demand`
+    container.appendChild(header)
+    const helper = document.createElement('p')
+    helper.textContent = 'Top freight destinations by weekly cargo demand'
+    helper.classList = 'pb-4'
+    container.appendChild(helper)
+
+    demands.forEach(function(d) {
+        const card = document.createElement('div')
+        card.className = 'card'
+
+        const headerRow = document.createElement('div')
+        headerRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;'
+        headerRow.innerHTML = `<strong class="iata">${d.toAirportIata}</strong>${d.toAirportName}`
+
+        const statsRow = document.createElement('div')
+        statsRow.innerHTML = '<span>&#128230; ' + commaSeparateNumber(d.cargoDemand) + ' cargo</span>'
+
+        card.appendChild(headerRow)
+        card.appendChild(statsRow)
+        container.appendChild(card)
+    })
+}
 
 async function loadAirportDemand(airportId) {
     const container = document.getElementById('airportDemandCards')
