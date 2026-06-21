@@ -47,6 +47,9 @@ jobs:
       - name: Install e2e dependencies
         run: npm ci --prefix e2e
 
+      - name: Initialize test database
+        run: cd airline-data && sbt publishLocal "runMain com.patson.init.MainInit"
+
       - name: Test airline-data and publish locally
         run: cd airline-data && sbt test publishLocal
 
