@@ -1401,6 +1401,51 @@ function calculateDemand() {
     });
 
     $('#planLinkDirectDemand').text(toLinkClassValueString(totalDemand))
+
+    updatePlanCapacityVsDemand()
+}
+
+//Shows weekly capacity vs direct demand so the player can spot over/under-served routes.
+//Direct demand only (indirect/connecting demand is excluded) - the row tooltip notes this.
+function updatePlanCapacityVsDemand() {
+    if (!planLinkInfo) {
+        $('#planLinkFillRow').hide()
+        return
+    }
+
+    var capacityTotal
+    var demandTotal
+    if (isCargoPlan()) {
+        var cargoCapacity = getPlanLinkCargoCapacity()
+        capacityTotal = cargoCapacity.current.capacity
+        demandTotal = (planLinkInfo.cargoDemand || 0) + (planLinkInfo.cargoDemandReverse || 0)
+    } else {
+        var paxCapacity = getPlanLinkCapacity().current.capacity
+        capacityTotal = (paxCapacity.economy || 0) + (paxCapacity.business || 0) + (paxCapacity.first || 0)
+
+        demandTotal = 0
+        var currentPrices = {
+            economy: parseFloat($('#planLinkEconomyPrice').val()),
+            business: parseFloat($('#planLinkBusinessPrice').val()),
+            first: parseFloat($('#planLinkFirstPrice').val()),
+        }
+        var allDemandDetails = [...planLinkInfo.fromDemandDetails, ...planLinkInfo.toDemandDetails]
+        allDemandDetails.forEach(demandEntry => {
+            var linkClassAdjusted = demandEntry.linkClass === "discountEconomy" ? "economy" : demandEntry.linkClass
+            if (currentPrices[linkClassAdjusted] <= demandEntry.price) {
+                demandTotal += demandEntry.count
+            }
+        })
+    }
+
+    if (!capacityTotal) { //no airplanes assigned yet - nothing to compare
+        $('#planLinkFillRow').hide()
+        return
+    }
+
+    var fill = Math.round(Math.min(100, demandTotal / capacityTotal * 100))
+    $('#planLinkFillEstimate').text(commaSeparateNumber(capacityTotal) + " cap vs " + commaSeparateNumber(demandTotal) + " demand (~" + fill + "% fill)")
+    $('#planLinkFillRow').show()
 }
 
 function resetPrice() {
@@ -1823,6 +1868,8 @@ function updateTotalValues() {
     } else {
         $("#planLinkDetails .future").hide()
     }
+
+    updatePlanCapacityVsDemand()
 
     var hasPassengerConfig = false
     $("#planLinkDetails .frequencyDetail .airplaneRow").each(function(index, airplaneRow) {
@@ -2332,6 +2379,9 @@ function updateLinksTable(sortProperty, sortOrder) {
         const satisfactionVal = link.isCargo ? "-" : `${Math.round(link.displaySatisfaction * 100)}%`
         const profitPerStaffVal = link.isCargo ? "-" : `$${commaSeparateNumber(link.profitPerStaff)}`
         const cargoIcon = link.isCargo ? " <span title='Cargo Flight'>📦</span>" : ""
+        //scannability: flag near-full routes (could add capacity) green, weak routes / losses red
+        const lfClass = link.displayLoadFactor >= 85 ? ' positive' : (link.displayLoadFactor < 50 ? ' negative' : '')
+        const profitClass = link.displayProfit < 0 ? ' negative' : ''
         const bgStyle = linkColors[link.id] ? ` style="background-color:${linkColors[link.id]}"` : '';
         const selectedClass = selectedLink == link.id ? ' selected' : '';
         const checkedAttr = selectedLinkIds.has(link.id) ? ' checked' : '';
@@ -2344,11 +2394,11 @@ function updateLinksTable(sortProperty, sortOrder) {
             `<div class='cell' align='right' data-label='Distance'>${Math.round(convertDistance(link.distance))}${distanceLabel()}</div>` +
             `<div class='cell' align='right' data-label='Cap (Freq)'>${link.totalCapacity}(${link.frequency})</div>` +
             `<div class='cell' align='right' data-label='Quality'>${quality}</div>` +
-            `<div class='cell${avgClass}' align='right' data-label='Load Factor'>${link.displayLoadFactor}%</div>` +
+            `<div class='cell${avgClass}${lfClass}' align='right' data-label='Load Factor'>${link.displayLoadFactor}%</div>` +
             `<div class='cell${avgClass}' align='right' data-label='Satisfaction'>${satisfactionVal}</div>` +
             `<div class='cell${avgClass}' align='right' data-label='Revenue'>$${commaSeparateNumber(link.revenue)}</div>` +
-            `<div class='cell${avgClass}' align='right' data-label='Profit'>$${commaSeparateNumber(link.displayProfit)}</div>` +
-            `<div class='cell${avgClass}' align='right' data-label='Margin'>${(link.displayProfitMargin * 100).toFixed(2)}%</div>` +
+            `<div class='cell${avgClass}${profitClass}' align='right' data-label='Profit'>$${commaSeparateNumber(link.displayProfit)}</div>` +
+            `<div class='cell${avgClass}${profitClass}' align='right' data-label='Margin'>${(link.displayProfitMargin * 100).toFixed(2)}%</div>` +
             `<div class='cell' align='right' data-label='Staff'>${link.currentStaffRequired}</div>` +
             `<div class='cell' align='right' data-label='Profit / Staff'>${profitPerStaffVal}</div>` +
             `<div class='cell' align='right' data-label='Modified'>${formatLastModified(link.lastUpdate)}</div>` +

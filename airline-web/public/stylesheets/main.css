@@ -1808,6 +1808,15 @@ html[data-theme="dark"] .svg-monochrome {
 .warning, .fatal, .negative {
     color: #D46A6A;
 }
+.positive {
+    color: #68A357;
+}
+/* income statement: give subtotal/total rows (the only .cell.h5 cells) a separating
+   rule + weight so they stand out from the line items above them */
+#incomeSheet .table-row .cell.h5 {
+    border-top: 1px solid var(--table-header-border);
+    font-weight: 600;
+}
 .fatal {
     font-weight: bold;
 }

@@ -264,6 +264,7 @@ function updateAirplaneModelTable(sortProperty, sortOrder) {
             `<div class='cell'>${modelOwnerInfo.airplaneType}</div>` +
             `<div class='cell' align='right'>$${commaSeparateNumber(modelOwnerInfo.price)}</div>` +
             `<div class='cell' align='right'>${modelOwnerInfo.capacity}</div>` +
+            `<div class='cell' align='right' title='Freighter ${commaSeparateNumber(modelOwnerInfo.freighterCargoCapacity)} t / Belly ${commaSeparateNumber(modelOwnerInfo.bellyCargoCapacity)} t'>${commaSeparateNumber(modelOwnerInfo.freighterCargoCapacity)} t</div>` +
             `<div class='cell' align='right'>${getGradeStarsImgs(modelOwnerInfo.quality)}</div>` +
             `<div class='cell' align='right'>${Math.round(convertDistance(modelOwnerInfo.range))} ${distanceLabel()}</div>` +
             `<div class='cell' align='right'>${modelOwnerInfo.trips}</div>` +
@@ -842,6 +843,7 @@ function selectAirplaneModel(model) {
 	$('#airplaneCanvas .modelName').text(model.name)
 	$('#airplaneCanvas .modelFamily').text(model.family)
 	$('#airplaneCanvas #capacity').text(model.capacity)
+	$('#airplaneCanvas #cargoCapacity').text('Freighter ' + commaSeparateNumber(model.freighterCargoCapacity) + ' t / Belly ' + commaSeparateNumber(model.bellyCargoCapacity) + ' t')
 	$('#airplaneCanvas #airplaneTypeQuality').empty()
     $('#airplaneCanvas #airplaneTypeQuality').append($stars)
 	$('#airplaneCanvas #airplaneType').text(model.airplaneType)

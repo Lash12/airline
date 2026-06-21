@@ -92,3 +92,21 @@ right in playtest. Keep heuristics cheap and bounded.
   one; only split if it adds real decisions.
 - Should cargo influence aircraft choice enough to matter, without forcing freighters? Tune via the
   belly-capacity-by-type curve.
+
+## Backlog (after the cargo UI-polish pass)
+
+### Airport Cargo Demand panel
+Surface per-airport cargo demand alongside the existing passenger demand cards, so a player scouting
+a base can see freight potential, not just passengers.
+
+- **Why deferred:** the `/airports/:airportId/demand` endpoint (`Application.computeAirportDemandJson`)
+  is passenger-only — it reads `ConsumptionHistorySource.loadTopConsumptionsByFromAirport` and
+  `MissedDemandSource.loadByFromAirport`. There is no per-airport cargo-demand aggregate to read; the
+  planner gets cargo demand on the fly per `from→to` pair only. Adding the panel needs new backend
+  data, which was out of scope for the incremental UI pass.
+- **Backend:** add a per-airport cargo-demand aggregation (sum cargo demand over destinations, reusing
+  the `CargoDemandGenerator` math) and include it in the demand JSON (e.g. a `cargo` array or a
+  `cargoDemand` field per destination row). Respect the existing-DB self-create rule if a new table is
+  involved.
+- **Frontend:** extend `renderDemandCards` (`airport.js`) to render cargo demand cards/rows reusing the
+  existing card markup; gate on `solo.cargo.enabled`.

@@ -12,13 +12,14 @@
 										<a class="px-2 py-1 inline-block" title="Show / Hide Filter Row" onclick="toggleAircraftTableFilterRow()"><img src="/assets/images/icons/funnel.png" style="vertical-align: text-bottom" class="img-button"></a>
                                         <input type="checkbox" id="toggleHideForbiddenPlanes"/><span class="label">Show all (forbidden) aircraft</span>
 									</div>
-									<div class="table data" style="height: 20px; min-width: 1180px;">
+									<div class="table data" style="height: 20px; min-width: 1240px;">
 										<div class="table-header" id="airplaneModelSortHeader">
 											<div class="cell clickable" style="width: 15%" data-sort-property="name" data-sort-order="ascending" onclick="toggleAirplaneModelTableSortOrder($(this))">Name</div>
 											<div class="cell clickable" style="width: 10%" data-sort-property="family" data-sort-order="ascending" onclick="toggleAirplaneModelTableSortOrder($(this))" >Family</div>
 											<div class="cell clickable" style="width: 9%" data-sort-property="size" data-sort-order="ascending" onclick="toggleAirplaneModelTableSortOrder($(this))">Category</div>
 											<div class="cell clickable selected" style="width: 8%" align="right" data-sort-property="price" data-sort-order="ascending" onclick="toggleAirplaneModelTableSortOrder($(this))">Price</div>
 											<div class="cell clickable" style="width: 7%" align="right" data-sort-property="capacity" data-sort-order="ascending" onclick="toggleAirplaneModelTableSortOrder($(this))">Capacity</div>
+											<div class="cell clickable" style="width: 5%" align="right" title="Cargo capacity (tons): freighter config / belly (passenger config)" data-sort-property="freighterCargoCapacity" data-sort-order="ascending" onclick="toggleAirplaneModelTableSortOrder($(this))">Cargo</div>
 											<div class="cell clickable" style="width: 10%" align="right" data-sort-property="quality" data-sort-order="ascending" onclick="toggleAirplaneModelTableSortOrder($(this))">Passenger Experience</div>
 											<div class="cell clickable" style="width: 7%" align="right" data-sort-property="range" data-sort-order="ascending" onclick="toggleAirplaneModelTableSortOrder($(this))">Range</div>
 											<div class="cell clickable" title="roundtrips" style="width: 3%" align="right" data-sort-property="trips" data-sort-order="ascending" onclick="toggleAirplaneModelTableSortOrder($(this))">↻</div>
@@ -37,6 +38,7 @@
 											<div class="cell" style="width: 9%; border-bottom: none;" data-filter-property="airplaneType"></div>
 											<div class="cell" style="width: 8%; border-bottom: none;"></div>
 											<div class="cell" style="width: 7%; border-bottom: none;" data-filter-property="capacity"></div>
+											<div class="cell" style="width: 5%; border-bottom: none;"></div>
 											<div class="cell" style="width: 10%; border-bottom: none;" data-filter-property="quality"></div>
 											<div class="cell" style="width: 7%; border-bottom: none;" data-filter-property="range"></div>
 											<div class="cell" style="width: 3%; border-bottom: none;"></div>
@@ -50,7 +52,7 @@
 											<div class="cell" style="width: 4%; border-bottom: none;"></div>
 										</div>
 									</div>
-									<div class="table-container-y" style="min-width: 1180px;">
+									<div class="table-container-y" style="min-width: 1240px;">
 										<div class="table data" id="airplaneModelTable">
 											<div class="table-header">
 												<div class="cell" style="width: 15%; border-bottom: none;"></div>
@@ -58,6 +60,7 @@
 												<div class="cell" style="width: 9%; border-bottom: none;"></div>
 												<div class="cell" style="width: 8%; border-bottom: none;"></div>
 												<div class="cell" style="width: 7%; border-bottom: none;"></div>
+												<div class="cell" style="width: 5%; border-bottom: none;"></div>
 												<div class="cell" style="width: 10%; border-bottom: none;"></div>
 												<div class="cell" style="width: 7%; border-bottom: none;"></div>
 												<div class="cell" style="width: 3%; border-bottom: none;"></div>
@@ -237,6 +240,10 @@
 									<div class="table-row">
 										<div class="label">Max Capacity:</div>
 										<div class="value" id="capacity"></div>
+									</div>
+									<div class="table-row">
+										<div class="label" title="Cargo capacity in tons. Freighter = dedicated cargo config; Belly = spare hold on a passenger config.">Cargo Capacity:</div>
+										<div class="value" id="cargoCapacity"></div>
 									</div>
 									<div class="table-row">
 										<div class="label">Passenger Experience:</div>

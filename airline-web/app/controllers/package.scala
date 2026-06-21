@@ -69,6 +69,7 @@ package object controllers {
         "family" -> JsString(airplaneModel.family),
         "capacity" -> JsNumber(airplaneModel.capacity),
         "freighterCargoCapacity" -> JsNumber(airplaneModel.freighterCargoCapacity),
+        "bellyCargoCapacity" -> JsNumber(airplaneModel.bellyCargoCapacity),
         "quality" -> JsNumber(airplaneModel.quality),
         "ascentBurn" -> JsNumber(airplaneModel.ascentBurn),
         "cruiseBurn" -> JsNumber(airplaneModel.cruiseBurn),

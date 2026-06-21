@@ -711,10 +711,13 @@ function changeOfficePeriod(period) {
 function updateIncomeSheet(b) {
 	if (!b) return
 	const fmt = v => '$' + commaSeparateNumber(v)
+	//color a money figure green/red by sign for quick scanning; keeps existing classes (e.g. h5)
+	const colorBySign = (sel, v) => $(sel).removeClass('positive negative').addClass(v < 0 ? 'negative' : (v > 0 ? 'positive' : ''))
 	$('#balTicketRevenue').text(fmt(b.ticketRevenue))
-	$('#balCargoRevenue').text(fmt(b.cargoRevenue || 0))
-	$('#balLoungeRevenue').text(fmt(b.loungeRevenue))
 	const totalRevenue = b.ticketRevenue + (b.cargoRevenue || 0) + b.loungeRevenue
+	const cargoPct = totalRevenue > 0 ? Math.round((b.cargoRevenue || 0) / totalRevenue * 100) : 0
+	$('#balCargoRevenue').text(fmt(b.cargoRevenue || 0) + (cargoPct > 0 ? ` (${cargoPct}%)` : ''))
+	$('#balLoungeRevenue').text(fmt(b.loungeRevenue))
 	$('#balRevenueTot').text(fmt(totalRevenue))
 
 	$('#balStaff').text(fmt(b.staff))
@@ -732,6 +735,7 @@ function updateIncomeSheet(b) {
 	const totalExpense = b.staff + b.staffOvertime + b.flightCrew + b.fuelNormalized + b.deprecation + b.airportRentals + (b.cargoExpense || 0) + b.inflightService + b.delay + b.maintenance + b.lounge + b.advertising
 	$('#balExpenseTot').text(fmt(totalExpense))
 	$('#balOperatingIncome').text(fmt(b.normalizedOperatingIncome))
+	colorBySign('#balOperatingIncome', b.normalizedOperatingIncome)
 	$('#balFuelTax').text(fmt(b.fuelTax))
 	$('#balDenormalizedFuel').text(fmt(b.fuel - b.fuelNormalized))
 	$('#balLoanInterest').text(fmt(b.loanInterest))
@@ -740,6 +744,7 @@ function updateIncomeSheet(b) {
 	$('#balNonOperatingTot').text(fmt(totalNonOperating))
 
 	$('#balNetIncome').text(fmt(b.income))
+	colorBySign('#balNetIncome', b.income)
 }
 
 function updateAssetChart() {
