@@ -11,7 +11,7 @@ async function createAccount(page: Page) {
   const sanitizedSuffix = suffix.replace(/[0-9]/g, "a");
   const airlineName = `Cargo Test ${sanitizedSuffix}`;
 
-  await page.goto("/login/", { waitUntil: "networkidle" });
+  await page.goto("/login/", { waitUntil: "load" });
   const signup = await page.request.post("/signup/json", {
     data: {
       username,
@@ -23,7 +23,7 @@ async function createAccount(page: Page) {
   });
   expect(signup.ok(), await signup.text()).toBeTruthy();
 
-  await page.goto("/login/", { waitUntil: "networkidle" });
+  await page.goto("/login/", { waitUntil: "load" });
   await page.evaluate(() => {
     localStorage.setItem("sessionActive", "true");
     localStorage.setItem("announcementAgreed", "2026-02-25");
@@ -34,7 +34,7 @@ async function createAccount(page: Page) {
   expect(restore.ok(), await restore.text()).toBeTruthy();
   
   // Wait for initial redirect or game load
-  await page.goto("/map/", { waitUntil: "networkidle" });
+  await page.goto("/map/", { waitUntil: "load" });
 }
 
 test("Validate Cargo UI and Assets", async ({ page }) => {
@@ -120,7 +120,7 @@ test("Validate Cargo UI and Assets", async ({ page }) => {
 
   // 2. Validate Office Page (Financial breakdown containing Cargo Revenue row)
   console.log("Navigating to Office Page...");
-  await page.goto("/office/", { waitUntil: "networkidle" });
+  await page.goto("/office/", { waitUntil: "load" });
   await page.waitForSelector("#officeCanvas", { state: "visible", timeout: 10000 });
   
   // Verify that the cargo revenue elements exist
@@ -134,7 +134,7 @@ test("Validate Cargo UI and Assets", async ({ page }) => {
 
   // 3. Navigate to HQ Airport and check Assets
   console.log(`Navigating to HQ Airport /airport/${hq.hqAirportCode}...`);
-  await page.goto(`/airport/${hq.hqAirportCode}`, { waitUntil: "networkidle" });
+  await page.goto(`/airport/${hq.hqAirportCode}`, { waitUntil: "load" });
   await page.waitForSelector("#airportCanvas", { state: "visible", timeout: 10000 });
   
   // Capture Airport Info screenshot
@@ -152,7 +152,7 @@ test("Validate Cargo UI and Assets", async ({ page }) => {
 
   // 4. Navigate to Map and open Route Planner
   console.log("Navigating to Route Planner...");
-  await page.goto("/map/", { waitUntil: "networkidle" });
+  await page.goto("/map/", { waitUntil: "load" });
   await page.waitForSelector("#worldMapCanvas", { state: "visible", timeout: 10000 });
 
   // Call planning logic directly in browser to open the planner side panel
