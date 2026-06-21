@@ -1,6 +1,10 @@
 # Air Cargo — design plan (stretch goal)
 
-Status: **not started** (design only). Captured 2026-06-20 as the next feature after Airport Assets.
+Status: **C-1 shipped** (committed locally as `f9144132` on `master`, 2026-06-20; not yet deployed).
+C-2 next; C-3/C-4 still design-only. Release scope this round is **C-1 + C-2, read-only UI** — see
+`docs/current-development-state.md` ("Air Cargo C-1 … shipped") and the executable plan at
+`C:\Users\logan\.claude\plans\glittery-finding-zebra.md`. Captured 2026-06-20 as the next feature
+after Airport Assets.
 
 ## Goal
 

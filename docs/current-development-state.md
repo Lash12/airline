@@ -235,11 +235,76 @@ on the OptiPlex via Playwright (logged in as Lash Air at LAX; screenshots review
   high-transfer hub feeders; the per-leg join (driven off `idx_link_history`) fixed it. No schema
   changes; demographics reflect the ~30-week history retention.
 
+## Air Cargo C-1 (cargo demand layer) — shipped 2026-06-20 (local commit, not yet deployed)
+
+First slice of the Air Cargo feature. Release scope was decided as **C-1 + C-2 only, read-only
+UI** (no Cargo Terminal asset / no freighters this release). Full executable plan lives at
+`C:\Users\logan\.claude\plans\glittery-finding-zebra.md`; design background in
+`docs/air-cargo-plan.md`.
+
+**C-1 is committed locally as `f9144132` on `master` — NOT pushed, NOT deployed.** It has **no
+gameplay effect**: it only computes the cargo demand model and logs a per-cycle inspection summary.
+
+What shipped (all in `airline-data`):
+- `data/SoloConfig.scala`: `solo.cargo.{enabled,demandAmplitude,captureRatio,revenuePerUnitKm}`,
+  default off so default/multiplayer deploys are byte-identical. `captureRatio` /
+  `revenuePerUnitKm` are unused until C-2 (belly revenue).
+- New `CargoDemandGenerator.scala`: pure, deterministic per-directed-pair weekly cargo-units model
+  — gravity geo-mean of each end's economic mass (`population * income`), affinity-weighted, with a
+  sub-400 km trucking fade, scaled by `cargoDemandAmplitude`. Index-keyed per-cycle memo cache with
+  fingerprint invalidation (mirrors `DemandGenerator.prepareBaseDemandCache`). `summarizeCycle`
+  returns the inspection line.
+- `DemandGenerator.computeDemand`: flag-gated `println(CargoDemandGenerator.summarizeCycle(...))`,
+  reusing the airports + country relationships already loaded (no second airport load).
+- `CargoDemandGeneratorSpec.scala`: 8 DB-free tests, all passing
+  (`sbt "testOnly com.patson.CargoDemandGeneratorSpec"`). Verified determinism, monotonicity vs.
+  economic mass, affinity weighting (domestic 83 vs foreign 8 on the synthetic pair), zero-income
+  gating, and cache full-reset/incremental-eviction.
+
+Calibration note: `CARGO_BASE_DIVISOR = 2.0e9` was picked so a major synthetic pair yields ~tens-
+to-hundreds of weekly units; **real magnitudes are unverified** against the live airport dataset.
+First time `-Dsolo.cargo.enabled=true` runs on real data, read the `[cargo] demand summary` log line
+and tune `CARGO_BASE_DIVISOR` (constant) / `solo.cargo.demandAmplitude` (knob) so totals are sane
+before C-2 turns demand into revenue.
+
+### Next session: pick up at Air Cargo C-2 (belly cargo revenue — the playable increment)
+
+Follow phase C-2 in `glittery-finding-zebra.md`. Summary of what's left:
+1. **Belly capacity (C-2.1):** add a *derived* `bellyCargoCapacity` helper on `Model`
+   (`model/airplane/Model.scala:26`) from existing fields (seats + range) — **no new Model DB field**
+   (avoids a model-table migration). `Model` currently has no cargo/belly/weight field.
+2. **Cargo revenue (C-2.2):** in `LinkSimulation.computeLinkAndLoungeConsumptionDetail`
+   (`LinkSimulation.scala:315`, passenger revenue at line 368, profit at 402), add a
+   `SoloConfig.cargoEnabled`-gated term: `carried = min(spareBelly, pairDemand * captureRatio)`,
+   `cargoRevenue = carried * distance * revenuePerUnitKm`. Needs a per-cycle
+   `CargoDemandGenerator` lookup by airport (the cache is in place; add a `demandFor(from,to)` style
+   accessor — note `summarizeCycle` already populates the cache each cycle).
+3. **Persist (C-2.3/C-2.4):** append `cargoRevenue: Int = 0` to `LinkConsumptionDetails`
+   (`model/LinkConsumptionResult.scala:3`) and add a `cargo_revenue` column to `link_consumption`.
+   **Existing-DB gotcha:** `Meta.createSchema` only runs on fresh init and MySQL 8 has no
+   `ADD COLUMN IF NOT EXISTS` — add an information_schema-guarded `ALTER TABLE` (follow the
+   `AirportAssetSource.ensureTable()` precedent). Update the INSERT (`LinkSource.scala` ~785) and
+   SELECT (~965).
+4. **Ledger (C-2.5):** append `CARGO_REVENUE` to `LedgerType` (`model/Airline.scala:210-248`,
+   **append only** — ordinals are persisted). Record it in `AirlineSimulation.scala` (aggregate
+   ~91-100, ledger ~216); recommend subtracting cargo from the flight-revenue ledger total so the
+   income statement doesn't double-count (plan C-2.5 option b).
+5. **Read-only UI (C-2.6):** add `cargoRevenue` to `LinkConsumptionFormat`
+   (`airline-web/.../LinkApplication.scala:54-89`) and a "Cargo revenue" line in the link-income JS;
+   `CARGO_REVENUE` needs an income-statement label like other `LedgerType` values.
+6. **Deploy (after C-2):** enable `-Dsolo.cargo.*` in **both** `SIM_SOLO_OPTS` and `WEB_SOLO_OPTS`
+   in `.github/workflows/optiplex-deploy.yml`, then deploy. C-1's flags are NOT yet in the workflow.
+
+Reminders for the next session: run `airline-data` `sbt publishLocal` before compiling `airline-web`;
+this checkout is the Desktop one (`C:\Users\logan\Desktop\Airline\airline`), git repo lives in the
+`airline/` subdir; C-1 commit `f9144132` is local on `master` and still needs pushing/deploying
+(can be folded into the C-2 deploy).
+
 ## Suggested Next Feature Phase
 
-- **Air Cargo** — see `docs/air-cargo-plan.md`. Model cargo as a parallel demand layer reusing the
-  existing demand/link/aircraft machinery; start with belly cargo on passenger links, then a
-  "Cargo Terminal" airport asset (the natural bridge to the assets feature), then optionally
-  dedicated freighters. Gated behind a new `solo.cargo.*` flag like every prior solo phase.
+- **Air Cargo C-2** — see the dedicated section above and `glittery-finding-zebra.md`. C-1 (demand
+  layer) is committed; C-2 turns spare belly capacity into bounded, automatic per-link revenue.
+- After cargo: Cargo Terminal airport asset (C-3) and dedicated freighters (C-4) remain designed-
+  only in `docs/air-cargo-plan.md`, explicitly out of the current release.
 - Tuning backlog: the `solo.airportAssets.*` cost/upkeep/income multipliers and `solo.ai.bases.*`
   knobs can be adjusted live once playtest shows how the cadence/economy feel.
