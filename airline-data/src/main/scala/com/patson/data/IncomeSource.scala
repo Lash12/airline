@@ -9,6 +9,7 @@ import com.patson.model._
 object IncomeSource {
 
   def saveBalances(balances: List[(AirlineBalance, AirlineBalanceDetails)]): Unit = {
+    ensureCargoSchema()
     val connection = Meta.getConnection()
     val balStmt = connection.prepareStatement(
       "REPLACE INTO " + BALANCE_TABLE +
@@ -18,8 +19,8 @@ object IncomeSource {
       "REPLACE INTO " + BALANCE_DETAILS_TABLE +
       "(airline, ticket_revenue, lounge_revenue, staff, staff_overtime, flight_crew, fuel, fuel_tax," +
       " fuel_normalized, deprecation, airport_rentals, inflight_service, delay, maintenance, lounge," +
-      " advertising, loan_interest, dividends, period, cycle)" +
-      " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+      " advertising, loan_interest, dividends, period, cycle, cargo_revenue)" +
+      " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
     try {
       connection.setAutoCommit(false)
       balances.foreach { case (bal, det) =>
@@ -53,6 +54,7 @@ object IncomeSource {
         detStmt.setLong(18, det.dividends)
         detStmt.setInt(19, det.period.id)
         detStmt.setInt(20, det.cycle)
+        detStmt.setLong(21, det.cargoRevenue)
         detStmt.addBatch()
       }
       balStmt.executeBatch()
@@ -133,6 +135,7 @@ object IncomeSource {
   }
 
   private def loadBalancesByCriteria(criteria: List[(String, Any)]): List[(AirlineBalance, AirlineBalanceDetails)] = {
+    ensureCargoSchema()
     val connection = Meta.getConnection()
     try {
       val whereClause = if (criteria.isEmpty) "" else " WHERE " + criteria.map(_._1 + " = ?").mkString(" AND ")
@@ -189,8 +192,26 @@ object IncomeSource {
       loanInterest = rs.getLong("d.loan_interest"),
       dividends = rs.getLong("d.dividends"),
       period = period,
-      cycle = cycle)
+      cycle = cycle,
+      cargoRevenue = rs.getLong("d.cargo_revenue"))
     (bal, det)
+  }
+
+  @volatile private var cargoSchemaEnsured = false
+
+  def ensureCargoSchema() : Unit = {
+    if (cargoSchemaEnsured) return
+    synchronized {
+      if (cargoSchemaEnsured) return
+      scala.util.Using.resource(Meta.getConnection()) { connection =>
+        val columns = connection.getMetaData.getColumns(null, null, BALANCE_DETAILS_TABLE, "cargo_revenue")
+        val exists = try columns.next() finally columns.close()
+        if (!exists) {
+          scala.util.Using.resource(connection.prepareStatement(s"ALTER TABLE $BALANCE_DETAILS_TABLE ADD COLUMN cargo_revenue BIGINT NOT NULL DEFAULT 0")) { _.executeUpdate() }
+        }
+      }
+      cargoSchemaEnsured = true
+    }
   }
 
   object DetailType extends Enumeration {

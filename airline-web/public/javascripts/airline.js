@@ -1057,6 +1057,12 @@ function updatePlanLinkInfo(linkInfo, isRefresh) {
     $breakdown.find(".toAirport .businessDemand").text(toLinkClassValueString(toBusinessTotal))
     $breakdown.find(".toAirport .touristDemand").text(toLinkClassValueString(toTouristTotal))
 
+    if (linkInfo.cargoDemand !== undefined && linkInfo.cargoDemandReverse !== undefined) {
+        $('#planLinkCargoDemandRow').show()
+        $('#planLinkCargoDemand').html(`${linkInfo.fromAirportCode} ➔ ${linkInfo.toAirportCode}: <b>${commaSeparateNumber(linkInfo.cargoDemand)}</b> | ${linkInfo.toAirportCode} ➔ ${linkInfo.fromAirportCode}: <b>${commaSeparateNumber(linkInfo.cargoDemandReverse)}</b>`)
+    } else {
+        $('#planLinkCargoDemandRow').hide()
+    }
 
 	linkInfo.otherLinks.forEach(lc => { lc.loadFactor = lc.capacity.total > 0 ? Math.round(lc.soldSeats * 100 / lc.capacity.total) : 0 })
 	linkInfo.otherViaLocalTransitLinks.forEach(lc => { lc.loadFactor = lc.capacity.total > 0 ? Math.round(lc.soldSeats * 100 / lc.capacity.total) : 0 })
@@ -2065,11 +2071,18 @@ function computeLinkDerivedProperties(links) {
         if (link.currentStaffRequired == null) link.currentStaffRequired = 0
         link.profitMargin = link.revenue > 0 ? link.profit / link.revenue : 0
         link.profitPerStaff = link.currentStaffRequired > 0 ? Math.round(link.profit / link.currentStaffRequired) : 0
-        link.totalCapacity = link.capacity ? link.capacity.economy + link.capacity.business + link.capacity.first : 0
-        link.totalCapacityHistory = link.capacityHistory ? link.capacityHistory.economy + link.capacityHistory.business + link.capacityHistory.first : 0
-        link.totalPassengers = link.passengers ? link.passengers.economy + link.passengers.business + link.passengers.first : 0
-        const cancelledTotal = link.cancelledSeats ? link.cancelledSeats.total : 0
-        link.totalLoadFactor = link.totalCapacityHistory > 0 ? Math.round(link.totalPassengers / (link.totalCapacityHistory - cancelledTotal) * 100) : 0
+        if (link.isCargo) {
+            link.totalCapacity = link.cargoCapacity || 0
+            link.totalCapacityHistory = link.cargoCapacity || 0
+            link.totalPassengers = link.cargoCarried || 0
+            link.totalLoadFactor = link.totalCapacityHistory > 0 ? Math.round(link.totalPassengers / link.totalCapacityHistory * 100) : 0
+        } else {
+            link.totalCapacity = link.capacity ? link.capacity.economy + link.capacity.business + link.capacity.first : 0
+            link.totalCapacityHistory = link.capacityHistory ? link.capacityHistory.economy + link.capacityHistory.business + link.capacityHistory.first : 0
+            link.totalPassengers = link.passengers ? link.passengers.economy + link.passengers.business + link.passengers.first : 0
+            const cancelledTotal = link.cancelledSeats ? link.cancelledSeats.total : 0
+            link.totalLoadFactor = link.totalCapacityHistory > 0 ? Math.round(link.totalPassengers / (link.totalCapacityHistory - cancelledTotal) * 100) : 0
+        }
         link.model = (link.assignedAirplanes && link.assignedAirplanes.length > 0) ? link.assignedAirplanes[0].airplane.name : "-"
         link.displayLoadFactor   = link.totalLoadFactor
         link.displaySatisfaction = link.satisfaction
@@ -2235,8 +2248,15 @@ function updateLinksTable(sortProperty, sortOrder) {
 
     const state = tableFilterState.getTableState('links');
 
+    const typeFilter = $('#linksTableTypeFilter').val() || 'all';
     const filteredLinks = [];
     $.each(loadedLinks, function(index, link) {
+        if (typeFilter === 'passenger' && link.isCargo) {
+            return;
+        }
+        if (typeFilter === 'cargo' && !link.isCargo) {
+            return;
+        }
         let isFiltered = false;
         Object.entries(state.selectedColumnFilter).forEach(([property, filterValues]) => {
             if (!Array.isArray(filterValues) || filterValues.length < 1) {
@@ -2257,26 +2277,29 @@ function updateLinksTable(sortProperty, sortOrder) {
     const avgClass = linksViewMode === 'avg' ? ' avg-cell' : ''
     const rowsHtml = [];
     filteredLinks.forEach((link) => {
-        const quality = link.computedQuality > 0 ? link.computedQuality : "-"
+        const quality = link.isCargo ? "-" : (link.computedQuality > 0 ? link.computedQuality : "-")
+        const satisfactionVal = link.isCargo ? "-" : `${Math.round(link.displaySatisfaction * 100)}%`
+        const profitPerStaffVal = link.isCargo ? "-" : `$${commaSeparateNumber(link.profitPerStaff)}`
+        const cargoIcon = link.isCargo ? " <span title='Cargo Flight'>📦</span>" : ""
         const bgStyle = linkColors[link.id] ? ` style="background-color:${linkColors[link.id]}"` : '';
         const selectedClass = selectedLink == link.id ? ' selected' : '';
         const checkedAttr = selectedLinkIds.has(link.id) ? ' checked' : '';
         rowsHtml.push(
             `<div class='table-row clickable${selectedClass}' data-link-id='${link.id}'${bgStyle}>` +
             `<div class='cell'><input type='checkbox' class='link-checkbox'${checkedAttr}></div>` +
-            `<div class='cell' data-label='From'>${getCountryFlagImg(link.fromCountryCode)}${getAirportText(link.fromAirportCity, link.fromAirportCode)}</div>` +
+            `<div class='cell' data-label='From'>${getCountryFlagImg(link.fromCountryCode)}${getAirportText(link.fromAirportCity, link.fromAirportCode)}${cargoIcon}</div>` +
             `<div class='cell' data-label='To'>${getCountryFlagImg(link.toCountryCode)}${getAirportText(link.toAirportCity, link.toAirportCode)}</div>` +
             `<div class='cell' data-label='Model'>${link.model}</div>` +
             `<div class='cell' align='right' data-label='Distance'>${Math.round(convertDistance(link.distance))}${distanceLabel()}</div>` +
             `<div class='cell' align='right' data-label='Cap (Freq)'>${link.totalCapacity}(${link.frequency})</div>` +
             `<div class='cell' align='right' data-label='Quality'>${quality}</div>` +
             `<div class='cell${avgClass}' align='right' data-label='Load Factor'>${link.displayLoadFactor}%</div>` +
-            `<div class='cell${avgClass}' align='right' data-label='Satisfaction'>${Math.round(link.displaySatisfaction * 100)}%</div>` +
+            `<div class='cell${avgClass}' align='right' data-label='Satisfaction'>${satisfactionVal}</div>` +
             `<div class='cell${avgClass}' align='right' data-label='Revenue'>$${commaSeparateNumber(link.revenue)}</div>` +
             `<div class='cell${avgClass}' align='right' data-label='Profit'>$${commaSeparateNumber(link.displayProfit)}</div>` +
             `<div class='cell${avgClass}' align='right' data-label='Margin'>${(link.displayProfitMargin * 100).toFixed(2)}%</div>` +
             `<div class='cell' align='right' data-label='Staff'>${link.currentStaffRequired}</div>` +
-            `<div class='cell' align='right' data-label='Profit / Staff'>$${commaSeparateNumber(link.profitPerStaff)}</div>` +
+            `<div class='cell' align='right' data-label='Profit / Staff'>${profitPerStaffVal}</div>` +
             `<div class='cell' align='right' data-label='Modified'>${formatLastModified(link.lastUpdate)}</div>` +
             `</div>`
         );
@@ -3728,4 +3751,33 @@ function executeBulkDelete() {
             alert("Failed to delete links: " + errorThrown);
         }
     });
+}
+
+function filterMapRoutes() {
+    const showPax = $('#mapShowPassenger').is(':checked');
+    const showCargo = $('#mapShowCargo').is(':checked');
+    
+    if (typeof AirlineMap !== 'undefined' && AirlineMap.map) {
+        let filterExpr;
+        if (showPax && showCargo) {
+            filterExpr = null;
+        } else if (showPax) {
+            filterExpr = ['!', ['boolean', ['get', 'isCargo'], false]];
+        } else if (showCargo) {
+            filterExpr = ['boolean', ['get', 'isCargo'], false];
+        } else {
+            filterExpr = ['literal', false];
+        }
+        
+        if (AirlineMap.map.getLayer('flight-routes-layer')) {
+            AirlineMap.map.setFilter('flight-routes-layer', filterExpr);
+        }
+        if (AirlineMap.map.getLayer('flight-routes-layer-click')) {
+            AirlineMap.map.setFilter('flight-routes-layer-click', filterExpr);
+        }
+    }
+}
+
+function filterLinksTable() {
+    updateLinksTable();
 }

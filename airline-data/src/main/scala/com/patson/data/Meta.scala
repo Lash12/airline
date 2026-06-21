@@ -752,6 +752,7 @@ object Meta {
       "advertising LONG," +
       "loan_interest LONG," +
       "dividends BIGINT NOT NULL DEFAULT 0," +
+      "cargo_revenue BIGINT NOT NULL DEFAULT 0," +
       "period INTEGER," +
       "cycle INTEGER," +
       "PRIMARY KEY (airline, period, cycle)" +

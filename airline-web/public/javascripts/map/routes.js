@@ -55,7 +55,8 @@ function createRouteLayer(sourceId, layerId, options = {}) {
                 paint: options.paint || {
                     'line-color': ['get', 'color'],
                     'line-width': options.hoverWidth ? ['case', ['boolean', ['feature-state', 'hover'], false], 2, 1.5] : 1.5,
-                    'line-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.9, ['get', 'opacity']]
+                    'line-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.9, ['get', 'opacity']],
+                    'line-dasharray': ['case', ['boolean', ['get', 'isCargo'], false], ['literal', [4, 2]], ['literal', [1, 0]]]
                 }
             }, beforeId);
         }
@@ -203,7 +204,8 @@ function flightPathsToGeoJSON(flightPaths) {
                 fromAirportCity: link.fromAirportCity,
                 toAirportCity: link.toAirportCity,
                 frequency: link.frequency,
-                highlighted: linkId == highlightedLinkId
+                highlighted: linkId == highlightedLinkId,
+                isCargo: link.isCargo || false
             }
         });
     });

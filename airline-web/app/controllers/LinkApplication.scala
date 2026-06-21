@@ -174,7 +174,9 @@ class LinkApplication @Inject()(cc: ControllerComponents) extends AbstractContro
       val satisfaction = entry.satisfaction
       val lastUpdate = entry.lastUpdate
       val currentStaffRequired = entry.currentStaffRequired
-      Json.toJson(link).asInstanceOf[JsObject] + ("profit" -> JsNumber(profit)) + ("revenue" -> JsNumber(revenue)) + ("passengers" -> Json.toJson(passengers)) + ("capacityHistory" -> Json.toJson(capacityHistory)) + ("cancelledSeats" -> Json.toJson(cancelledSeats)) + ("satisfaction" -> JsNumber(satisfaction)) + ("lastUpdate" -> JsNumber(lastUpdate.getTimeInMillis)) + ("currentStaffRequired" -> JsNumber(currentStaffRequired))
+      val cargoCarried = entry.cargoCarried
+      val cargoCapacity = entry.cargoCapacity
+      Json.toJson(link).asInstanceOf[JsObject] + ("profit" -> JsNumber(profit)) + ("revenue" -> JsNumber(revenue)) + ("passengers" -> Json.toJson(passengers)) + ("capacityHistory" -> Json.toJson(capacityHistory)) + ("cancelledSeats" -> Json.toJson(cancelledSeats)) + ("satisfaction" -> JsNumber(satisfaction)) + ("lastUpdate" -> JsNumber(lastUpdate.getTimeInMillis)) + ("currentStaffRequired" -> JsNumber(currentStaffRequired)) + ("cargoCarried" -> JsNumber(cargoCarried)) + ("cargoCapacity" -> JsNumber(cargoCapacity))
     }
   }
 
@@ -663,7 +665,9 @@ class LinkApplication @Inject()(cc: ControllerComponents) extends AbstractContro
   }
 
   def getLinksDetails(airlineId : Int) = AuthenticatedAirline(airlineId) { request =>
-    val links = LinkSource.loadFlightLinksByAirlineId(airlineId)
+    val paxLinks = LinkSource.loadFlightLinksByAirlineId(airlineId)
+    val cargoLinks = LinkSource.loadCargoLinksByCriteria(List(("airline", airlineId)))
+    val links = paxLinks ++ cargoLinks
     val consumptions = LinkSource.loadLinkConsumptionsByAirline(airlineId).foldLeft(immutable.Map[Int, LinkConsumptionDetails]()) { (foldMap, linkConsumptionDetails) =>
       foldMap + (linkConsumptionDetails.link.id -> linkConsumptionDetails)
     }
@@ -671,16 +675,23 @@ class LinkApplication @Inject()(cc: ControllerComponents) extends AbstractContro
 
     val linksWithProfit: Seq[LinkExtendedInfo] = links.map { link =>
       //(link, consumptions.get(link.id).fold(0)(_.profit), consumptions.get(link.id).fold(0)(_.revenue), consumptions.get(link.id).fold(LinkClassValues.getInstance())(_.link.soldSeats))
+      val consumption = consumptions.get(link.id)
+      val staffRequired = link match {
+        case l: Link => l.getCurrentOfficeStaffRequired
+        case _ => 0.0
+      }
       LinkExtendedInfo(
         link,
-        consumptions.get(link.id).fold(0)(_.profit),
-        consumptions.get(link.id).fold(0)(_.revenue),
-        consumptions.get(link.id).fold(LinkClassValues.getInstance())(_.link.soldSeats),
-        consumptions.get(link.id).fold(LinkClassValues.getInstance())(_.link.capacity),
-        consumptions.get(link.id).fold(LinkClassValues.getInstance())(_.link.cancelledSeats),
-        consumptions.get(link.id).map(_.satisfaction).getOrElse(0),
-        lastUpdates(link.id),
-        link.getCurrentOfficeStaffRequired
+        consumption.fold(0)(_.profit),
+        consumption.fold(0)(_.revenue),
+        consumption.fold(LinkClassValues.getInstance())(_.link.soldSeats),
+        consumption.fold(LinkClassValues.getInstance())(_.link.capacity),
+        consumption.fold(LinkClassValues.getInstance())(_.link.cancelledSeats),
+        consumption.map(_.satisfaction).getOrElse(0.0),
+        lastUpdates.get(link.id).getOrElse(Calendar.getInstance()),
+        staffRequired,
+        consumption.map(_.cargoCarried).getOrElse(0),
+        consumption.map(_.cargoCapacity).getOrElse(0)
       )
     }
     Ok(Json.toJson(linksWithProfit)(LinksExtendedGeoJsonWrites)).withHeaders(
@@ -688,7 +699,7 @@ class LinkApplication @Inject()(cc: ControllerComponents) extends AbstractContro
     )
   }
 
-  case class LinkExtendedInfo(link : Link, profit : Int, revenue : Int, soldSeats : LinkClassValues, capacityHistory : LinkClassValues, cancelledSeats : LinkClassValues, satisfaction : Double, lastUpdate : Calendar, currentStaffRequired : Double)
+  case class LinkExtendedInfo(link : Transport, profit : Int, revenue : Int, soldSeats : LinkClassValues, capacityHistory : LinkClassValues, cancelledSeats : LinkClassValues, satisfaction : Double, lastUpdate : Calendar, currentStaffRequired : Double, cargoCarried : Int = 0, cargoCapacity : Int = 0)
 
   def getLinksAverages(airlineId: Int, weeks: Int = 48) = AuthenticatedAirline(airlineId) { _ =>
     val consumptions = LinkSource.loadLinkConsumptionsByAirline(airlineId, weeks)
@@ -895,6 +906,8 @@ class LinkApplication @Inject()(cc: ControllerComponents) extends AbstractContro
         }.toMap
 
         val (fromDemand, toDemand) = LinkApplication.generateDemands(fromAirport, toAirport, affinity, distance, flightCategory)
+        val cargoDemand = CargoDemandGenerator.computeCargoDemandBetweenAirports(fromAirport, toAirport, affinity, distance)
+        val cargoDemandReverse = CargoDemandGenerator.computeCargoDemandBetweenAirports(toAirport, fromAirport, affinity, distance)
 
         val cost = 0
         val quality = if (existingLink.isEmpty) 0 else existingLink.get.computedQuality()
@@ -965,7 +978,9 @@ class LinkApplication @Inject()(cc: ControllerComponents) extends AbstractContro
           "distance" -> distance,
           "flightType" -> FlightCategory.label(flightCategory),
           "suggestedPrice" -> suggestedPrice,
-          "cost" -> cost) ++
+          "cost" -> cost,
+          "cargoDemand" -> cargoDemand,
+          "cargoDemandReverse" -> cargoDemandReverse) ++
           Json.obj("modelPlanLinkInfo" -> Json.toJson(planLinkInfoByModel)) ++
           estimatedDifficulty.fold(Json.obj())(difficulty => Json.obj("estimatedDifficulty" -> difficulty)) ++
           deleteLinkRefund.fold(Json.obj())(refund => Json.obj("deleteLinkRefund" -> refund))

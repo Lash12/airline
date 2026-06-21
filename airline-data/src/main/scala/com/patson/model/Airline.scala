@@ -257,7 +257,8 @@ case class AirlineBalanceDetails(airlineId: Int, ticketRevenue: Long, loungeReve
   fuelNormalized: Long, deprecation: Long, airportRentals: Long, inflightService: Long,
   delay: Long, maintenance: Long, lounge: Long, advertising: Long, loanInterest: Long,
   dividends: Long = 0,
-  period: Period.Value = Period.WEEKLY, var cycle: Int = 0)
+  period: Period.Value = Period.WEEKLY, var cycle: Int = 0,
+  cargoRevenue: Long = 0L)
 
 
 

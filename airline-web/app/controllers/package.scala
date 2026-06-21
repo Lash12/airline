@@ -244,6 +244,53 @@ package object controllers {
     }
   }
 
+  implicit object CargoLinkWrites extends Writes[CargoLink] {
+    def writes(link: CargoLink): JsValue = {
+      var json = JsObject(List(
+        "id" -> JsNumber(link.id),
+        "fromAirportId" -> JsNumber(link.from.id),
+        "toAirportId" -> JsNumber(link.to.id),
+        "fromAirportCode" -> JsString(link.from.iata),
+        "toAirportCode" -> JsString(link.to.iata),
+        "fromAirportName" -> JsString(link.from.name),
+        "toAirportName" -> JsString(link.to.name),
+        "fromAirportCity" -> JsString(link.from.city),
+        "toAirportCity" -> JsString(link.to.city),
+        "fromCountryCode" -> JsString(link.from.countryCode),
+        "toCountryCode" -> JsString(link.to.countryCode),
+        "airlineId" -> JsNumber(link.airline.id),
+        "airlineName" -> JsString(link.airline.name),
+        "price" -> Json.obj("economy" -> 0, "business" -> 0, "first" -> 0),
+        "distance" -> JsNumber(link.distance),
+        "cargoCapacity" -> JsNumber(link.cargoCapacity),
+        "capacity" -> Json.obj("economy" -> 0, "business" -> 0, "first" -> 0),
+        "rawQuality" -> JsNumber(0),
+        "computedQuality" -> JsNumber(0),
+        "duration" -> JsNumber(link.duration),
+        "frequency" -> JsNumber(link.frequency),
+        "fromLatitude" -> JsNumber(link.from.latitude),
+        "fromLongitude" -> JsNumber(link.from.longitude),
+        "toLatitude" -> JsNumber(link.to.latitude),
+        "toLongitude" -> JsNumber(link.to.longitude),
+        "flightCode" -> JsString(LinkUtil.getFlightCode(link.airline, link.flightNumber)),
+        "isCargo" -> JsBoolean(true)
+      ))
+
+      json = json + ("assignedAirplanes" -> Json.arr())
+      json
+    }
+  }
+
+  implicit object TransportWrites extends Writes[Transport] {
+    def writes(transport: Transport): JsValue = {
+      transport match {
+        case f: Link => Json.toJson(f)(LinkFormat)
+        case c: CargoLink => Json.toJson(c)(CargoLinkWrites)
+        case _ => JsNull
+      }
+    }
+  }
+
   object SimpleLinkConsumptionWrite extends Writes[LinkConsumptionDetails] {
     def writes(linkConsumption: LinkConsumptionDetails): JsValue = {
       var priceJson = Json.obj()
@@ -426,7 +473,8 @@ package object controllers {
         "lounge" -> JsNumber(details.lounge),
         "advertising" -> JsNumber(details.advertising),
         "loanInterest" -> JsNumber(details.loanInterest),
-        "dividends" -> JsNumber(details.dividends)
+        "dividends" -> JsNumber(details.dividends),
+        "cargoRevenue" -> JsNumber(details.cargoRevenue)
       ))
     }
   }

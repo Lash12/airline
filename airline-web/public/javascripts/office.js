@@ -712,8 +712,9 @@ function updateIncomeSheet(b) {
 	if (!b) return
 	const fmt = v => '$' + commaSeparateNumber(v)
 	$('#balTicketRevenue').text(fmt(b.ticketRevenue))
+	$('#balCargoRevenue').text(fmt(b.cargoRevenue || 0))
 	$('#balLoungeRevenue').text(fmt(b.loungeRevenue))
-	const totalRevenue = b.ticketRevenue + b.loungeRevenue
+	const totalRevenue = b.ticketRevenue + (b.cargoRevenue || 0) + b.loungeRevenue
 	$('#balRevenueTot').text(fmt(totalRevenue))
 
 	$('#balStaff').text(fmt(b.staff))

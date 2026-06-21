@@ -11,6 +11,16 @@
 						data-domestic-airport-marker='@routes.Assets.versioned("images/markers/airport-domestic.svg")'
 						data-disabled-airport-marker='@routes.Assets.versioned("images/markers/airport-transparent.svg")'>
 					</div>
+                    <div id="mapFilters" class="mapOverlayPanel" style="position: absolute; top: 10px; left: 10px; z-index: 1000; background: rgba(30, 30, 40, 0.75); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; flex-direction: column; gap: 8px; font-size: 12px; color: #fff; font-family: sans-serif;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0; user-select: none;">
+                            <input type="checkbox" id="mapShowPassenger" checked onchange="filterMapRoutes()" style="cursor: pointer;" />
+                            Show Passenger Flights
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0; user-select: none;">
+                            <input type="checkbox" id="mapShowCargo" checked onchange="filterMapRoutes()" style="cursor: pointer;" />
+                            Show Cargo Flights
+                        </label>
+                    </div>
 					<div id="sidePanel" class="sidePanel mapOverlayPanel" style="display:none;">
 						<span class="close" onclick="$('#sidePanel').fadeOut(200)">&times;</span>
 
@@ -291,6 +301,13 @@
 												<p class="leading-snug py-1">Above is the total possible direct demand, however most traffic is indirect demand. Elite demand can't be estimated because it changes every cycle.</p>
 											</span>
 										</div>
+									</div>
+								</div>
+
+								<div class="flex-row py-2" id="planLinkCargoDemandRow">
+									<div style="width:162px"><p>Cargo Demand:</p></div>
+									<div class="h-4">
+										<span id="planLinkCargoDemand"></span>
 									</div>
 								</div>
 

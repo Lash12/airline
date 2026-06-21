@@ -5,7 +5,13 @@
                     <a class="px-2 button text py-1 flex-align-center tooltip-attr tooltip-attr-bottom" data-tooltip="Sort by last updated" onclick="toggleLinksTableSortOrder($('#hiddenLinkSortBy'))"><img src='@routes.Assets.versioned("/images/icons/clock-frame.png")'></a>
                     <a class="px-2 button text py-1 flex-align-center tooltip-attr tooltip-attr-bottom" data-tooltip="Show / Hide Filter Row" onclick="toggleLinksTableFilterRow()"><img src='@routes.Assets.versioned("/images/icons/funnel.png")'></a>
                     <a class="px-2 button text flex-align-center tooltip-attr tooltip-attr-bottom opacity-80" data-tooltip="Show Averages" onclick="toggleLinksTableAverage()" style="font-family:monospace; font-size: 18px;">x̄</a>
-                    <a class="px-2 button text py-1 flex-align-center tooltip-attr tooltip-attr-bottom opacity-80" data-tooltip="Show Medians" onclick="toggleLinksTableMedian()" style="font-size: 16px;">M</a>
+                    <div class="ml-4 mt-2">
+                        <select id="linksTableTypeFilter" onchange="filterLinksTable()" class="select-menu" style="font-size: 12px; padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1); background: #333; color: #fff; vertical-align: middle;">
+                            <option value="all">All Flights</option>
+                            <option value="passenger">Passenger Only</option>
+                            <option value="cargo">Cargo Only</option>
+                        </select>
+                    </div>
                     <div id="linksViewSwitchContainer" class="ml-auto mt-2">
                       <div class="switch">
                         <input type="radio" class="switch-input" name="linksView" value="weekly" id="switchLinksWeekly" checked>

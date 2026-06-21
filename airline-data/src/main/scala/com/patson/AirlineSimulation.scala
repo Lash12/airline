@@ -475,7 +475,7 @@ object AirlineSimulation {
 
       val weeklyDetails = AirlineBalanceDetails(
         airlineId = airline.id,
-        ticketRevenue = linksRevenue,
+        ticketRevenue = linksRevenue - linksCargoRevenue,
         loungeRevenue = loungeRevenue,
         staff = -staffCost,
         staffOvertime = -staffOvertimeCost.toLong,
@@ -492,6 +492,7 @@ object AirlineSimulation {
         advertising = advertisementEntry,
         loanInterest = loanInterestEntry,
         dividends = -dividendsPaid,
+        cargoRevenue = linksCargoRevenue,
         cycle = cycle)
       val weeklyBalance = AirlineBalance(
         airlineId = airline.id,
