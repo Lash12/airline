@@ -10,6 +10,14 @@ var _toggleState_AllianceBaseMapView = false
 const _etagStore = {}
 var _facilityStatistics = null
 
+// Money for airport table cells: compact on phones, full on desktop.
+function formatAssetMoney(value) {
+	if (window.matchMedia && window.matchMedia('(max-width: 640px)').matches) {
+		return abbreviateMoney(value)
+	}
+	return '$' + Number(value).toLocaleString()
+}
+
 function _allianceHslColor(allianceId) {
     const hue = Math.floor((allianceId * 137.508) % 360)
     return `hsl(${hue}, 62%, 52%)`
@@ -312,70 +320,98 @@ function renderAirportAssets(airportId, data) {
     if (!data.assets || data.assets.length === 0) {
         $list.append($('<div class="table-row"><div class="cell" style="width:100%">No assets built here yet.</div></div>'))
     } else {
-        $.each(data.assets, function(i, asset) {
-            var statusText = asset.status === 'ACTIVE' ? 'Active' : ('Building (' + asset.remainingCycles + ' cycles)')
-            var $row = $('<div class="table-row"></div>')
-            var $assetName = $('<div class="cell" style="width:24%"></div>')
-            if (asset.image) {
-                $('<img loading="lazy" style="height:24px; vertical-align:middle; margin-right:6px;">')
-                    .attr('src', '/assets/images/airport-assets/' + asset.image).appendTo($assetName)
-            }
-            $assetName.append($('<span></span>').text(asset.label))
-            $row.append($assetName)
-            $row.append($('<div class="cell" style="width:12%; text-align:right;"></div>').text(asset.level + '/' + asset.maxLevel))
-            $row.append($('<div class="cell" style="width:16%"></div>').text(statusText))
-            $row.append($('<div class="cell" style="width:16%; text-align:right;"></div>').text('$' + asset.weeklyIncome.toLocaleString()))
-            $row.append($('<div class="cell" style="width:16%; text-align:right;"></div>').text('$' + asset.weeklyUpkeep.toLocaleString()))
-            var $action = $('<div class="cell" style="width:16%; text-align:right;"></div>')
-            var $sell = $('<button class="button"></button>').text('Sell ($' + asset.sellValue.toLocaleString() + ')')
-            $sell.click(function() {
-                if (confirm('Sell ' + asset.label + ' for $' + asset.sellValue.toLocaleString() + '?')) {
-                    sellAirportAsset(airportId, asset.id)
-                }
-            })
-            $action.append($sell)
-            $row.append($action)
-            $list.append($row)
-        })
+		$.each(data.assets, function(i, asset) {
+			var statusText = asset.status === 'ACTIVE' ? 'Active' : ('Building (' + asset.remainingCycles + ' cycles)')
+			var $row = $('<div class="table-row clickable"></div>')
+			var $assetName = $('<div class="cell" style="width:24%"></div>')
+			if (asset.image) {
+				$('<img loading="lazy" style="height:24px; vertical-align:middle; margin-right:6px;">')
+					.attr('src', '/assets/images/airport-assets/' + asset.image).appendTo($assetName)
+			}
+			$assetName.append($('<span></span>').text(asset.label))
+			$row.append($assetName)
+			$row.append($('<div class="cell" style="width:16%; text-align:right;"></div>').text(asset.level + '/' + asset.maxLevel))
+			$row.append($('<div class="cell" style="width:24%"></div>').text(statusText))
+			$row.append($('<div class="cell" style="width:18%; text-align:right;"></div>').text(formatAssetMoney(asset.weeklyIncome)))
+			$row.append($('<div class="cell" style="width:18%; text-align:right;"></div>').text(formatAssetMoney(asset.weeklyUpkeep)))
+			$row.on('click', function() {
+				openAssetDetailsModal({
+					name: asset.label,
+					image: asset.image,
+					benefit: '',
+					boost: '-',
+					levelText: asset.level + ' / ' + asset.maxLevel,
+					rows: [
+						{ label: 'Status:', value: statusText },
+						{ label: 'Weekly income:', value: '$' + asset.weeklyIncome.toLocaleString() },
+						{ label: 'Weekly upkeep:', value: '$' + asset.weeklyUpkeep.toLocaleString() }
+					],
+					reason: null,
+					actionLabel: 'Sell ($' + asset.sellValue.toLocaleString() + ')',
+					actionFn: function() {
+						if (confirm('Sell ' + asset.label + ' for $' + asset.sellValue.toLocaleString() + '?')) {
+							sellAirportAsset(airportId, asset.id)
+						}
+					}
+				})
+			})
+			$list.append($row)
+		})
     }
 
     var $cat = $('#airportDetailsAssetCatalog')
     $cat.children('.table-row').remove()
-    $.each(data.catalog, function(i, entry) {
-        var $row = $('<div class="table-row"></div>')
-        var payback = entry.nextLevelPayback ? (entry.nextLevelPayback + ' cycles') : 'n/a (boost only)'
-        var tip = entry.benefit
-            + '\nUpkeep: $' + entry.nextLevelUpkeep.toLocaleString() + '/wk'
-            + (entry.generatesIncome ? ('\nIncome: $' + entry.nextLevelIncome.toLocaleString() + '/wk'
-                + '\nNet: $' + entry.nextLevelNet.toLocaleString() + '/wk'
-                + '\nPayback: ' + payback) : '')
-        var $name = $('<div class="cell" style="width:22%"></div>')
-        $('<img loading="lazy" style="height:24px; vertical-align:middle; margin-right:6px;">')
-            .attr('src', '/assets/images/airport-assets/' + entry.image)
-            .attr('title', tip).appendTo($name)
-        $name.append($('<span></span>').attr('title', tip).text(entry.label))
-        $row.append($name)
-        $row.append($('<div class="cell" style="width:22%"></div>').text(entry.boostType))
-        $row.append($('<div class="cell" style="width:10%; text-align:right;"></div>').text(entry.sizeRequirement))
-        $row.append($('<div class="cell" style="width:16%; text-align:right;"></div>').text('$' + entry.nextLevelCost.toLocaleString()))
-        $row.append($('<div class="cell" style="width:14%; text-align:right;"></div>').text(entry.constructionDuration))
-        var $action = $('<div class="cell" style="width:16%; text-align:right;"></div>')
-        var label = entry.ownedLevel === 0 ? 'Build' : ('Upgrade to ' + (entry.ownedLevel + 1))
-        var $build = $('<button class="button"></button>').text(label)
-        var affordable = data.balance >= entry.nextLevelCost
-        var disabled = !data.hasBase || !entry.meetsSize || !entry.canUpgrade || !affordable
-        if (disabled) {
-            $build.addClass('disabled').prop('disabled', true)
-            if (!entry.canUpgrade) { $build.text('Max level') }
-            else if (!entry.meetsSize) { $build.text('Airport too small') }
-            else if (!affordable) { $build.text('Not enough cash') }
-        } else {
-            $build.click(function() { buildAirportAsset(airportId, entry.assetType) })
-        }
-        $action.append($build)
-        $row.append($action)
-        $cat.append($row)
-    })
+	$.each(data.catalog, function(i, entry) {
+		var payback = entry.nextLevelPayback ? (entry.nextLevelPayback + ' cycles') : 'n/a (boost only)'
+		var $row = $('<div class="table-row clickable"></div>')
+		var $name = $('<div class="cell" style="width:26%"></div>')
+		if (entry.image) {
+			$('<img loading="lazy" style="height:24px; vertical-align:middle; margin-right:6px;">')
+				.attr('src', '/assets/images/airport-assets/' + entry.image).appendTo($name)
+		}
+		$name.append($('<span></span>').text(entry.label))
+		$row.append($name)
+		$row.append($('<div class="cell" style="width:24%"></div>').text(entry.boostType))
+		$row.append($('<div class="cell" style="width:12%; text-align:right;"></div>').text(entry.sizeRequirement))
+		$row.append($('<div class="cell" style="width:20%; text-align:right;"></div>').text(formatAssetMoney(entry.nextLevelCost)))
+		$row.append($('<div class="cell" style="width:18%; text-align:right;"></div>').text(entry.constructionDuration))
+
+		var affordable = data.balance >= entry.nextLevelCost
+		var reason = null
+		if (!data.hasBase) { reason = 'Build a base at this airport first.' }
+		else if (!entry.canUpgrade) { reason = 'Already at max level.' }
+		else if (!entry.meetsSize) { reason = 'Airport is too small for this asset.' }
+		else if (!affordable) { reason = 'Not enough cash.' }
+		var actionLabel = !entry.canUpgrade ? 'Max level'
+			: (entry.ownedLevel === 0 ? 'Build' : ('Upgrade to ' + (entry.ownedLevel + 1)))
+
+		var rows = [
+			{ label: 'Size required:', value: String(entry.sizeRequirement) },
+			{ label: 'Cost:', value: '$' + entry.nextLevelCost.toLocaleString() },
+			{ label: 'Build time:', value: String(entry.constructionDuration) },
+			{ label: 'Weekly upkeep:', value: '$' + entry.nextLevelUpkeep.toLocaleString() }
+		]
+		if (entry.generatesIncome) {
+			rows.push({ label: 'Weekly income:', value: '$' + entry.nextLevelIncome.toLocaleString() })
+			rows.push({ label: 'Weekly net:', value: '$' + entry.nextLevelNet.toLocaleString() })
+			rows.push({ label: 'Payback:', value: payback })
+		}
+
+		$row.on('click', function() {
+			openAssetDetailsModal({
+				name: entry.label,
+				image: entry.image,
+				benefit: entry.benefit,
+				boost: entry.boostType,
+				levelText: entry.ownedLevel === 0 ? 'Not built' : ('Current level ' + entry.ownedLevel),
+				rows: rows,
+				reason: reason,
+				actionLabel: actionLabel,
+				actionFn: function() { buildAirportAsset(airportId, entry.assetType) }
+			})
+		})
+		$cat.append($row)
+	})
 }
 
 function buildAirportAsset(airportId, assetType) {
