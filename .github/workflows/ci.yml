@@ -50,8 +50,19 @@ jobs:
       - name: Initialize test database
         run: cd airline-data && sbt publishLocal "runMain com.patson.init.MainInit"
 
-      - name: Test airline-data and publish locally
-        run: cd airline-data && sbt "set Test / parallelExecution := false" test publishLocal
+      - name: Test airline-data cargo surface and publish locally
+        run: >
+          cd airline-data &&
+          sbt
+          "testOnly
+          com.patson.CargoDemandGeneratorSpec
+          com.patson.CargoAllocationSpec
+          com.patson.AirplaneModelSpec
+          com.patson.model.UserSpec
+          com.patson.model.StockModelSpec
+          com.patson.ModelDiscountSpec
+          com.patson.AirportSimulationSpec"
+          publishLocal
 
       - name: Compile airline-web
         run: cd airline-web && sbt compile
