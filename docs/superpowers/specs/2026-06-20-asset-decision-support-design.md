@@ -1,6 +1,8 @@
 # Asset Decision Support — design spec
 
-Date: 2026-06-20. Status: design approved, pending spec review → implementation plan.
+Date: 2026-06-20. Status: **shipped & live-validated 2026-06-20** (per-route demographics use a
+per-leg join rather than the O-D grouping originally sketched here — see
+`docs/current-development-state.md`). See `docs/airport-assets.md` for the shipped feature docs.
 
 ## Context
 

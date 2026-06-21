@@ -213,6 +213,28 @@ load queried it. Fixed by the `HeartbeatSource` pattern: `AirportAssetSource.ens
 the feature flag. **Any future feature that adds a table must self-create it this way (or run a
 manual migration on the live DB) — do not rely on `createSchema`.**
 
+## Asset Decision Support — shipped 2026-06-20
+
+Player QOL layer on the airport screen so assets are legible and decidable. Spec/plan:
+`docs/superpowers/specs/2026-06-20-asset-decision-support-design.md` (+ matching plan). Live-validated
+on the OptiPlex via Playwright (logged in as Lash Air at LAX; screenshots reviewed; no JS errors).
+
+- **Asset benefit/ROI + imagery:** each catalog row shows the asset artwork (29 PNGs vendored from
+  `patsonluk/airline`, Apache 2.0, credited in root `NOTICE`) and a tooltip with the plain-language
+  benefit, weekly upkeep, and — for revenue assets — income/net/payback. `AirportAssetType` gained
+  `image`/`benefit`; pure `netWeekly`/`paybackCycles` helpers (payback only for net-positive revenue
+  types). Always-paired with the assets section (flag-gated by `solo.airportAssets.enabled`).
+- **Traffic Analytics (always-on, no flag):** `GET /airports/:id/traffic-analytics` returns an airport
+  summary (transfer% vs direct, premium%, passenger-type demographic mix) and a per-route table
+  (volume, transfer%, premium%, **per-route demographics**), whole-market across all airlines.
+  Rendered in a new airport-panel section above the assets section.
+- **Data sources:** transfer/volume/premium from `link_statistics` (per arriving leg, via pure
+  `AirportTrafficStats`); demographics from `passenger_route_history`. **Per-route demographics use an
+  accurate per-leg join** (`passenger_link_history → link → passenger_route_history`, keyed by the
+  arriving leg's origin) — the first attempt used an O-D grouping that came back empty for
+  high-transfer hub feeders; the per-leg join (driven off `idx_link_history`) fixed it. No schema
+  changes; demographics reflect the ~30-week history retention.
+
 ## Suggested Next Feature Phase
 
 - **Air Cargo** — see `docs/air-cargo-plan.md`. Model cargo as a parallel demand layer reusing the

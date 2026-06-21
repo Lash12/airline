@@ -1,5 +1,9 @@
 # Asset Decision Support Implementation Plan
 
+> **Status: COMPLETE — shipped & live-validated 2026-06-20.** All tasks done; per-route demographics
+> implemented via a per-leg join (`passenger_link_history → link → passenger_route_history`) instead
+> of the per-partner O-D approximation in Task 3 (which returned empty for high-transfer hubs).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make the airport screen a decision-support surface — show whole-market traffic analytics (transfer share + demographics) and explain each airport asset's benefit/ROI with imagery — so a player can judge what to build and where.

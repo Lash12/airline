@@ -86,6 +86,17 @@ or run a manual migration against the live DB — never rely on `createSchema` f
    (none for Metro).
 4. Sell → returns half the invested cash.
 
+## Decision support (shipped 2026-06-20)
+
+The airport screen also surfaces what an asset will do and whether the market justifies it (see the
+"Asset Decision Support" section in `docs/current-development-state.md`):
+- Catalog rows show the asset **artwork** + a tooltip with the plain-language benefit, weekly upkeep,
+  and (revenue assets) income/net/payback. Backed by `AirportAssetType.image`/`benefit` and the pure
+  `netWeekly`/`paybackCycles` helpers.
+- A **Traffic Analytics** panel (always-on) shows transfer% vs direct, premium%, and passenger-type
+  demographics for the airport and per route (whole market), so a player can judge demand before
+  building. Endpoint `GET /airports/:id/traffic-analytics`.
+
 ## Out of scope / future
 
 - Throughput-linked income (scale income with the airport's realized passenger volume).
