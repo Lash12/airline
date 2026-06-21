@@ -251,4 +251,32 @@
         font-size: 2.5vw;
         line-height: 1;
     }
+
+    /* Airport page: keep wide data tables as scrollable grids instead of letting
+       the global rule collapse every cell to width:auto (which stacks values
+       vertically and is unreadable). Scoped to #airportCanvas so other pages and
+       the #linksCanvas opt-out are unaffected. */
+    #airportCanvas .table.data {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        min-width: 0;
+    }
+    #airportCanvas .table.data .table-header,
+    #airportCanvas .table.data .table-row {
+        min-width: 560px;        /* force overflow so columns keep their proportions */
+    }
+    #airportCanvas .table.data .cell {
+        width: auto;             /* the inline % widths on each cell still apply via flex-basis */
+        white-space: nowrap;     /* override the global word-break stacking */
+        word-break: normal;
+        overflow-wrap: normal;
+        font-size: 11px;
+        padding-left: 4px;
+        padding-right: 4px;
+    }
+    /* Bigger tap target for clickable asset rows + a subtle hint they open a modal. */
+    #airportCanvas .table.data .table-row.clickable {
+        min-height: 34px;
+        cursor: pointer;
+    }
 }
