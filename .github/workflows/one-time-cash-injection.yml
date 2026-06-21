@@ -1,0 +1,92 @@
+name: One-Time Cash Injection
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: optiplex-deploy
+  cancel-in-progress: false
+
+jobs:
+  inject:
+    runs-on: [self-hosted, optiplex]
+    timeout-minutes: 5
+    steps:
+      - name: Add cash to selected airlines
+        run: |
+          set -euo pipefail
+
+          DB_USER="$(docker exec airline-db printenv MYSQL_USER)"
+          DB_PASS="$(docker exec airline-db printenv MYSQL_PASSWORD)"
+          DB_NAME="$(docker exec airline-db printenv MYSQL_DATABASE)"
+          AMOUNT=250000000
+          ENTRY_TYPE=26
+          DESCRIPTION="One-time cash injection 2026-06-21"
+          TARGETS="'Lash Air','Island Air','Coral Air'"
+
+          mysql_query() {
+            docker exec airline-db mysql -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" "$@"
+          }
+
+          echo "Before:"
+          mysql_query -e "
+            SELECT a.id, a.name, ai.balance
+            FROM airline a
+            JOIN airline_info ai ON ai.airline = a.id
+            WHERE a.name IN (${TARGETS})
+            ORDER BY a.name;
+          "
+
+          TARGET_COUNT="$(mysql_query -N -e "SELECT COUNT(*) FROM airline WHERE name IN (${TARGETS});" | tr -d '\r\n')"
+          if [ "$TARGET_COUNT" != "3" ]; then
+            echo "Expected 3 target airlines, found ${TARGET_COUNT}" >&2
+            exit 1
+          fi
+
+          DUP_COUNT="$(mysql_query -N -e "
+            SELECT COUNT(*)
+            FROM airline_ledger l
+            JOIN airline a ON a.id = l.airline
+            WHERE a.name IN (${TARGETS})
+              AND l.entry_type = ${ENTRY_TYPE}
+              AND l.amount = ${AMOUNT}
+              AND l.description = '${DESCRIPTION}';
+          " | tr -d '\r\n')"
+          if [ "$DUP_COUNT" = "3" ]; then
+            echo "Injection already applied; skipping."
+          elif [ "$DUP_COUNT" != "0" ]; then
+            echo "Partial duplicate injection rows found: ${DUP_COUNT}" >&2
+            exit 1
+          else
+            mysql_query -e "
+              START TRANSACTION;
+              UPDATE airline_info ai
+              JOIN airline a ON a.id = ai.airline
+              SET ai.balance = ai.balance + ${AMOUNT}
+              WHERE a.name IN (${TARGETS});
+              INSERT INTO airline_ledger (airline, cycle, entry_type, amount, description)
+              SELECT id, (SELECT cycle FROM cycle LIMIT 1), ${ENTRY_TYPE}, ${AMOUNT}, '${DESCRIPTION}'
+              FROM airline
+              WHERE name IN (${TARGETS});
+              COMMIT;
+            "
+          fi
+
+          echo "After:"
+          mysql_query -e "
+            SELECT a.id, a.name, ai.balance
+            FROM airline a
+            JOIN airline_info ai ON ai.airline = a.id
+            WHERE a.name IN (${TARGETS})
+            ORDER BY a.name;
+            SELECT a.name, l.cycle, l.entry_type, l.amount, l.description
+            FROM airline_ledger l
+            JOIN airline a ON a.id = l.airline
+            WHERE a.name IN (${TARGETS})
+              AND l.entry_type = ${ENTRY_TYPE}
+              AND l.amount = ${AMOUNT}
+              AND l.description = '${DESCRIPTION}'
+            ORDER BY a.name;
+          "
+
+          docker restart airline-app >/dev/null
