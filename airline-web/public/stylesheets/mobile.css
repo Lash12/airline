@@ -252,31 +252,45 @@
         line-height: 1;
     }
 
-    /* Airport page: keep wide data tables as scrollable grids instead of letting
-       the global rule collapse every cell to width:auto (which stacks values
-       vertically and is unreadable). Scoped to #airportCanvas so other pages and
-       the #linksCanvas opt-out are unaffected. */
+    /* Airport page: keep wide data tables as horizontally-scrollable grids instead of
+       letting the global rule collapse every cell (which stacks values vertically and is
+       unreadable). These tables are CSS-table layout (display:table/table-row/table-cell),
+       where min-width on rows and overflow-x on the table are both ignored — so on mobile
+       we convert the airport tables to a block scroller with flex rows. The global rules
+       use !important, so these overrides must too. Scoped to #airportCanvas so other pages
+       and the #linksCanvas opt-out are unaffected. */
     #airportCanvas .table.data {
-        overflow-x: auto;
+        display: block !important;
+        overflow-x: auto !important;
         -webkit-overflow-scrolling: touch;
-        min-width: 0;
+        width: 100%;
     }
     #airportCanvas .table.data .table-header,
     #airportCanvas .table.data .table-row {
-        min-width: 560px;        /* force overflow so columns keep their proportions */
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        min-width: 560px;        /* force the row wider than the viewport so it scrolls */
+        height: auto;
     }
     #airportCanvas .table.data .cell {
-        width: auto;             /* the inline % widths on each cell still apply via flex-basis */
-        white-space: nowrap;     /* override the global word-break stacking */
-        word-break: normal;
-        overflow-wrap: normal;
+        display: block !important;
+        flex: 1 0 auto !important;
+        width: auto !important;
+        min-width: 84px !important;   /* override global min-width:0 !important */
+        white-space: nowrap !important;  /* override global white-space:normal !important */
+        word-break: normal !important;
+        overflow-wrap: normal !important;
         font-size: 11px;
         padding-left: 4px;
         padding-right: 4px;
     }
+    #airportCanvas .table.data .table-header .cell {
+        font-size: 10px;
+    }
     /* Bigger tap target for clickable asset rows + a subtle hint they open a modal. */
     #airportCanvas .table.data .table-row.clickable {
-        min-height: 34px;
+        min-height: 36px;
+        align-items: center;
         cursor: pointer;
     }
 }
