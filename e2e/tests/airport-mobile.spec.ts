@@ -20,6 +20,7 @@ async function bootstrap(page: Page) {
       await ajax({type:"PUT",url:`/airlines/${id}/profiles/0?airportId=3599`,contentType:"application/json; charset=utf-8",dataType:"json"});
       await (window as any).updateAirlineInfo(id);
       await ajax({type:"POST",url:`/airlines/${id}/tutorial?skipTutorial=true`,dataType:"json"});
+      a.skipTutorial = true;   // stop checkTutorial() from showing tutorial modals client-side
     }
   });
   await page.waitForFunction(()=> (window as any).activeAirline?.headquarterAirport, { timeout:15000 });
@@ -34,8 +35,11 @@ test("airport page mobile: tables scroll, asset modal opens", async ({ page }) =
   // URL only loads the SPA shell on the map; it does not activate the airport canvas).
   await page.evaluate(() => (window as any).showAirportDetails(3599));
   await page.waitForSelector("#airportDetailsAssetCatalog .table-row", { timeout: 15000 });
-  // Dismiss any tutorial/announcement modal so it doesn't intercept the row tap below.
-  await page.evaluate(() => (window as any).closeAllModals && (window as any).closeAllModals());
+  // Belt-and-suspenders: remove any tutorial/announcement overlay so it can't intercept the tap.
+  await page.evaluate(() => {
+    (window as any).closeAllModals && (window as any).closeAllModals();
+    document.querySelectorAll('.tutorial.modal, #tutorialHtml').forEach(e => (e as HTMLElement).remove());
+  });
 
   // Catalog table should overflow horizontally (scrollWidth > clientWidth), not stack.
   const overflow = await page.$eval("#airportDetailsAssetCatalog", el => el.scrollWidth > el.clientWidth + 4);
