@@ -182,6 +182,19 @@ function changeColoredElementValue(element, newValue) {
 	}
 }
 
+// Compact money for tight (mobile) layouts: $1.2M, $340K, $950. Full precision
+// stays in detail panels/modals. Non-finite input renders "-".
+function abbreviateMoney(value) {
+	if (!Number.isFinite(value)) return "-";
+	var sign = value < 0 ? "-" : "";
+	var n = Math.abs(value);
+	function trim(x) { return (Math.round(x * 10) / 10).toString(); }
+	if (n >= 1e9) return sign + "$" + trim(n / 1e9) + "B";
+	if (n >= 1e6) return sign + "$" + trim(n / 1e6) + "M";
+	if (n >= 1e3) return sign + "$" + trim(n / 1e3) + "K";
+	return sign + "$" + Math.round(n);
+}
+
 function commaSeparateNumber(val, shorthand = "") {
     var isNegative = val < 0
     val = Math.abs(Math.trunc(Number(val) * 1000) / 1000)
