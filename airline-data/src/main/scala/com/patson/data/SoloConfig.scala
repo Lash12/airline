@@ -215,4 +215,15 @@ object SoloConfig {
   // becomes ESTABLISHED (upstream 3) so a player's own 2 airlines can form a real alliance.
   val loungeWithoutAlliance : Boolean = boolAt("solo.lounge.allowWithoutAlliance", false)
   val allianceMinMembers : Int = intAt("solo.alliance.minMembers", 3)
+
+  // Air cargo (single-player). Off by default so default/multiplayer deploys are byte-identical.
+  // Cargo is modeled as a parallel demand layer (CargoDemandGenerator) driven by economic mass,
+  // carried in the spare belly of existing passenger flights. demandAmplitude scales the overall
+  // cargo-demand size; captureRatio is the fraction of a pair's cargo demand a single route can win;
+  // revenuePerUnitKm prices a carried cargo-unit per km. captureRatio/revenuePerUnitKm are consumed
+  // by the belly-cargo revenue step (Phase C-2); demandAmplitude + enabled drive the demand layer (C-1).
+  val cargoEnabled : Boolean = boolAt("solo.cargo.enabled", false)
+  val cargoDemandAmplitude : Double = doubleAt("solo.cargo.demandAmplitude", 1.0)
+  val cargoCaptureRatio : Double = doubleAt("solo.cargo.captureRatio", 0.5)
+  val cargoRevenuePerUnitKm : Double = doubleAt("solo.cargo.revenuePerUnitKm", 0.0002)
 }

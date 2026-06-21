@@ -183,6 +183,13 @@ object DemandGenerator {
     val countryRelationships = CountrySource.getCountryMutualRelationships()
     val destinationList = DestinationSource.loadAllEliteDestinations()
 
+    // Air cargo demand layer (Phase C-1): inspection only, no gameplay effect. Gated by
+    // solo.cargo.enabled so it never runs in default/multiplayer deploys. Reuses the airports +
+    // country relationships already loaded above to avoid a second airport load.
+    if (SoloConfig.cargoEnabled) {
+      println(CargoDemandGenerator.summarizeCycle(airports, countryRelationships))
+    }
+
     // Diagnostic (solo.demand.profile): measure base-demand vs chunk-generation
     // cost to decide if memoizing the base layer is worthwhile. Zero overhead off.
     val profileDemand = SoloConfig.demandProfile
