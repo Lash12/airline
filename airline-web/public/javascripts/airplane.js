@@ -1,5 +1,8 @@
 var loadedModelsById = {}
 var loadedModelsOwnerInfo = []
+// Format a cargo capacity (tons). Guards against a stale cached model payload that
+// predates the cargo fields so we render "—" rather than a literal "NaN".
+function formatCargoTons(v) { return Number.isFinite(v) ? commaSeparateNumber(v) + ' t' : '—' }
 var loadedUsedAirplanes = []
 var selectedModelId
 var selectedModel
@@ -264,7 +267,7 @@ function updateAirplaneModelTable(sortProperty, sortOrder) {
             `<div class='cell'>${modelOwnerInfo.airplaneType}</div>` +
             `<div class='cell' align='right'>$${commaSeparateNumber(modelOwnerInfo.price)}</div>` +
             `<div class='cell' align='right'>${modelOwnerInfo.capacity}</div>` +
-            `<div class='cell' align='right' title='Freighter ${commaSeparateNumber(modelOwnerInfo.freighterCargoCapacity)} t / Belly ${commaSeparateNumber(modelOwnerInfo.bellyCargoCapacity)} t'>${commaSeparateNumber(modelOwnerInfo.freighterCargoCapacity)} t</div>` +
+            `<div class='cell' align='right' title='Freighter ${formatCargoTons(modelOwnerInfo.freighterCargoCapacity)} / Belly ${formatCargoTons(modelOwnerInfo.bellyCargoCapacity)}'>${formatCargoTons(modelOwnerInfo.freighterCargoCapacity)}</div>` +
             `<div class='cell' align='right'>${getGradeStarsImgs(modelOwnerInfo.quality)}</div>` +
             `<div class='cell' align='right'>${Math.round(convertDistance(modelOwnerInfo.range))} ${distanceLabel()}</div>` +
             `<div class='cell' align='right'>${modelOwnerInfo.trips}</div>` +
@@ -843,7 +846,7 @@ function selectAirplaneModel(model) {
 	$('#airplaneCanvas .modelName').text(model.name)
 	$('#airplaneCanvas .modelFamily').text(model.family)
 	$('#airplaneCanvas #capacity').text(model.capacity)
-	$('#airplaneCanvas #cargoCapacity').text('Freighter ' + commaSeparateNumber(model.freighterCargoCapacity) + ' t / Belly ' + commaSeparateNumber(model.bellyCargoCapacity) + ' t')
+	$('#airplaneCanvas #cargoCapacity').text('Freighter ' + formatCargoTons(model.freighterCargoCapacity) + ' / Belly ' + formatCargoTons(model.bellyCargoCapacity))
 	$('#airplaneCanvas #airplaneTypeQuality').empty()
     $('#airplaneCanvas #airplaneTypeQuality').append($stars)
 	$('#airplaneCanvas #airplaneType').text(model.airplaneType)
