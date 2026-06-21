@@ -191,4 +191,19 @@ object CargoDemandGenerator {
     val cacheState = if (fullReset) "full-reset" else s"incremental evicted=$changed"
     s"[cargo] demand summary: cache $cacheState; $pairsWithCargo directed pairs with cargo, total $total weekly cargo-units (N=${ordered.length})"
   }
+
+  /**
+   * Top cargo-demand destinations from `fromAirport` among `candidates`.
+   * Pure: callers supply the candidate airports and a country->relationship map
+   * for `fromAirport`'s country (so this opens no DB connection). O(candidates).
+   */
+  def topCargoDestinations(fromAirport: Airport, candidates: List[Airport], relationshipsByCountry: Map[String, Int], limit: Int): List[(Airport, Int)] = {
+    candidates.iterator.filter(_.id != fromAirport.id).flatMap { to =>
+      val distance = Util.calculateDistance(fromAirport.latitude, fromAirport.longitude, to.latitude, to.longitude).toInt
+      val relationship = relationshipsByCountry.getOrElse(to.countryCode, 0)
+      val affinity = Computation.calculateAffinityValue(fromAirport.zone, to.zone, relationship)
+      val demand = computeCargoDemandBetweenAirports(fromAirport, to, affinity, distance)
+      if (demand > 0) Some((to, demand)) else None
+    }.toList.sortBy(-_._2).take(limit)
+  }
 }

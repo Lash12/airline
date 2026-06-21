@@ -85,6 +85,28 @@ class CargoDemandGeneratorSpec extends AnyWordSpecLike with Matchers {
     }
   }
 
+  "topCargoDestinations" should {
+    "exclude self, keep only demand>0, sort desc, and cap at limit" in {
+      // mk derives lat/lng from iata.hashCode, so distance (hence demand) varies per
+      // iata; use several high-mass same-country candidates + one near-zero-mass one so
+      // the contract (cap/sort/filter/exclude) is exercised deterministically without
+      // depending on any single pair's exact demand.
+      val from = mk("FROM", 40000, 5_000_000, countryCode = "US")
+      val candidates = (1 to 8).toList.map(i => mk(s"DST$i", 40000, 4_000_000, countryCode = "US"))
+      val tiny = mk("TINY", 1000, 1000, countryCode = "US") // ~0 economic mass -> demand 0
+      val rels = Map("US" -> 5)
+
+      val result = CargoDemandGenerator.topCargoDestinations(from, from :: tiny :: candidates, rels, limit = 3)
+
+      result.size should be <= 3 // capped at limit
+      result should not be empty // productive path exercised
+      result.map(_._1.id) should not contain from.id // excludes self
+      result.map(_._1.iata) should not contain "TINY" // zero-demand filtered out
+      result.map(_._2) shouldBe result.map(_._2).sorted.reverse // descending by demand
+      assert(result.map(_._2).forall(_ > 0), "all demand should be > 0")
+    }
+  }
+
   "prepareCargoCache" must {
     "full-reset cold, then invalidate only changed airports".in {
       val a = mk("AAA", 30000, 1_000_000)
