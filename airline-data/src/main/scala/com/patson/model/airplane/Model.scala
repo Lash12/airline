@@ -78,6 +78,24 @@ case class Model(name : String, family : String = "", capacity : Int, quality : 
 
   val airplaneTypeSize : Double = size(airplaneType)
 
+  private def cargoRangeFactor(min: Double, max: Double): Double =
+    Math.max(min, Math.min(max, range.toDouble / 6000.0))
+
+  def bellyCargoCapacity : Int = {
+    val categoryFactor = category match {
+      case Category.SPECIAL => 0.0
+      case Category.SMALL => 0.02
+      case Category.REGIONAL => 0.04
+      case Category.MEDIUM => 0.08
+      case Category.LARGE => 0.12
+      case Category.EXTRAORDINARY => if (airplaneType == SUPERSONIC) 0.0 else 0.10
+    }
+    Math.round(capacity * categoryFactor * cargoRangeFactor(0.75, 1.35)).toInt
+  }
+
+  def freighterCargoCapacity : Int =
+    Math.round(capacity * 0.55 * cargoRangeFactor(0.8, 1.4)).toInt
+
   //weekly fixed cost
   val baseMaintenanceCost : Int = {
     (capacity / 50.0 * 725).toInt //46,500
@@ -200,14 +218,14 @@ object Model {
       grouping.find(_._2.contains(airplaneType)).map(_._1).getOrElse(Model.Category.EXTRAORDINARY)
     }
 
-    val capacityRange : Map[Category.Value, (Int, Int)]= {
+    lazy val capacityRange : Map[Category.Value, (Int, Int)]= {
       AirplaneModelCache.allModels.values.groupBy(_.category).view.mapValues { models =>
         val sortedByCapacity = models.toList.sortBy(_.capacity)
         (sortedByCapacity.head.capacity, sortedByCapacity.last.capacity)
       }.toMap
     }
 
-    val speedRange: Map[Category.Value, (Int, Int)] = {
+    lazy val speedRange: Map[Category.Value, (Int, Int)] = {
       AirplaneModelCache.allModels.values.groupBy(_.category).view.mapValues { models =>
         val sortedBySpeed = models.toList.sortBy(_.speed)
         (sortedBySpeed.head.speed, sortedBySpeed.last.speed)

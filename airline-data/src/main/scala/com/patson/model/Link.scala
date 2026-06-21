@@ -184,6 +184,18 @@ case class Link(from : Airport, to : Airport, airline: Airline, price : LinkClas
   }
 }
 
+case class CargoLink(from : Airport, to : Airport, airline: Airline, distance : Int, var cargoCapacity : Int, duration : Int, var frequency : Int, var flightNumber : Int = 0, var id : Int = 0) extends Transport {
+  override val transportType = TransportType.CARGO_FLIGHT
+  override val cost = LinkClassValues.getInstance()
+  override val price = LinkClassValues.getInstance()
+  override var capacity = LinkClassValues.getInstance()
+  override var minorDelayCount = 0
+  override var majorDelayCount = 0
+  override var cancellationCount = 0
+  override val frequencyByClass = (_ : LinkClass) => 0
+  override def computedQuality() : Int = 0
+}
+
 object Link {
   val MAX_QUALITY = 100
   val HIGH_FREQUENCY_THRESHOLD = 21

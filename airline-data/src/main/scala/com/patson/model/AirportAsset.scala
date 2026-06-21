@@ -100,8 +100,9 @@ object AirportAssetType {
   case object CONVENTION_CENTER extends AirportAssetType("CONVENTION_CENTER", "Convention Center", ATTRACTION, AirportBoostType.FINANCIAL_HUB, 5, 200_000_000L, 20, 6, "CONVENTION_CENTER.png", "Strengthens this airport as a financial hub, drawing more inbound business demand.")
   case object LANDMARK          extends AirportAssetType("LANDMARK", "Landmark", ATTRACTION, AirportBoostType.INTERNATIONAL_HUB, 4, 250_000_000L, 24, 7, "LANDMARK.png", "Strengthens this airport as an international hub, drawing more inbound long-haul tourist demand.")
   case object METRO             extends AirportAssetType("METRO", "Metro / Transit", INFRASTRUCTURE, AirportBoostType.POPULATION, 30000, 200_000_000L, 20, 5, "SUBWAY.png", "Grows the catchment population around this airport, raising demand across the board. No direct income.")
+  case object CARGO_TERMINAL    extends AirportAssetType("CARGO_TERMINAL", "Cargo Terminal", INFRASTRUCTURE, AirportBoostType.CARGO, 15, 180_000_000L, 16, 4, "SUBWAY.png", "Raises cargo throughput at this airport, improving cargo carried on passenger and freight routes. No direct income.")
 
-  val values : List[AirportAssetType] = List(SHOPPING_MALL, GRAND_HOTEL, RESORT, CONVENTION_CENTER, LANDMARK, METRO)
+  val values : List[AirportAssetType] = List(SHOPPING_MALL, GRAND_HOTEL, RESORT, CONVENTION_CENTER, LANDMARK, METRO, CARGO_TERMINAL)
   def fromId(id : String) : Option[AirportAssetType] = values.find(_.id == id)
 
   private def roundTo1000(v : Long) : Long = Math.round(v / 1000.0) * 1000

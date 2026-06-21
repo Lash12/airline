@@ -28,17 +28,17 @@ class AirlineGradeSpec extends AnyFunSuite with Matchers {
   }
 
   test("AirlineGradeStockPrice: value below smallest threshold returns level 0 with correct ceiling") {
-    val grade = AirlineGradeStockPrice.findGrade(0.5)
+    val grade = AirlineGradeStockPrice.findGrade(0.3)
     grade.level shouldBe 0
-    grade.reputationCeiling shouldBe 0.7
+    grade.reputationCeiling shouldBe 0.32
     grade.reputationFloor shouldBe 0.0
   }
 
   test("AirlineGradeStockPrice: penultimate value") {
-    val grade = AirlineGradeStockPrice.findGrade(1090.0)
-    grade.level shouldBe 12
-    grade.reputationFloor shouldBe 1075.0
-    grade.reputationCeiling shouldBe 1725.0
+    val grade = AirlineGradeStockPrice.findGrade(1300.0)
+    grade.level shouldBe AirlineGradeStockPrice.grades.length - 1
+    grade.reputationFloor shouldBe 1254.66
+    grade.reputationCeiling shouldBe 2333.67
   }
 
   test("AirlineGradeStockPrice: value above all thresholds returns level equal to grades length with MaxValue ceiling") {
@@ -46,6 +46,6 @@ class AirlineGradeSpec extends AnyFunSuite with Matchers {
     println(s"Grade: $grade")
     grade.level shouldBe AirlineGradeStockPrice.grades.length
     grade.reputationCeiling shouldBe Double.MaxValue
-    grade.reputationFloor shouldBe 1725.0
+    grade.reputationFloor shouldBe 2333.67
   }
 }

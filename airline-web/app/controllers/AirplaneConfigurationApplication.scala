@@ -26,8 +26,9 @@ class AirplaneConfigurationApplication @Inject()(cc: ControllerComponents) exten
       "economy" -> JsNumber(configuration.economyVal),
       "business" -> JsNumber(configuration.businessVal),
       "first" -> JsNumber(configuration.firstVal),
+      "cargoCapacity" -> JsNumber(configuration.cargoCapacity),
       "isDefault" -> JsBoolean(configuration.isDefault)
-      ))
+    ))
   }
 
   def getConfigurations(airlineId : Int, modelId : Int) = AuthenticatedAirline(airlineId) { request : AuthenticatedRequest[Any, Airline] =>
@@ -49,10 +50,10 @@ class AirplaneConfigurationApplication @Inject()(cc: ControllerComponents) exten
     }
   }
   
-  def putConfiguration(airlineId : Int, modelId : Int, configurationId : Int, economy : Int, business : Int, first : Int, isDefault : Boolean) = AuthenticatedAirline(airlineId) { implicit request =>
+  def putConfiguration(airlineId : Int, modelId : Int, configurationId : Int, economy : Int, business : Int, first : Int, isDefault : Boolean, cargoCapacity : Int) = AuthenticatedAirline(airlineId) { implicit request =>
     val airline = AirlineCache.getAirline(airlineId, fullLoad = true).get
     println(s"check: ${airline.name} is ${airline.airlineType}")
-    if (economy < 0 || business < 0 || first < 0) {
+    if (economy < 0 || business < 0 || first < 0 || cargoCapacity < 0) {
       BadRequest("cannot have negative values for configurations")
     } else if (airline.airlineType == DiscountAirline && business > 0 || airline.airlineType == DiscountAirline && first > 0) {
       BadRequest("Discount airline cannot have business or first class")
@@ -61,8 +62,13 @@ class AirplaneConfigurationApplication @Inject()(cc: ControllerComponents) exten
     } else {
       ModelSource.loadModelById(modelId) match {
         case Some(model) =>
-          if (economy * ECONOMY.spaceMultiplier + business * BUSINESS.spaceMultiplier + first * FIRST.spaceMultiplier > model.capacity) {
+          val passengerSpace = economy * ECONOMY.spaceMultiplier + business * BUSINESS.spaceMultiplier + first * FIRST.spaceMultiplier
+          if (passengerSpace > model.capacity) {
             BadRequest("Configuration is not within capacity limit!")
+          } else if (cargoCapacity > 0 && passengerSpace > 0) {
+            BadRequest("Cargo configurations cannot have passenger seats.")
+          } else if (cargoCapacity > model.freighterCargoCapacity) {
+            BadRequest("Cargo capacity exceeds model freighter capacity.")
           } else if (model.quality == 10 && economy > 0) {
             BadRequest("5 star aircraft cannot have economy seats!")
           } else if (economy != 0 && economy < AirplaneConfiguration.MIN_SEATS_PER_CLASS || business != 0 && business < AirplaneConfiguration.MIN_SEATS_PER_CLASS || first != 0 && first < AirplaneConfiguration.MIN_SEATS_PER_CLASS) {
@@ -73,7 +79,7 @@ class AirplaneConfigurationApplication @Inject()(cc: ControllerComponents) exten
               if (existingConfigurations.size >= AirplaneConfiguration.MAX_CONFIGURATION_TEMPLATE_COUNT) {
                  BadRequest("too many configurations saved!")
               } else {
-                val newConfig = AirplaneConfiguration(economy, business, first, request.user, model, isDefault)
+                val newConfig = AirplaneConfiguration(economy, business, first, request.user, model, isDefault, cargoCapacity)
                 AirplaneSource.saveAirplaneConfigurations(List(newConfig))
                 Ok(Json.toJson(newConfig))
               }
@@ -84,7 +90,7 @@ class AirplaneConfigurationApplication @Inject()(cc: ControllerComponents) exten
                   if (existingConfig.airline.id != airlineId) {
                     BadRequest(s"configuration update failed, as the configuration with not owned by $airlineId !")
                   } else {
-                    val updatingConfig = existingConfig.copy(economyVal = economy, businessVal = business, firstVal = first, isDefault = isDefault)
+                    val updatingConfig = existingConfig.copy(economyVal = economy, businessVal = business, firstVal = first, isDefault = isDefault, cargoCapacity = cargoCapacity)
                     //check if this is set as default
                     if (!existingConfig.isDefault && isDefault) { //then unset the old default
                       AirplaneSource.loadAirplaneConfigurationById(airlineId, modelId).filter(_.isDefault).foreach { oldDefault =>

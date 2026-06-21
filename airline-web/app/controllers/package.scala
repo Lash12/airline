@@ -68,6 +68,7 @@ package object controllers {
         "name" -> JsString(airplaneModel.name),
         "family" -> JsString(airplaneModel.family),
         "capacity" -> JsNumber(airplaneModel.capacity),
+        "freighterCargoCapacity" -> JsNumber(airplaneModel.freighterCargoCapacity),
         "quality" -> JsNumber(airplaneModel.quality),
         "ascentBurn" -> JsNumber(airplaneModel.ascentBurn),
         "cruiseBurn" -> JsNumber(airplaneModel.cruiseBurn),
@@ -111,7 +112,8 @@ package object controllers {
         "sellValue" -> JsNumber(Computation.calculateAirplaneSellValue(airplane)),
         "dealerValue" -> JsNumber(airplane.dealerValue),
         "configurationId" -> JsNumber(airplane.configuration.id),
-        "configuration" -> Json.obj("economy" -> airplane.configuration.economyVal, "business" -> airplane.configuration.businessVal, "first" -> airplane.configuration.firstVal),
+        "configuration" -> Json.obj("economy" -> airplane.configuration.economyVal, "business" -> airplane.configuration.businessVal, "first" -> airplane.configuration.firstVal, "cargoCapacity" -> airplane.configuration.cargoCapacity),
+        "cargoCapacity" -> JsNumber(airplane.configuration.cargoCapacity),
         "homeAirportId" -> JsNumber(airplane.home.id),
       ))
     }
@@ -262,7 +264,10 @@ package object controllers {
         "capacity" -> Json.toJson(linkConsumption.link.capacity),
         "frequency" -> JsNumber(linkConsumption.link.frequency),
         "soldSeats" -> JsNumber(linkConsumption.link.soldSeats.total),
-        "quality" -> JsNumber(linkConsumption.link.computedQuality())))
+        "quality" -> JsNumber(linkConsumption.link.computedQuality()),
+        "cargoCapacity" -> JsNumber(linkConsumption.cargoCapacity),
+        "cargoCarried" -> JsNumber(linkConsumption.cargoCarried),
+        "cargoRevenue" -> JsNumber(linkConsumption.cargoRevenue)))
     }
   }
 
@@ -286,7 +291,10 @@ package object controllers {
           _.name
         }),
         "price" -> priceJson,
-        "capacity" -> Json.toJson(linkConsumption.link.capacity)))
+        "capacity" -> Json.toJson(linkConsumption.link.capacity),
+        "cargoCapacity" -> JsNumber(linkConsumption.cargoCapacity),
+        "cargoCarried" -> JsNumber(linkConsumption.cargoCarried),
+        "cargoRevenue" -> JsNumber(linkConsumption.cargoRevenue)))
     }
   }
 

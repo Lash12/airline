@@ -165,7 +165,7 @@ object AirplaneSimulation {
       case(airplane, linkAssignments) =>
         val baseDecayRate = Airplane.MAX_CONDITION.toDouble / airplane.model.lifespan //live the whole lifespan
         val decayRate = baseDecayRate / 3 + baseDecayRate * (2.0 / 3) * airplane.utilizationRate
-        val newCondition = airplane.condition - decayRate
+        val newCondition = Math.max(0.0, airplane.condition - decayRate)
 
         updatingAirplanes.append(airplane.copy(condition = newCondition))
     }

@@ -65,6 +65,24 @@ class CargoDemandGeneratorSpec extends AnyWordSpecLike with Matchers {
       println(s"domestic(affinity 5)=$domestic foreign(affinity 0)=$foreign")
       assert(domestic >= foreign)
     }
+
+    "prefer source-backed cargo hubs without replacing economic demand".in {
+      val hub = mk("HKG", 40000, 5_000_000)
+      val nonHub = mk("ZZZ", 40000, 5_000_000)
+      val destination = mk("AAA", 35000, 4_000_000)
+
+      val hubDemand = computeCargoDemandBetweenAirports(hub, destination, affinity = 5, distance = 2000)
+      val nonHubDemand = computeCargoDemandBetweenAirports(nonHub, destination, affinity = 5, distance = 2000)
+
+      hubDemand should be > nonHubDemand
+    }
+
+    "keep the strongest known cargo hub pair under the cap".in {
+      val topPairMultiplier = CargoDemandGenerator.cargoHubMultiplier(mk("HKG", 40000, 5_000_000), mk("PVG", 40000, 5_000_000))
+
+      topPairMultiplier shouldBe 1.35 +- 0.0001
+      topPairMultiplier should be <= 1.4
+    }
   }
 
   "prepareCargoCache" must {

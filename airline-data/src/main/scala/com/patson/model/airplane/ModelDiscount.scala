@@ -11,7 +11,7 @@ import scala.collection.mutable.ListBuffer
 case class ModelDiscount(modelId : Int, discount : Double, discountType : DiscountType.Value, discountReason : DiscountReason.Value) {
   val description = discountReason match {
     case DiscountReason.PREFERRED_SUPPLIER => s"${(discount * 100).toInt}% off ${DiscountType.description(discountType)} for having one preferred supplier."
-    case DiscountReason.LOW_DEMAND => s"${(discount * 100).toInt}% off ${DiscountType.description(discountType)} from manufacturer relationship."
+    case DiscountReason.LOW_DEMAND => s"${(discount * 100).toInt}% off ${DiscountType.description(discountType)} from low demand."
   }
 }
 

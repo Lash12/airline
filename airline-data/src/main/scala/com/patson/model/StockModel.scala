@@ -65,14 +65,15 @@ object StockModel {
 
   //currently adds up to 110
   val allMetrics: Map[String, StockMetric] = Map(
-    "eps" ->                  StockMetric(30, 0.1, 1.0),
+    "eps" ->                  StockMetric(30, 0.1, 5.0),
     "pask" ->                 StockMetric(25, 0.05, 0.08),
     "dividends_per_share" ->  StockMetric(25, 0.0, 0.005),
-    "interest" ->             StockMetric(5, 0.26, 0.6), //there's an extra 5 here
+    "interest" ->             StockMetric(5, 0.22, 0.0),
     "satisfaction" ->         StockMetric(5, 0.5, 0.9),
     "link_count" ->           StockMetric(5, 50, 400),
     "on_time" ->              StockMetric(5, 0.75, 0.95),
     "codeshares" ->           StockMetric(5, 200, 5000),
+    "airport" ->              StockMetric(5, 5, 500),
     "rep_leaderboards" ->     StockMetric(5, 0, 200),
   )
 
@@ -89,7 +90,13 @@ object StockModel {
   }
 
   def getMetricValue(metric: StockMetric, airlineValue: Double): Double = {
-    val targetPercent = 1 - (metric.target - airlineValue) / (metric.target - metric.floor)
+    if (metric.target == metric.floor) return if (airlineValue >= metric.target) metric.value else 0
+    val targetPercent =
+      if (metric.target > metric.floor) {
+        (airlineValue - metric.floor) / (metric.target - metric.floor)
+      } else {
+        (metric.floor - airlineValue) / (metric.floor - metric.target)
+      }
     metric.value * Math.max(0, Math.min(1, targetPercent))
   }
 

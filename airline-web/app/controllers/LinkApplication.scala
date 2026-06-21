@@ -8,7 +8,7 @@ import com.patson.model.negotiation.LinkNegotiationDiscount
 import com.patson.model.event.Olympics
 import com.patson.model.{FlightPreferenceType, Notification, NotificationCategory, _}
 import com.patson.util.{AirlineCache, AirplaneOwnershipCache, AirportCache, AllianceCache, CountryCache}
-import com.patson.{DemandGenerator, Util}
+import com.patson.{CargoDemandGenerator, DemandGenerator, Util}
 import controllers.AuthenticationObject.AuthenticatedAirline
 
 import javax.inject.Inject
@@ -70,6 +70,9 @@ class LinkApplication @Inject()(cc: ControllerComponents) extends AbstractContro
       "distance" -> JsNumber(linkConsumption.link.distance),
       "profit" -> JsNumber(linkConsumption.profit),
       "revenue" -> JsNumber(linkConsumption.revenue),
+      "cargoCapacity" -> JsNumber(linkConsumption.cargoCapacity),
+      "cargoCarried" -> JsNumber(linkConsumption.cargoCarried),
+      "cargoRevenue" -> JsNumber(linkConsumption.cargoRevenue),
       "fuelCost" -> JsNumber(linkConsumption.fuelCost),
       "fuelTax" -> JsNumber(linkConsumption.fuelTax),
       "crewCost" -> JsNumber(linkConsumption.crewCost),
@@ -259,6 +262,71 @@ class LinkApplication @Inject()(cc: ControllerComponents) extends AbstractContro
   )
 
   val countryByCode = CountrySource.loadAllCountries().map(country => (country.countryCode, country)).toMap
+
+  def addCargoLink(airlineId : Int) = AuthenticatedAirline(airlineId) { request => addCargoLinkBlock(airlineId, request) }
+
+  def addCargoLinkBlock(airlineId : Int, request : AuthenticatedRequest[AnyContent, Airline]) : Result = {
+    val json = request.body.asInstanceOf[AnyContentAsJson].json
+    val fromAirport = AirportCache.getAirport((json \ "fromAirportId").as[Int], true).getOrElse(return BadRequest("From airport not found"))
+    val toAirport = AirportCache.getAirport((json \ "toAirportId").as[Int], true).getOrElse(return BadRequest("To airport not found"))
+    val airplaneFrequencies = (json \ "airplanes").as[Map[Airplane, Int]](AirplaneAssignmentsRead)
+
+    if (airplaneFrequencies.isEmpty) return BadRequest("Cannot insert cargo link - no freighter assigned")
+    val distance = Util.calculateDistance(fromAirport.latitude, fromAirport.longitude, toAirport.latitude, toAirport.longitude).toInt
+    val models = airplaneFrequencies.keys.map(_.model).toSet
+    if (models.size != 1) return BadRequest("Cannot insert cargo link - not all airplanes are same model")
+    val model = models.head
+    val validationReasons = LinkApplication.validateModelForLink(model, request.user, fromAirport, toAirport)
+    if (validationReasons.nonEmpty) return BadRequest("Cannot insert cargo link - " + validationReasons.mkString(" "))
+
+    val existingLink = LinkSource.loadCargoLinkByAirportsAndAirline(fromAirport.id, toAirport.id, airlineId)
+    val existingLinkId = existingLink.map(_.id).getOrElse(0)
+    val flightMinutesRequiredPerFrequency = Computation.calculateFlightMinutesRequired(model, distance)
+    val assignments = airplaneFrequencies.map { case (airplane, frequency) =>
+      if (airplane.owner.id != airlineId) return BadRequest(s"Cannot insert cargo link - airplane $airplane is not owned by ${request.user}")
+      if (airplane.home.id != fromAirport.id) return BadRequest(s"Cannot insert cargo link - airplane $airplane is not based in $fromAirport")
+      if (airplane.configuration.cargoCapacity <= 0 || airplane.configuration.total > 0) return BadRequest(s"Cannot insert cargo link - airplane $airplane is not freighter-configured")
+      if (frequency <= 0) return BadRequest("Cannot insert cargo link - future frequency is 0")
+      val existingFrequency = AirplaneSource.loadAirplaneLinkAssignmentsByAirplaneId(airplane.id).getFrequencyByLink(existingLinkId)
+      val flightMinutesDelta = flightMinutesRequiredPerFrequency * (frequency - existingFrequency)
+      if (flightMinutesDelta > 0 && airplane.availableFlightMinutes < flightMinutesDelta) {
+        return BadRequest(s"Cannot insert cargo link - airplane require flight minutes : $flightMinutesDelta, but only have ${airplane.availableFlightMinutes} left")
+      }
+      airplane -> LinkAssignment(frequency, frequency * flightMinutesRequiredPerFrequency)
+    }
+
+    val frequency = assignments.values.map(_.frequency).sum
+    val cargoCapacity = airplaneFrequencies.map { case (airplane, frequency) => airplane.configuration.cargoCapacity * frequency }.sum
+    if (frequency == 0 || cargoCapacity == 0) return BadRequest("Cannot insert cargo link - cargo capacity is 0")
+
+    val cargoLink = CargoLink(fromAirport, toAirport, request.user, distance, cargoCapacity, Computation.calculateDuration(model, distance), frequency)
+    cargoLink.flightNumber = existingLink.map(_.flightNumber).getOrElse(LinkApplication.getNextAvailableFlightNumber(request.user))
+    existingLink.foreach(existing => cargoLink.id = existing.id)
+
+    val savedLink =
+      if (existingLink.isEmpty) LinkSource.saveLink(cargoLink).getOrElse(return UnprocessableEntity("Cannot insert cargo link"))
+      else {
+        LinkSource.updateLink(cargoLink) match {
+          case 1 => cargoLink
+          case _ => return UnprocessableEntity("Cannot update cargo link")
+        }
+      }
+    LinkSource.updateAssignedPlanes(savedLink.id, assignments)
+
+    Ok(Json.obj(
+      "id" -> savedLink.id,
+      "transportType" -> "CARGO_FLIGHT",
+      "fromAirportId" -> fromAirport.id,
+      "toAirportId" -> toAirport.id,
+      "airlineId" -> request.user.id,
+      "distance" -> distance,
+      "duration" -> savedLink.duration,
+      "frequency" -> savedLink.frequency,
+      "cargoCapacity" -> cargoCapacity,
+      "weeklyCargoDemand" -> CargoDemandGenerator.demandFor(fromAirport, toAirport),
+      "flightCode" -> LinkUtil.getFlightCode(request.user, savedLink.flightNumber)
+    ))
+  }
 
   def addLinkBlock(request : AuthenticatedRequest[AnyContent, Airline]) : Result = {
     val incomingLink = request.body.asInstanceOf[AnyContentAsJson].json.as[Link]

@@ -61,6 +61,9 @@ jobs:
             -Dsolo.ai.fleet.enabled=true
             -Dsolo.ai.bases.enabled=true
             -Dsolo.airportAssets.enabled=true
+            -Dsolo.cargo.enabled=true
+            -Dsolo.cargo.captureRatio=0.5
+            -Dsolo.cargo.revenuePerUnitKm=0.0002
             -Dsolo.news.enabled=true
             -Dsolo.demand.memoize=true
             -Dsolo.progression.enabled=true
@@ -80,6 +83,9 @@ jobs:
             -Dsolo.bankruptcy.assetsThreshold=-150000000
             -Dsolo.consultant.enabled=true
             -Dsolo.airportAssets.enabled=true
+            -Dsolo.cargo.enabled=true
+            -Dsolo.cargo.captureRatio=0.5
+            -Dsolo.cargo.revenuePerUnitKm=0.0002
             -Dsolo.lounge.allowWithoutAlliance=true
             -Dsolo.alliance.minMembers=2
             -Dsolo.push.enabled=true

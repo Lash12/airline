@@ -51,7 +51,7 @@ abstract class Transport extends IdObject{
    */
   def getDelayRatio: Double = {
     if (frequency == 0){
-      return 0.0
+      return 1.0
     } else {
       Math.max(0, 1 - (minorDelayCount * Link.DELAY_MINOR_ONTIME + majorDelayCount * Link.DELAY_MAJOR_ONTIME + cancellationCount * Link.CANCELLATION_ONTIME) / frequency)
     }
@@ -120,7 +120,7 @@ abstract class Transport extends IdObject{
 
 object TransportType extends Enumeration {
   type TransportType = Value
-  val FLIGHT, GENERIC_TRANSIT = Value
+  val FLIGHT, GENERIC_TRANSIT, CARGO_FLIGHT = Value
 }
 
 

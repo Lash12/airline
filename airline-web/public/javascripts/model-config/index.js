@@ -80,9 +80,10 @@ const AircraftConfig = (() => {
 
     function _getValidation(config) {
         if (config.maxCapacity == null) throw new Error(`AircraftConfig: config.maxCapacity missing on config ${config.id}`);
-        const { economy, business, first, maxCapacity, maxSeats } = config;
+        const { economy, business, first, cargoCapacity, maxCapacity, maxSeats } = config;
         const totalSeats    = economy + business + first;
         const totalCapacity = economy + business * 2.5 + first * 6;
+        const maxCargoCapacity = config.maxCargoCapacity || 0;
         const minSeats = gameConstants.aircraft.minSeatsPerClass;
         const minViolations = ['economy', 'business', 'first'].filter(cls => {
             const count = config[cls];
@@ -91,15 +92,19 @@ const AircraftConfig = (() => {
         const minSeatsError = minViolations.length > 0
             ? `${minViolations.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(', ')} must have at least ${minSeats} seats`
             : '';
-        const isValid = totalCapacity <= maxCapacity && totalSeats <= maxSeats && minViolations.length === 0;
+        const cargoError = cargoCapacity > 0 && totalSeats > 0
+            ? 'Cargo configs cannot have passenger seats'
+            : (cargoCapacity > maxCargoCapacity ? `Cargo capacity cannot exceed ${maxCargoCapacity}` : '');
+        const isValid = totalCapacity <= maxCapacity && totalSeats <= maxSeats && minViolations.length === 0 && cargoError === '';
         const seatsColor    = totalSeats    > maxSeats    ? 'crimson' : 'inherit';
         const capacityColor = totalCapacity > maxCapacity ? 'crimson' : 'inherit';
+        const cargoColor = cargoCapacity > maxCargoCapacity || (cargoCapacity > 0 && totalSeats > 0) ? 'crimson' : 'inherit';
         const borderColor = !isValid
             ? 'crimson'
             : (totalCapacity === maxCapacity || totalSeats === maxSeats)
                 ? 'forestgreen'
                 : 'inherit';
-        return { isValid, totalCapacity, totalSeats, capacityColor, seatsColor, borderColor, minSeatsError };
+        return { isValid, totalCapacity, totalSeats, capacityColor, seatsColor, cargoColor, borderColor, minSeatsError, cargoError };
     }
 
     // -------------------------------------------------------------------------
@@ -168,10 +173,12 @@ const AircraftConfig = (() => {
             <div><label>First:</label><input type="number" class="ac-input" data-class="first" min="0" value="${config.first}"><a class="config-btn-max img-button" data-class="first" aria-label="Increase first seats to max">➞</a></div>
             <div><label>Business:</label><input type="number" class="ac-input" data-class="business" min="0" value="${config.business}"><a class="config-btn-max img-button" data-class="business" aria-label="Increase business seats to max">➞</a></div>
             <div><label>Economy:</label><input type="number" class="ac-input" data-class="economy" min="0" value="${config.economy}"><a class="config-btn-max img-button" data-class="economy" aria-label="Increase economy seats to max">➞</a></div>
+            <div><label>Cargo:</label><input type="number" class="ac-input" data-class="cargoCapacity" min="0" value="${config.cargoCapacity || 0}"><a class="config-btn-max img-button" data-class="cargoCapacity" aria-label="Set freighter cargo capacity to max">➞</a></div>
         </div>`;
 
         const statsHtml = `<p class="ac-stats" style="margin:2px 0;text-align:center;">using <span class="ac-capacity-stat" style="color:${validation.capacityColor}">${validation.totalCapacity} of ${config.maxCapacity} capacity</span></p>`
-            + `<p class="ac-min-seats-error" style="margin:2px 0;text-align:center;color:crimson;${validation.minSeatsError ? '' : 'display:none;'}">${validation.minSeatsError}</p>`;
+            + `<p class="ac-cargo-stat" style="margin:2px 0;text-align:center;color:${validation.cargoColor};">cargo ${config.cargoCapacity || 0} of ${config.maxCargoCapacity || 0}</p>`
+            + `<p class="ac-min-seats-error" style="margin:2px 0;text-align:center;color:crimson;${validation.minSeatsError || validation.cargoError ? '' : 'display:none;'}">${validation.minSeatsError || validation.cargoError}</p>`;
 
         const diagramHtml = _renderDiagramHtml(config, validation, dim, view);
 
@@ -182,17 +189,20 @@ const AircraftConfig = (() => {
     }
 
     function _updatePanel($panel, config) {
-        const { isValid, totalCapacity, totalSeats, capacityColor, seatsColor, borderColor, minSeatsError } = _getValidation(config);
+        const { isValid, totalCapacity, totalSeats, capacityColor, seatsColor, cargoColor, borderColor, minSeatsError, cargoError } = _getValidation(config);
 
         $panel.find('.ac-capacity-stat')
             .css('color', capacityColor)
             .text(totalCapacity + ' of ' + config.maxCapacity + ' capacity');
+        $panel.find('.ac-cargo-stat')
+            .css('color', cargoColor)
+            .text('cargo ' + (config.cargoCapacity || 0) + ' of ' + (config.maxCargoCapacity || 0));
         $panel.find('.ac-seat-stat')
             .css('color', seatsColor)
             .text(totalSeats + ' of ' + config.maxSeats + ' seats');
 
-        if (minSeatsError) {
-            $panel.find('.ac-min-seats-error').text(minSeatsError).show();
+        if (minSeatsError || cargoError) {
+            $panel.find('.ac-min-seats-error').text(minSeatsError || cargoError).show();
         } else {
             $panel.find('.ac-min-seats-error').hide();
         }
@@ -200,7 +210,7 @@ const AircraftConfig = (() => {
         if (isValid) {
             const dim  = _calcDimensions(config.maxCapacity);
             const view = _distributeSeats(config, dim);
-            const validation = { isValid, totalCapacity, totalSeats, capacityColor, seatsColor, borderColor };
+            const validation = { isValid, totalCapacity, totalSeats, capacityColor, seatsColor, cargoColor, borderColor };
             $panel.find('.ac-diagram').html(_renderDiagramHtml(config, validation, dim, view));
         } else {
             $panel.find('.planeDiagram').css({ borderColor: borderColor, borderWidth: '2px' });
@@ -219,7 +229,7 @@ const AircraftConfig = (() => {
         const $panel = $configDiv.find('.aircraft-config-view');
 
         // Mutable local state — starts with the server-returned values
-        const state = { economy: config.economy, business: config.business, first: config.first };
+        const state = { economy: config.economy, business: config.business, first: config.first, cargoCapacity: config.cargoCapacity || 0 };
 
         function getCurrentConfig() {
             return Object.assign({}, config, state);
@@ -237,9 +247,11 @@ const AircraftConfig = (() => {
             state.economy  = config.original.economy;
             state.business = config.original.business;
             state.first    = config.original.first;
+            state.cargoCapacity = config.original.cargoCapacity || 0;
             $panel.find('.ac-input[data-class="economy"]').val(state.economy);
             $panel.find('.ac-input[data-class="business"]').val(state.business);
             $panel.find('.ac-input[data-class="first"]').val(state.first);
+            $panel.find('.ac-input[data-class="cargoCapacity"]').val(state.cargoCapacity);
             _updatePanel($panel, getCurrentConfig());
         });
 
@@ -267,6 +279,18 @@ const AircraftConfig = (() => {
         $panel.find('.config-btn-max').on('click', function() {
             const cls = $(this).data('class');
             const cur = getCurrentConfig();
+            if (cls === 'cargoCapacity') {
+                state.economy = 0;
+                state.business = 0;
+                state.first = 0;
+                state.cargoCapacity = cur.maxCargoCapacity || 0;
+                $panel.find('.ac-input[data-class="economy"]').val(0);
+                $panel.find('.ac-input[data-class="business"]').val(0);
+                $panel.find('.ac-input[data-class="first"]').val(0);
+                $panel.find('.ac-input[data-class="cargoCapacity"]').val(state.cargoCapacity);
+                _updatePanel($panel, getCurrentConfig());
+                return;
+            }
             const usedCapacity = cur.economy * 1 + cur.business * 2.5 + cur.first * 6;
             const remainingCapacity = cur.maxCapacity - usedCapacity;
             const remainingSeats = cur.maxSeats - (cur.economy + cur.business + cur.first);
@@ -339,7 +363,8 @@ const AircraftConfig = (() => {
             mergedConfig.model       = model;
             mergedConfig.maxCapacity = model.capacity;   // total space units (economy=1, business=2.5, first=6)
             mergedConfig.maxSeats    = model.capacity;   // max seats if all-economy (1 space/seat)
-            mergedConfig.original    = { economy: configuration.economy, business: configuration.business, first: configuration.first };
+            mergedConfig.maxCargoCapacity = model.freighterCargoCapacity || 0;
+            mergedConfig.original    = { economy: configuration.economy, business: configuration.business, first: configuration.first, cargoCapacity: configuration.cargoCapacity || 0 };
             mergedConfig.airplaneCount = getAssignedAirplanesCount("configurationId", configuration.id, model.id);
 
             $configDiv.append(_buildPanelHtml(mergedConfig));
@@ -411,7 +436,8 @@ const AircraftConfig = (() => {
                 + "&economy="         + config.economy
                 + "&business="        + config.business
                 + "&first="           + config.first
-                + "&isDefault="       + config.isDefault,
+                + "&isDefault="       + config.isDefault
+                + "&cargoCapacity="   + (config.cargoCapacity || 0),
             contentType: 'application/json; charset=utf-8',
             dataType: 'json',
             success: function() {
@@ -454,6 +480,7 @@ const AircraftConfig = (() => {
             economy:  _configStore.economy,
             business: _configStore.business,
             first:    _configStore.first,
+            cargoCapacity: _configStore.cargoCapacity || 0,
             isDefault: isDefault
         };
         save(configuration);

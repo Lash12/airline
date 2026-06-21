@@ -88,15 +88,15 @@ object AirlineSimulation {
         NotificationSource.insertNotification(Notification(airline.id, NotificationCategory.GAME_OVER, gameOverMessage, cycle))
       }
 
-      val (linksRevenue, linksAirportFee, linksCrewCost, linksFuelCost, linksFuelTax, linksInflightCost, linksDelayCompensation, linksMaintenanceCost, linksDepreciation, linksLoungeCost) = flightLinkResultByAirline.get(airline.id) match {
+      val (linksRevenue, linksAirportFee, linksCrewCost, linksFuelCost, linksFuelTax, linksInflightCost, linksDelayCompensation, linksMaintenanceCost, linksDepreciation, linksLoungeCost, linksCargoRevenue) = flightLinkResultByAirline.get(airline.id) match {
           case Some(lc) =>
-            lc.foldLeft((0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)) {
-              case ((r, a, c, f, t, i, d, m, depr, l), lcd) =>
+            lc.foldLeft((0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)) {
+              case ((r, a, c, f, t, i, d, m, depr, l, cargo), lcd) =>
                 (r + lcd.revenue, a + lcd.airportFees, c + lcd.crewCost, f + lcd.fuelCost,
-                 t + lcd.fuelTax, i + lcd.inflightCost, d + lcd.delayCompensation,
-                 m + lcd.maintenanceCost, depr + lcd.depreciation, l + lcd.loungeCost)
+                  t + lcd.fuelTax, i + lcd.inflightCost, d + lcd.delayCompensation,
+                  m + lcd.maintenanceCost, depr + lcd.depreciation, l + lcd.loungeCost, cargo + lcd.cargoRevenue)
             }
-          case None => (0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)
+          case None => (0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)
         }
 
       
@@ -213,7 +213,8 @@ object AirlineSimulation {
       // Record weekly ledger entries
       if (!isBankrupt) {
         val weeklyLedger = List(
-            AirlineLedgerEntry(airline.id, cycle, LedgerType.FLIGHT_REVENUE, linksRevenue),
+            AirlineLedgerEntry(airline.id, cycle, LedgerType.FLIGHT_REVENUE, linksRevenue - linksCargoRevenue),
+            AirlineLedgerEntry(airline.id, cycle, LedgerType.CARGO_REVENUE, linksCargoRevenue),
             AirlineLedgerEntry(airline.id, cycle, LedgerType.FLIGHT_CREW, -linksCrewCost),
             AirlineLedgerEntry(airline.id, cycle, LedgerType.AIRPORT_RENTALS, -linksAirportFee),
             AirlineLedgerEntry(airline.id, cycle, LedgerType.INFLIGHT_SERVICE, -linksInflightCost),

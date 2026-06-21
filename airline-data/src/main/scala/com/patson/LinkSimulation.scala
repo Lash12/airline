@@ -152,15 +152,29 @@ object LinkSimulation {
           linkConsumptionDetails += linkResult
           loungeConsumptionDetails ++= loungeResult
         }
+      case cargoLink : CargoLink =>
+        linkConsumptionDetails += LinkConsumptionDetails(cargoLink, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, cycle, cargoCapacity = cargoLink.cargoCapacity)
       case nonFlightLink => //only compute for flights (class Link), need consumptions for transit modal
         linkConsumptionDetails += LinkConsumptionDetails(nonFlightLink, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, cycle)
+    }
+
+    val cargoResults = CargoAllocation.allocate(linkConsumptionDetails.toList)
+    val cargoAdjustedLinkConsumptionDetails = linkConsumptionDetails.map { detail =>
+      cargoResults.get(detail.link.id) match {
+        case Some(cargo) => detail.copy(
+          revenue = detail.revenue + cargo.revenue,
+          profit = detail.profit + cargo.revenue,
+          cargoCarried = cargo.carried,
+          cargoRevenue = cargo.revenue)
+        case None => detail
+      }
     }
 
     purgeAlerts()
     checkLoadFactor(flightLinks, cycle)
 
     LinkSource.deleteLinkConsumptionsByCycle(145)
-    LinkSource.saveLinkConsumptions(linkConsumptionDetails.toList)
+    LinkSource.saveLinkConsumptions(cargoAdjustedLinkConsumptionDetails.toList)
 
     println("Calculating Lounge usage")
     val loungeResult: List[LoungeConsumptionDetails] = loungeConsumptionDetails.groupBy(_.lounge).map{
@@ -179,7 +193,7 @@ object LinkSimulation {
     LoungeHistorySource.deleteConsumptionsBeforeCycle(cycle)
     Util.outputTimeDiff(startTime, "Finished calculation on profits by links & lounges. Took ")
 
-    (linkConsumptionDetails.toList, loungeResult, consumptionResult, airlineStats)
+    (cargoAdjustedLinkConsumptionDetails.toList, loungeResult, consumptionResult, airlineStats)
   }
 
   case class PassengerCost(group : PassengerGroup, passengerCount : Int, cost : Double)
@@ -414,7 +428,8 @@ object LinkSimulation {
     }
     val overallSatisfaction = if (totalPassengerCount == 0) 0 else satisfactionTotalValue / totalPassengerCount
 
-    val result = LinkConsumptionDetails(link, fuelCost, fuelTax, crewCost, airportFees, inflightCost, delayCompensation = delayCompensation, maintenanceCost, depreciation = depreciation, loungeCost = loungeCost, revenue, profit, overallSatisfaction, cycle)
+    val cargoCapacity = inServiceAssignedAirplanes.map { case (airplane, assignment) => airplane.model.bellyCargoCapacity * assignment.frequency }.sum
+    val result = LinkConsumptionDetails(link, fuelCost, fuelTax, crewCost, airportFees, inflightCost, delayCompensation = delayCompensation, maintenanceCost, depreciation = depreciation, loungeCost = loungeCost, revenue, profit, overallSatisfaction, cycle, cargoCapacity = cargoCapacity)
     (result, loungeConsumptionDetails.toList)
   }
 

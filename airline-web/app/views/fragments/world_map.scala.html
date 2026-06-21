@@ -114,6 +114,14 @@
 											<div class="label">Revenue:</div>
 											<div class="value" id="linkRevenue"></div>
 										</div>
+										<div class="table-row" id="linkCargoRevenueRow" style="display:none">
+											<div class="label">Cargo Revenue:</div>
+											<div class="value" id="linkCargoRevenue"></div>
+										</div>
+										<div class="table-row" id="linkCargoCarriedRow" style="display:none">
+											<div class="label">Cargo Carried:</div>
+											<div class="value" id="linkCargoCarried"></div>
+										</div>
 										<div class="table-row">
 											<div class="label">Delays & Cancellations:</div>
 											<div class="value"><span id="linkDelays"></span> | <span id="linkCancellations"></span><div class="tooltip">
@@ -380,6 +388,15 @@
 								<hr>
 
 								<div class="table py-2" style="width: 100%" id="planLinkExtendedDetails">
+									<div class="table-row">
+										<div class="label" style="width:30%;">Route Type:</div>
+										<div class="value" style="width:70%;">
+											<select class="select-css" id="planLinkTransportType" onchange="setPlanTransportType(this.value)">
+												<option value="FLIGHT">Passenger</option>
+												<option value="CARGO_FLIGHT">Cargo</option>
+											</select>
+										</div>
+									</div>
 									<div class="table-row" id="planLinkModelRow">
 										<div class="label" style="width:30%;">Airplane Model (max freq):</div>
 										<div class="value" style="width:70%;"><select class="select-css" id="planLinkModelSelect" onchange="updatePlanLinkInfoWithModelSelected($(this).val()); updateModelInfo($(this).val())"></select></div>
@@ -464,7 +481,7 @@
 										<div class="value planLinkActionPointRefund"></div>
 									</div>
 									<div class="table-row">
-										<div class="label">Capacity (Y/J/F):</div>
+										<div class="label" id="planLinkCapacityLabel">Capacity (Y/J/F):</div>
 										<div class="value">
 											<span id="planLinkCapacity"></span>
 											<div class="future">

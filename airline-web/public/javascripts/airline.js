@@ -127,6 +127,7 @@ async function switchAirline(airlineId) {
     linksAverages = null
     selectedLinkIds = new Set()
     planLinkState = { fromAirportId: null, toAirportId: null }
+    planTransportType = "FLIGHT"
     planLinkInfo = null
     planLinkInfoByModel = {}
     existingLink = undefined
@@ -752,6 +753,9 @@ function updateLinkHistory() {
       soldSeats: avgNested(consumptions, "soldSeats"),
       profit: avg(consumptions, "profit"),
       revenue: avg(consumptions, "revenue"),
+      cargoCapacity: avg(consumptions, "cargoCapacity"),
+      cargoCarried: avg(consumptions, "cargoCarried"),
+      cargoRevenue: avg(consumptions, "cargoRevenue"),
       fuelCost: avg(consumptions, "fuelCost"),
       fuelTax: avg(consumptions, "fuelTax"),
       crewCost: avg(consumptions, "crewCost"),
@@ -791,6 +795,20 @@ function updateLinkHistory() {
   $("#linkLoadFactor").text(toLinkClassValueString(loadFactor, "", "%"));
   $("#linkProfit").text("$" + commaSeparateNumber(data.profit));
   $("#linkRevenue").text("$" + commaSeparateNumber(data.revenue));
+  if ((data.cargoRevenue || 0) > 0) {
+    $("#linkCargoRevenueRow").show();
+    $("#linkCargoRevenue").text("$" + commaSeparateNumber(data.cargoRevenue));
+  } else {
+    $("#linkCargoRevenueRow").hide();
+    $("#linkCargoRevenue").text("-");
+  }
+  if ((data.cargoCapacity || 0) > 0) {
+    $("#linkCargoCarriedRow").show();
+    $("#linkCargoCarried").text(commaSeparateNumber(data.cargoCarried || 0) + " / " + commaSeparateNumber(data.cargoCapacity));
+  } else {
+    $("#linkCargoCarriedRow").hide();
+    $("#linkCargoCarried").text("-");
+  }
   $("#linkFuelCost").text("$" + commaSeparateNumber(data.fuelCost));
   $("#linkFuelTax").text("$" + commaSeparateNumber(data.fuelTax));
   $("#linkCrewCost").text("$" + commaSeparateNumber(data.crewCost));
@@ -915,6 +933,25 @@ function planLink(fromAirport, toAirport, isRefresh) {
 }
 
 var planLinkState = { fromAirportId: null, toAirportId: null }
+var planTransportType = "FLIGHT"
+
+function isCargoPlan() {
+    return planTransportType === "CARGO_FLIGHT"
+}
+
+function setPlanTransportType(transportType) {
+    planTransportType = transportType
+    $('#planLinkCapacityLabel').text(isCargoPlan() ? 'Cargo Capacity:' : 'Capacity (Y/J/F):')
+    $('#planLinkEstimatedDifficultyRow, .planLinkActionPointRefundRow, #linkStaffBreakdownTooltip, .planLinkFlightType').toggle(!isCargoPlan())
+    $('#planLinkDirectDemand').closest('.flex-row').toggle(!isCargoPlan())
+    $('#planLinkCompetitors, #saveCurrentLinkPricePlan').toggle(!isCargoPlan())
+    $('.flex-container-width-quarter.pt-2, .flex-container-width-quarter.items-center.economy, .flex-container-width-quarter.items-center.business, .flex-container-width-quarter.items-center.first').toggle(!isCargoPlan())
+    $('#planLinkExpectedFromQuality, #planLinkExpectedToQuality, #serviceLevelBar').closest('.flex-container-width-third').toggle(!isCargoPlan())
+    if (selectedModelId) {
+        updatePlanLinkInfoWithModelSelected(selectedModelId, null, true)
+    }
+    updateTotalValues()
+}
 var planLinkInfo = null
 var planLinkInfoByModel = {}
 var existingLink
@@ -1462,7 +1499,13 @@ function updatePlanLinkInfoWithModelSelected(newModelId, assignedModelId, isRefr
 
         $('#planLinkAirplaneSelect').empty()
 
-		$.each(thisModelPlanLinkInfo.airplanes, function(key, airplaneEntry) {
+		var selectableAirplanes = thisModelPlanLinkInfo.airplanes.filter(function(entry) {
+		    var config = entry.airplane.configuration
+		    var passengerSeats = (config.economy || 0) + (config.business || 0) + (config.first || 0)
+		    return isCargoPlan() ? (config.cargoCapacity || 0) > 0 && passengerSeats == 0 : passengerSeats > 0
+		})
+
+		$.each(selectableAirplanes, function(key, airplaneEntry) {
 //			var option = $("<option></option>").attr("value", airplane.airplaneId).text("#" + airplane.airplaneId)
 //			option.appendTo($("#planLinkAirplaneSelect"))
 
@@ -1482,7 +1525,7 @@ function updatePlanLinkInfoWithModelSelected(newModelId, assignedModelId, isRefr
 
 			$('#planLinkAirplaneSelect').append(div)
 		})
-		if (thisModelPlanLinkInfo.airplanes.length == 0) {
+		if (selectableAirplanes.length == 0) {
 		    $('#planLinkDetails .noAirplaneHelp').show()
 		} else {
 		    $('#planLinkDetails .noAirplaneHelp').hide()
@@ -1532,7 +1575,11 @@ function mergeAirplaneEntry(airplaneEntry, $airplaneRow) {
 }
 
 function updateFrequencyDetail(info) {
-    var airplaneEntries = info.airplanes
+    var airplaneEntries = info.airplanes.filter(function(entry) {
+        var config = entry.airplane.configuration
+        var passengerSeats = (config.economy || 0) + (config.business || 0) + (config.first || 0)
+        return isCargoPlan() ? (config.cargoCapacity || 0) > 0 && passengerSeats == 0 : passengerSeats > 0
+    })
     $("#planLinkDetails .frequencyDetail .table-row").remove()
 
     var isEmpty = true
@@ -1696,19 +1743,49 @@ function getPlanLinkCapacity() {
     }
 }
 
+function getPlanLinkCargoCapacity() {
+    var currentFrequency = 0
+    var currentCapacity = 0
+    var futureFrequency = 0
+    var futureCapacity = 0
+    var hasUnderConstructionAirplanes = false
+
+    $("#planLinkDetails .frequencyDetail .airplaneRow").each(function(index, airplaneRow) {
+       var frequency = parseInt($(airplaneRow).find(".frequency").val())
+       var airplane = $(airplaneRow).data("airplane")
+       var cargoCapacity = airplane.configuration.cargoCapacity || 0
+
+       futureFrequency += frequency
+       futureCapacity += cargoCapacity * frequency
+
+       if (airplane.isReady) {
+           currentFrequency += frequency
+           currentCapacity += cargoCapacity * frequency
+       } else {
+            hasUnderConstructionAirplanes = true
+       }
+    })
+
+    if (hasUnderConstructionAirplanes) {
+        return { "current" : { "capacity" : currentCapacity, "frequency" : currentFrequency }, "future" : { "capacity" : futureCapacity, "frequency" : futureFrequency }}
+    } else {
+        return { "current" : { "capacity" : currentCapacity, "frequency" : currentFrequency }}
+    }
+}
+
 
 // Update total frequency and capacity
 function updateTotalValues() {
-    var planCapacity = getPlanLinkCapacity()
+    var planCapacity = isCargoPlan() ? getPlanLinkCargoCapacity() : getPlanLinkCapacity()
     var currentCapacity = planCapacity.current.capacity
     var futureFrequency = planCapacity.future ? planCapacity.future.frequency : planCapacity.current.frequency
     var futureCapacity = planCapacity.future ? planCapacity.future.capacity : planCapacity.current.capacity
 
     $(".frequencyDetailTotal .total").text(futureFrequency)
 
-    $('#planLinkCapacity').text(toLinkClassValueString(currentCapacity))
+    $('#planLinkCapacity').text(isCargoPlan() ? commaSeparateNumber(currentCapacity) : toLinkClassValueString(currentCapacity))
     if (planCapacity.future) {
-        $("#planLinkDetails .future .capacity").text(toLinkClassValueString(futureCapacity))
+        $("#planLinkDetails .future .capacity").text(isCargoPlan() ? commaSeparateNumber(futureCapacity) : toLinkClassValueString(futureCapacity))
         $("#planLinkDetails .future").show()
     } else {
         $("#planLinkDetails .future").hide()
@@ -1721,13 +1798,22 @@ function updateTotalValues() {
          disableButton($("#planLinkDetails .modifyLink"), "Must assign airplanes and frequency")
 
         var thisModelPlanLinkInfo = planLinkInfoByModel[selectedModelId]
-        if (thisModelPlanLinkInfo.airplanes.length == 0) {
+        var availableForMode = thisModelPlanLinkInfo.airplanes.filter(function(entry) {
+            var config = entry.airplane.configuration
+            var passengerSeats = (config.economy || 0) + (config.business || 0) + (config.first || 0)
+            return isCargoPlan() ? (config.cargoCapacity || 0) > 0 && passengerSeats == 0 : passengerSeats > 0
+        })
+        if (availableForMode.length == 0) {
             $('.noAirplaneHelp').addClass('glow')
         } else {
             $('#planLinkAirplaneSelect').addClass('glow')
         }
     } else {
         enableButton($("#planLinkDetails .modifyLink"))
+    }
+    if (isCargoPlan()) {
+        $('#planLinkEstimatedDifficultyRow, .planLinkActionPointRefundRow').hide()
+        return
     }
     getLinkStaffingInfo()
 
@@ -1800,12 +1886,13 @@ function getAssignedAirplaneFrequencies() {
 function createLink() {
 	if (planLinkState.fromAirportId && planLinkState.toAirportId) {
 		var airlineId = activeAirline.id
-		var url = "/airlines/" + airlineId + "/links"
+		var url = "/airlines/" + airlineId + (isCargoPlan() ? "/cargo-links" : "/links")
 	    var linkData = {
 			"fromAirportId" : planLinkState.fromAirportId,
 			"toAirportId" : planLinkState.toAirportId,
 			airplanes : getAssignedAirplaneFrequencies(),
 			"airlineId" : airlineId,
+			"transportType" : planTransportType,
 			"price" : { "economy" : parseInt($("#planLinkEconomyPrice").val()), "business" : parseInt($("#planLinkBusinessPrice").val()), "first" : parseInt($("#planLinkFirstPrice").val())},
 			"model" : parseInt($("#planLinkModelSelect").val()),
 			"rawQuality" : parseInt($("#planLinkServiceLevel").val()) * 20,
@@ -1820,6 +1907,11 @@ function createLink() {
 		    	if (activeAirline.id !== airlineId) return
 		    	var isSuccessful
 		    	closeModal($('#linkConfirmationModal'))
+		    	if (isCargoPlan()) {
+		    	    updateLinksInfo()
+		    	    updateAirlineInfo(activeAirline.id)
+		    	    return
+		    	}
                 if (savedLink.negotiationResult) {
                     isSuccessful = savedLink.negotiationResult.isSuccessful
                     if (isSuccessful) {
@@ -2996,7 +3088,7 @@ function linkConfirmation() {
 
 	refreshAssignedAirplanesBar($('#linkConfirmationModal div.updating.airplanes'), assignedAirplaneFrequencies)
 
-    var planInfo = getPlanLinkCapacity()
+    var planInfo = isCargoPlan() ? getPlanLinkCargoCapacity() : getPlanLinkCapacity()
     var planFrequency = planInfo.future ? planInfo.future.frequency : planInfo.current.frequency
 
 	for (i = 0 ; i < planFrequency ; i ++) {
@@ -3008,17 +3100,23 @@ function linkConfirmation() {
 		}
 	}
 
-	var planCapacitySpan = $('<span>' + toLinkClassValueString(planInfo.current.capacity) + '</span>')
+	var planCapacitySpan = $('<span>' + (isCargoPlan() ? commaSeparateNumber(planInfo.current.capacity) : toLinkClassValueString(planInfo.current.capacity)) + '</span>')
     $("#linkConfirmationModal div.updating.capacity").append(planCapacitySpan)
     if (planInfo.future) {
-        var futureCapacitySpan = $('<div class="future">(' + toLinkClassValueString(planInfo.future.capacity) + ')</div>')
+        var futureCapacitySpan = $('<div class="future">(' + (isCargoPlan() ? commaSeparateNumber(planInfo.future.capacity) : toLinkClassValueString(planInfo.future.capacity)) + ')</div>')
         $("#linkConfirmationModal div.updating.capacity").append(futureCapacitySpan)
     }
 
-	$('#linkConfirmationModal div.updating.price').text('$' + $('#planLinkEconomyPrice').val() + " / $" + $('#planLinkBusinessPrice').val() + " / $" + $('#planLinkFirstPrice').val())
+	$('#linkConfirmationModal div.updating.price').text(isCargoPlan() ? '-' : '$' + $('#planLinkEconomyPrice').val() + " / $" + $('#planLinkBusinessPrice').val() + " / $" + $('#planLinkFirstPrice').val())
 	$('#linkConfirmationModal').fadeIn(200)
 
-    getLinkNegotiation()
+    if (isCargoPlan()) {
+        $('#linkConfirmationModal div.controlButtons').show()
+        $('#linkConfirmationModal .confirmButton').show()
+        $('#linkConfirmationModal .negotiateButton').hide()
+    } else {
+        getLinkNegotiation()
+    }
 }
 
 function changeAssignedActionPoints(delta) {

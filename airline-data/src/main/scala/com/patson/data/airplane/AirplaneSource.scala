@@ -11,9 +11,26 @@ import scala.collection.mutable.ListBuffer
 import scala.util.Using
 
 object AirplaneSource {
+  @volatile private var cargoSchemaEnsured = false
+
+  def ensureCargoConfigurationColumn() : Unit = {
+    if (cargoSchemaEnsured) return
+    synchronized {
+      if (cargoSchemaEnsured) return
+      Using.resource(Meta.getConnection()) { connection =>
+        val columns = connection.getMetaData.getColumns(null, null, AIRPLANE_CONFIGURATION_TEMPLATE_TABLE, "cargo_capacity")
+        val exists = try columns.next() finally columns.close()
+        if (!exists) {
+          Using.resource(connection.prepareStatement(s"ALTER TABLE $AIRPLANE_CONFIGURATION_TEMPLATE_TABLE ADD COLUMN cargo_capacity INT NOT NULL DEFAULT 0")) { _.executeUpdate() }
+        }
+      }
+      cargoSchemaEnsured = true
+    }
+  }
+
   val LINK_ID_LOAD : Map[DetailType.Value, Boolean] = Map.empty
   val allModels = ModelSource.loadAllModels().map(model => (model.id, model)).toMap
-  private[this] val BASE_QUERY = "SELECT owner, a.id as id, a.model as model, name, capacity, quality, ascent_burn, cruise_burn, speed, fly_range, price, constructed_cycle, purchased_cycle, airplane_condition, purchase_price, is_sold, configuration, a.home as home, a.version as version, economy, business, first, is_default FROM " + AIRPLANE_TABLE + " a LEFT JOIN " + AIRPLANE_MODEL_TABLE + " m ON a.model = m.id LEFT JOIN " + AIRPLANE_CONFIGURATION_TABLE + " c ON c.airplane = a.id LEFT JOIN " + AIRPLANE_CONFIGURATION_TEMPLATE_TABLE + " t ON c.configuration = t.id"
+  private[this] val BASE_QUERY = "SELECT owner, a.id as id, a.model as model, name, capacity, quality, ascent_burn, cruise_burn, speed, fly_range, price, constructed_cycle, purchased_cycle, airplane_condition, purchase_price, is_sold, configuration, a.home as home, a.version as version, economy, business, first, is_default, cargo_capacity FROM " + AIRPLANE_TABLE + " a LEFT JOIN " + AIRPLANE_MODEL_TABLE + " m ON a.model = m.id LEFT JOIN " + AIRPLANE_CONFIGURATION_TABLE + " c ON c.airplane = a.id LEFT JOIN " + AIRPLANE_CONFIGURATION_TEMPLATE_TABLE + " t ON c.configuration = t.id"
 
 
   def loadAirplanesCriteria(criteria : List[(String, Any)]) = {
@@ -31,6 +48,7 @@ object AirplaneSource {
   }
 
   def loadAirplanesByQueryString(queryString : String, parameters : List[Any]) = {
+    ensureCargoConfigurationColumn()
     Using.resource(Meta.getConnection()) { connection =>
       Using.resource(connection.prepareStatement(queryString)) { preparedStatement =>
         for (i <- 0 until parameters.size) {
@@ -43,7 +61,7 @@ object AirplaneSource {
             val airlineId = resultSet.getInt("owner")
             val airline = AirlineCache.getAirline(airlineId).getOrElse(Airline.fromId(airlineId))
             val model = allModels(resultSet.getInt("a.model"))
-            val configuration = AirplaneConfiguration(resultSet.getInt("economy"), resultSet.getInt("business"), resultSet.getInt("first"), airline, model, resultSet.getBoolean("is_default"), id = resultSet.getInt("configuration"))
+            val configuration = AirplaneConfiguration(resultSet.getInt("economy"), resultSet.getInt("business"), resultSet.getInt("first"), airline, model, resultSet.getBoolean("is_default"), cargoCapacity = resultSet.getInt("cargo_capacity"), id = resultSet.getInt("configuration"))
             val isSold = resultSet.getBoolean("is_sold")
             val constructedCycle = resultSet.getInt("constructed_cycle")
             val isReady = !isSold && currentCycle >= constructedCycle
@@ -311,10 +329,11 @@ object AirplaneSource {
 
 
   def saveAirplaneConfigurations(configurations : List[AirplaneConfiguration]) = {
+    ensureCargoConfigurationColumn()
     var updateCount = 0
     Using.resource(Meta.getConnection()) { connection =>
       connection.setAutoCommit(false)
-      Using.resource(connection.prepareStatement("INSERT INTO " + AIRPLANE_CONFIGURATION_TEMPLATE_TABLE + "(airline, model, economy, business, first, is_default) VALUES(?,?,?,?,?,?)", Statement.RETURN_GENERATED_KEYS)) { preparedStatement =>
+      Using.resource(connection.prepareStatement("INSERT INTO " + AIRPLANE_CONFIGURATION_TEMPLATE_TABLE + "(airline, model, economy, business, first, is_default, cargo_capacity) VALUES(?,?,?,?,?,?,?)", Statement.RETURN_GENERATED_KEYS)) { preparedStatement =>
         configurations.foreach { configuration =>
           preparedStatement.setInt(1, configuration.airline.id)
           preparedStatement.setInt(2, configuration.model.id)
@@ -322,6 +341,7 @@ object AirplaneSource {
           preparedStatement.setInt(4, configuration.businessVal)
           preparedStatement.setInt(5, configuration.firstVal)
           preparedStatement.setBoolean(6, configuration.isDefault)
+          preparedStatement.setInt(7, configuration.cargoCapacity)
           updateCount += preparedStatement.executeUpdate()
 
           Using.resource(preparedStatement.getGeneratedKeys) { generatedKeys =>
@@ -338,16 +358,18 @@ object AirplaneSource {
   }
 
   def updateAirplaneConfiguration(configuration: AirplaneConfiguration) = {
+    ensureCargoConfigurationColumn()
     Using.resource(Meta.getConnection()) { connection =>
       connection.setAutoCommit(false)
-      Using.resource(connection.prepareStatement("UPDATE " + AIRPLANE_CONFIGURATION_TEMPLATE_TABLE + " SET economy = ?, business = ?, first = ?, is_default = ? WHERE id = ? AND airline = ? AND model = ?")) { preparedStatement =>
+      Using.resource(connection.prepareStatement("UPDATE " + AIRPLANE_CONFIGURATION_TEMPLATE_TABLE + " SET economy = ?, business = ?, first = ?, is_default = ?, cargo_capacity = ? WHERE id = ? AND airline = ? AND model = ?")) { preparedStatement =>
         preparedStatement.setInt(1, configuration.economyVal)
         preparedStatement.setDouble(2, configuration.businessVal)
         preparedStatement.setInt(3, configuration.firstVal)
         preparedStatement.setBoolean(4, configuration.isDefault)
-        preparedStatement.setInt(5, configuration.id)
-        preparedStatement.setInt(6, configuration.airline.id) //not necessary but just to play safe...
-        preparedStatement.setInt(7, configuration.model.id)//not necessary but just to play safe...
+        preparedStatement.setInt(5, configuration.cargoCapacity)
+        preparedStatement.setInt(6, configuration.id)
+        preparedStatement.setInt(7, configuration.airline.id) //not necessary but just to play safe...
+        preparedStatement.setInt(8, configuration.model.id)//not necessary but just to play safe...
         preparedStatement.executeUpdate()
       }
       connection.commit()
@@ -405,6 +427,7 @@ object AirplaneSource {
 
 
   def loadAirplaneConfigurationsByQueryString(queryString : String, parameters : List[Any]) = {
+    ensureCargoConfigurationColumn()
     Using.resource(Meta.getConnection()) { connection =>
       Using.resource(connection.prepareStatement(queryString)) { preparedStatement =>
         for (i <- 0 until parameters.size) {
@@ -413,7 +436,7 @@ object AirplaneSource {
         Using.resource(preparedStatement.executeQuery()) { resultSet =>
           val configurations = new ListBuffer[AirplaneConfiguration]()
           while (resultSet.next()) {
-            val configuration = AirplaneConfiguration(resultSet.getInt("economy"), resultSet.getInt("business"), resultSet.getInt("first"), Airline.fromId(resultSet.getInt("airline")), Model.fromId(resultSet.getInt("model")), resultSet.getBoolean("is_default"), id = resultSet.getInt("id"))
+            val configuration = AirplaneConfiguration(resultSet.getInt("economy"), resultSet.getInt("business"), resultSet.getInt("first"), Airline.fromId(resultSet.getInt("airline")), Model.fromId(resultSet.getInt("model")), resultSet.getBoolean("is_default"), cargoCapacity = resultSet.getInt("cargo_capacity"), id = resultSet.getInt("id"))
             configurations.append(configuration)
           }
           configurations.toList

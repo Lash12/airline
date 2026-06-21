@@ -303,6 +303,7 @@ object Meta {
       "from_country CHAR(2)," +
       "to_country CHAR(2)," +
       "transport_type SMALLINT," +
+      "cargo_capacity INTEGER NOT NULL DEFAULT 0," +
       "last_update DATETIME DEFAULT CURRENT_TIMESTAMP," +
       "FOREIGN KEY(from_airport) REFERENCES " + AIRPORT_TABLE + "(id) ON DELETE CASCADE ON UPDATE CASCADE," +
       "FOREIGN KEY(to_airport) REFERENCES " + AIRPORT_TABLE + "(id) ON DELETE CASCADE ON UPDATE CASCADE" +
@@ -311,7 +312,7 @@ object Meta {
     statement.execute()
     statement.close()
 
-    statement = connection.prepareStatement("CREATE UNIQUE INDEX " + LINK_INDEX_1 + " ON " + LINK_TABLE + "(from_airport, to_airport, airline)")
+    statement = connection.prepareStatement("CREATE UNIQUE INDEX " + LINK_INDEX_1 + " ON " + LINK_TABLE + "(from_airport, to_airport, airline, transport_type)")
     statement.execute()
     statement.close()
     statement = connection.prepareStatement("CREATE INDEX " + LINK_INDEX_2 + " ON " + LINK_TABLE + "(from_airport)")
@@ -364,6 +365,9 @@ object Meta {
       "duration SMALLINT, " +
       "flight_number SMALLINT, " +
       "airplane_model SMALLINT, " +
+      "cargo_capacity INTEGER NOT NULL DEFAULT 0, " +
+      "cargo_carried INTEGER NOT NULL DEFAULT 0, " +
+      "cargo_revenue INTEGER NOT NULL DEFAULT 0, " +
       "raw_quality SMALLINT, " +
       "satisfaction DECIMAL(5,4), " +
       "cycle INTEGER, " +
@@ -833,6 +837,7 @@ object Meta {
       "business INTEGER, " +
       "first INTEGER, " +
       "is_default TINYINT(1), " +
+      "cargo_capacity INTEGER NOT NULL DEFAULT 0, " +
       "FOREIGN KEY(model) REFERENCES " + AIRPLANE_MODEL_TABLE + "(id) ON DELETE CASCADE ON UPDATE CASCADE, " +
       "FOREIGN KEY(airline) REFERENCES " + AIRLINE_TABLE + "(id) ON DELETE CASCADE ON UPDATE CASCADE" +
       ")")

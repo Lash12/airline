@@ -25,6 +25,24 @@ object CargoDemandGenerator {
   // Below this distance, air freight loses to trucking, so demand fades linearly to zero.
   val TRUCKING_DISTANCE = 400
 
+  case class CargoHubProfile(rank : Int, iata : String) {
+    val multiplier : Double =
+      if (rank <= 5) 1.35
+      else if (rank <= 10) 1.25
+      else 1.15
+  }
+
+  val cargoHubProfiles : Map[String, CargoHubProfile] = List(
+    "HKG", "PVG", "ANC", "SDF", "MIA", "MEM", "ICN", "DOH", "TPE", "CAN",
+    "LAX", "NRT", "FRA", "CDG", "SIN", "DXB", "ORD", "AMS", "BKK", "LHR"
+  ).zipWithIndex.map { case (iata, idx) => iata -> CargoHubProfile(idx + 1, iata) }.toMap
+
+  def cargoHubMultiplier(fromAirport : Airport, toAirport : Airport) : Double = {
+    val from = cargoHubProfiles.get(fromAirport.iata).map(_.multiplier).getOrElse(1.0)
+    val to = cargoHubProfiles.get(toAirport.iata).map(_.multiplier).getOrElse(1.0)
+    Math.min(1.4, Math.sqrt(from * to))
+  }
+
   /**
    * Weekly cargo-units demand from one airport to another (directed). Pure and deterministic.
    * Returns 0 when the pair cannot have demand or either side has no economy.
@@ -55,7 +73,7 @@ object CargoDemandGenerator {
       if (distance < TRUCKING_DISTANCE) distance.toDouble / TRUCKING_DISTANCE
       else 1.0
 
-    val raw = gravity * affinityMultiplier * distanceMultiplier * SoloConfig.cargoDemandAmplitude
+    val raw = gravity * affinityMultiplier * distanceMultiplier * cargoHubMultiplier(fromAirport, toAirport) * SoloConfig.cargoDemandAmplitude
     if (raw <= 0) 0 else raw.toInt
   }
 
@@ -70,6 +88,8 @@ object CargoDemandGenerator {
   private var fingerprints : Array[Long] = null
   private var lastEpoch : Long = Long.MinValue
   private var lastCount : Int = -1
+  private var airportIndexById : Map[Int, Int] = Map.empty
+  private var cachedAirports : Array[Airport] = Array.empty
 
   /** Demographic fingerprint of an airport: any change invalidates its cached cargo demand. */
   def airportFingerprint(airport : Airport) : Long = {
@@ -89,6 +109,8 @@ object CargoDemandGenerator {
   def prepareCargoCache(orderedAirports : Array[Airport], relationshipEpoch : Long) : (Boolean, Int) = {
     val n = orderedAirports.length
     val fullReset = cacheData == null || n != lastCount || relationshipEpoch != lastEpoch
+    airportIndexById = orderedAirports.zipWithIndex.map { case (airport, index) => airport.id -> index }.toMap
+    cachedAirports = orderedAirports
     if (fullReset) {
       cacheData = Array.fill(n)(Array.fill(n)(ABSENT))
       fingerprints = orderedAirports.map(airportFingerprint)
@@ -121,6 +143,19 @@ object CargoDemandGenerator {
       d
     } else {
       row(toIndex)
+    }
+  }
+
+  def demandFor(fromAirport : Airport, toAirport : Airport, countryRelationships : Map[(String, String), Int] = Map.empty) : Int = {
+    val distance = Computation.calculateDistance(fromAirport, toAirport)
+    if (!DemandGenerator.canHaveDemand(fromAirport, toAirport, distance)) return 0
+    val relationship = countryRelationships.getOrElse((fromAirport.countryCode, toAirport.countryCode), 0)
+    val affinity = Computation.calculateAffinityValue(fromAirport.zone, toAirport.zone, relationship)
+    (airportIndexById.get(fromAirport.id), airportIndexById.get(toAirport.id), Option(cacheData)) match {
+      case (Some(fromIndex), Some(toIndex), Some(_)) if fromIndex < cachedAirports.length && toIndex < cachedAirports.length =>
+        cachedDemand(fromIndex, toIndex, cachedAirports(fromIndex), cachedAirports(toIndex), affinity, distance)
+      case _ =>
+        computeCargoDemandBetweenAirports(fromAirport, toAirport, affinity, distance)
     }
   }
 

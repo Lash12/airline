@@ -132,6 +132,9 @@ object AirportSimulation {
   private[patson] def computeLoyalists(linkRidershipDetails: immutable.Map[(PassengerGroup, Airport, Route), Int], existingLoyalistByAirportId : immutable.Map[Int, List[Loyalist]]): (List[Loyalist], List[Loyalist], immutable.Map[Int, Int]) = {
     val result = ListBuffer[Loyalist]() //airlineId, amount
     val allAirportPaxCounts = mutable.Map[Int, Int]() //airportId, amount
+    val airlinesById =
+      linkRidershipDetails.keys.flatMap(_._3.links.map(_.link.airline)).map(airline => airline.id -> airline).toMap ++
+      existingLoyalistByAirportId.values.flatten.map(loyalist => loyalist.airline.id -> loyalist.airline).toMap
 
     linkRidershipDetails.groupBy(_._1._1.fromAirport).foreach {
       case ((fromAirport, passengersFromThisAirport)) =>
@@ -185,13 +188,13 @@ object AirportSimulation {
         loyalistIncrementOfAirlines.foreach {
           case (gainAirlineId, increment) => //split into chunks for better randomness
             if (increment > 0) {
-              var unclaimedLoyalist = (fromAirport.popMiddleIncome - totalLoyalist).toInt
+              var unclaimedLoyalist = (fromAirport.population - totalLoyalist).toInt
               var remainingIncrement = increment
               while (remainingIncrement > 0) {
                 val chunk = if (remainingIncrement <= CHUNK_SIZE) remainingIncrement else CHUNK_SIZE
 
                 //Has to compare pop vs total, as  in rare scenario fromAirport.population < existingLoyalistOfThisAirport.values.sum, for example demolished property that +pop
-                val flipTrigger = ThreadLocalRandom.current().nextInt(Math.max(1, Math.max(fromAirport.popMiddleIncome, totalLoyalist).toInt))
+                val flipTrigger = ThreadLocalRandom.current().nextInt(Math.max(1, Math.max(fromAirport.population, totalLoyalist).toInt))
 
                 val flippedAirlineIdOption = loyalistDistribution.find {
                   case (airlineId : Int, threshold : Int) => flipTrigger < threshold
@@ -244,7 +247,7 @@ object AirportSimulation {
 
         //write result of this airport to final result
         updatingLoyalists.foreach {
-          case (airlineId, amount) => result.append(Loyalist(fromAirport, AirlineCache.getAirline(airlineId).getOrElse(Airline.fromId(airlineId)), amount))
+          case (airlineId, amount) => result.append(Loyalist(fromAirport, airlinesById.getOrElse(airlineId, Airline.fromId(airlineId)), amount))
         }
     }
     val (positive, nonPositive) = result.toList.partition(_.amount > 0)

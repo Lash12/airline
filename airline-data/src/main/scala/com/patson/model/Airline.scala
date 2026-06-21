@@ -244,7 +244,8 @@ object LedgerType extends Enumeration {
   // aggregates. Appended at the end so existing ordinals (persisted as entry_type) are unchanged.
   val AIRPORT_ASSET_CONSTRUCTION,
       AIRPORT_ASSET_INCOME,
-      AIRPORT_ASSET_UPKEEP = Value
+      AIRPORT_ASSET_UPKEEP,
+      CARGO_REVENUE = Value
 }
 
 case class AirlineLedgerEntry(airlineId : Int, cycle : Int, entryType : LedgerType.Value, amount : Long, description : Option[String] = None, id : Int = 0)

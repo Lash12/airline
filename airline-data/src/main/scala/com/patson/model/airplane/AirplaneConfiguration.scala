@@ -2,12 +2,12 @@ package com.patson.model.airplane
 
 import com.patson.model.{AbstractLinkClassValues, Airline, BUSINESS, ECONOMY, FIRST, LinkClassValues}
 
-case class AirplaneConfiguration(economyVal : Int, businessVal : Int, firstVal : Int, airline : Airline, model : Model, isDefault : Boolean, var id : Int = 0) extends AbstractLinkClassValues(economyVal, businessVal, firstVal) {
+case class AirplaneConfiguration(economyVal : Int, businessVal : Int, firstVal : Int, airline : Airline, model : Model, isDefault : Boolean, cargoCapacity : Int = 0, var id : Int = 0) extends AbstractLinkClassValues(economyVal, businessVal, firstVal) {
   lazy val minimized : AirplaneConfiguration = { //config that has least capacity
     val minimizedFirst = (model.capacity / FIRST.spaceMultiplier).toInt
     val minimizedBusiness = ((model.capacity - minimizedFirst * FIRST.spaceMultiplier) / BUSINESS.spaceMultiplier).toInt
     //no eco as user can lock econ to zero
-    AirplaneConfiguration(0, minimizedBusiness, minimizedFirst, airline, model, isDefault)
+    AirplaneConfiguration(0, minimizedBusiness, minimizedFirst, airline, model, isDefault, cargoCapacity)
   }
 }
 
@@ -52,6 +52,7 @@ object AirplaneConfiguration {
   val economy : ((Airline, Model) => AirplaneConfiguration) = (airline, model) => AirplaneConfiguration((model.capacity.toDouble / ECONOMY.spaceMultiplier).toInt, 0, 0, airline, model, false)
   val business : ((Airline, Model) => AirplaneConfiguration) = (airline, model) => AirplaneConfiguration(0, (model.capacity.toDouble / BUSINESS.spaceMultiplier).toInt, 0, airline, model, false)
   val first : ((Airline, Model) => AirplaneConfiguration) = (airline, model) => AirplaneConfiguration(0, 0, (model.capacity.toDouble / FIRST.spaceMultiplier).toInt, airline, model, false)
+  val freighter : ((Airline, Model) => AirplaneConfiguration) = (airline, model) => AirplaneConfiguration(0, 0, 0, airline, model, false, model.freighterCargoCapacity)
   val MAX_CONFIGURATION_TEMPLATE_COUNT = 5 //per model and airline
   val MIN_SEATS_PER_CLASS = 4
 }

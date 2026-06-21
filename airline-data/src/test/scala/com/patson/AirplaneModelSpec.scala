@@ -97,4 +97,25 @@ class AirplaneModelSpec extends AnyWordSpecLike with Matchers {
     }
   }
 
+  "cargo capacity" should {
+    "derive belly and freighter cargo from model size and range".in {
+      val a320 = Model.models.find(_.name == "Airbus A320").get
+      val a350 = Model.models.find(_.name == "Airbus A350-900").get
+
+      a320.bellyCargoCapacity shouldBe Math.round(195 * 0.08 * (5408.0 / 6000.0)).toInt
+      a320.freighterCargoCapacity shouldBe Math.round(195 * 0.55 * (5408.0 / 6000.0)).toInt
+
+      a350.bellyCargoCapacity shouldBe Math.round(440 * 0.10 * 1.35).toInt
+      a350.freighterCargoCapacity shouldBe Math.round(440 * 0.55 * 1.4).toInt
+    }
+
+    "does not add belly cargo to special or supersonic models".in {
+      val concorde = Model.models.find(_.name == "Concorde").get
+      val helicopter = Model.models.find(_.airplaneType == Model.Type.HELICOPTER).get
+
+      concorde.bellyCargoCapacity shouldBe 0
+      helicopter.bellyCargoCapacity shouldBe 0
+    }
+  }
+
 }
