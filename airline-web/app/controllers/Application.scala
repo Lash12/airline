@@ -1,6 +1,6 @@
 package controllers
 
-import com.patson.{AirportSimulation, DemandGenerator, LinkSimulation}
+import com.patson.{AirportSimulation, CargoDemandGenerator, DemandGenerator, LinkSimulation}
 import com.patson.data._
 import com.patson.model.Scheduling.{TimeSlot, TimeSlotStatus}
 import com.patson.model.airplane.{Airplane, AirplaneConfiguration, Model, ModelDiscount}
@@ -825,6 +825,42 @@ class Application @Inject()(cc: ControllerComponents, val configuration: play.ap
           result
         }
         Ok(json).withHeaders(CACHE_CONTROL -> CYCLE_CACHE_CONTROL, ETAG -> s""""$currentCycle"""")
+    }
+  }
+
+  def getAirportCargoDemand(airportId: Int) = Action { request =>
+    request.headers.get(IF_NONE_MATCH) match {
+      case Some(etag) if etag == s""""$currentCycle"""" =>
+        NotModified
+      case _ =>
+        val json = Option(ResponseCache.cargoDemandCache.getIfPresent(airportId)).filter(_._1 == currentCycle).map(_._2).getOrElse {
+          val result = computeAirportCargoDemandJson(airportId)
+          ResponseCache.cargoDemandCache.put(airportId, (currentCycle, result))
+          result
+        }
+        Ok(json).withHeaders(CACHE_CONTROL -> CYCLE_CACHE_CONTROL, ETAG -> s""""$currentCycle"""")
+    }
+  }
+
+  private def computeAirportCargoDemandJson(airportId: Int): JsValue = {
+    if (!SoloConfig.cargoEnabled) {
+      Json.arr()
+    } else {
+      AirportCache.getAirport(airportId) match {
+        case None => Json.arr()
+        case Some(fromAirport) =>
+          val candidates = AirportCache.getAllAirports()
+          val relationships = CountrySource.getCountryMutualRelationships(fromAirport.countryCode)
+          val top = CargoDemandGenerator.topCargoDestinations(fromAirport, candidates, relationships, 15)
+          Json.toJson(top.map { case (to, demand) =>
+            Json.obj(
+              "toAirportId"   -> to.id,
+              "toAirportName" -> to.city,
+              "toAirportIata" -> to.iata,
+              "cargoDemand"   -> demand
+            )
+          })
+      }
     }
   }
 
