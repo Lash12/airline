@@ -382,8 +382,14 @@ function renderAirportAssets(airportId, data) {
 		else if (!entry.canUpgrade) { reason = 'Already at max level.' }
 		else if (!entry.meetsSize) { reason = 'Airport is too small for this asset.' }
 		else if (!affordable) { reason = 'Not enough cash.' }
-		var actionLabel = !entry.canUpgrade ? 'Max level'
-			: (entry.ownedLevel === 0 ? 'Build' : ('Upgrade to ' + (entry.ownedLevel + 1)))
+		var actionLabel
+		if (!data.hasBase) {
+			actionLabel = entry.ownedLevel === 0 ? 'Build' : ('Upgrade to ' + (entry.ownedLevel + 1))
+		} else if (!entry.canUpgrade) {
+			actionLabel = 'Max level'
+		} else {
+			actionLabel = entry.ownedLevel === 0 ? 'Build' : ('Upgrade to ' + (entry.ownedLevel + 1))
+		}
 
 		var rows = [
 			{ label: 'Size required:', value: String(entry.sizeRequirement) },
