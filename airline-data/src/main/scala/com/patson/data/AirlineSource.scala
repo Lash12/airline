@@ -49,8 +49,8 @@ object AirlineSource {
   }
 
   private def loadAirlinesByQueryString(queryString : String, parameters : List[Any], fullLoad : Boolean = false) : List[Airline] = {
-    Using.resource(Meta.getConnection()) { connection =>
-      val airlines = Using.resource(connection.prepareStatement(queryString)) { preparedStatement =>
+    val airlines = Using.resource(Meta.getConnection()) { connection =>
+      Using.resource(connection.prepareStatement(queryString)) { preparedStatement =>
         for (i <- 0 until parameters.size) {
           preparedStatement.setObject(i + 1, parameters(i))
         }
@@ -80,33 +80,38 @@ object AirlineSource {
           airlines.toList
         }
       }
-
-      val allianceMembers = AllianceSource.loadAllianceMemberByAirlines(airlines)
-      airlines.foreach { airline =>
-        allianceMembers.get(airline) match {
-          case Some(allianceMember) =>
-            if (allianceMember.role != AllianceRole.APPLICANT) {
-              airline.setAllianceId(allianceMember.allianceId)
-            }
-          case None => //do nothing
-        }
-      }
-
-      if (fullLoad) {
-        val airlineBases : scala.collection.immutable.Map[Int, List[AirlineBase]] = loadAirlineBasesByAirlines(airlines).groupBy(_.airline.id)
-        airlines.foreach { airline =>
-          airline.setBases(airlineBases.getOrElse(airline.id, List.empty))
-        }
-
-        val stats = AirlineStatisticsSource.loadAirlineStatsForAirlines(airlines)
-        airlines.foreach { airline =>
-          val airlineStat = stats.find(_.airlineId == airline.id).getOrElse(AirlineStat(airline.id, 0, Period.WEEKLY, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
-          airline.setStats(airlineStat)
-        }
-      }
-
-      airlines
     }
+    // The read connection is released above before the enrichment sub-loaders below. Each of
+    // loadAllianceMemberByAirlines / loadAirlineBasesByAirlines / loadAirlineStatsForAirlines
+    // acquires its own connection; running them while the read connection was still held meant
+    // a single call occupied two pool connections at once, which exhausted the Hikari pool
+    // under concurrency (SQLTransientConnectionException, pool starvation).
+
+    val allianceMembers = AllianceSource.loadAllianceMemberByAirlines(airlines)
+    airlines.foreach { airline =>
+      allianceMembers.get(airline) match {
+        case Some(allianceMember) =>
+          if (allianceMember.role != AllianceRole.APPLICANT) {
+            airline.setAllianceId(allianceMember.allianceId)
+          }
+        case None => //do nothing
+      }
+    }
+
+    if (fullLoad) {
+      val airlineBases : scala.collection.immutable.Map[Int, List[AirlineBase]] = loadAirlineBasesByAirlines(airlines).groupBy(_.airline.id)
+      airlines.foreach { airline =>
+        airline.setBases(airlineBases.getOrElse(airline.id, List.empty))
+      }
+
+      val stats = AirlineStatisticsSource.loadAirlineStatsForAirlines(airlines)
+      airlines.foreach { airline =>
+        val airlineStat = stats.find(_.airlineId == airline.id).getOrElse(AirlineStat(airline.id, 0, Period.WEEKLY, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+        airline.setStats(airlineStat)
+      }
+    }
+
+    airlines
   }
 
 
