@@ -1508,80 +1508,89 @@ function updatePlanLinkInfoWithModelSelected(newModelId, assignedModelId, isRefr
 	if (selectedModelId) {
 		var thisModelPlanLinkInfo = planLinkInfoByModel[selectedModelId]
 
-		$('#planLinkAirplaneSelect').data('badConditionThreshold', gameConstants.aircraft.conditionBad)
+		if (thisModelPlanLinkInfo) {
+			$('#planLinkAirplaneSelect').data('badConditionThreshold', gameConstants.aircraft.conditionBad)
 
-		thisModelPlanLinkInfo.airplanes.sort(function(a, b) {
-		    var result = b.frequency - a.frequency
-		    if (result != 0) {
-		        if (b.frequency == 0 || a.frequency == 0) { //if either one is not assigned to this route at all, then return result ie also higher precedence to compare if airplane is assigned
-		            return result
-		        }
-		    }
+			if (thisModelPlanLinkInfo.airplanes) {
+				thisModelPlanLinkInfo.airplanes.sort(function(a, b) {
+					var result = b.frequency - a.frequency
+					if (result != 0) {
+						if (b.frequency == 0 || a.frequency == 0) { //if either one is not assigned to this route at all, then return result ie also higher precedence to compare if airplane is assigned
+							return result
+						}
+					}
 
-		    return a.airplane.condition - b.airplane.condition //otherwise: both assigned or both not assigned, then return lowest condition ones first
-		})
-
-        $('#planLinkAirplaneSelect').empty()
-
-		var selectableAirplanes = thisModelPlanLinkInfo.airplanes.filter(function(entry) {
-		    var config = entry.airplane.configuration
-		    var passengerSeats = (config.economy || 0) + (config.business || 0) + (config.first || 0)
-		    return isCargoPlan() ? (config.cargoCapacity || 0) > 0 && passengerSeats == 0 : passengerSeats > 0
-		})
-
-		$.each(selectableAirplanes, function(key, airplaneEntry) {
-//			var option = $("<option></option>").attr("value", airplane.airplaneId).text("#" + airplane.airplaneId)
-//			option.appendTo($("#planLinkAirplaneSelect"))
-
-			//check existing UI changes if just a refresh
-			if (isRefresh) {
-			    var $existingAirplaneRow = $("#planLinkDetails .frequencyDetail .airplaneRow[data-airplaneId='" + airplaneEntry.airplane.id + "']")
-			    //UI values merge into the airplane/frequency info as we want to preserve previously UI change on refresh
-    			mergeAirplaneEntry(airplaneEntry, $existingAirplaneRow)
+					return a.airplane.condition - b.airplane.condition //otherwise: both assigned or both not assigned, then return lowest condition ones first
+				})
 			}
 
-			var airplane = airplaneEntry.airplane
-			airplane.isAssigned = airplaneEntry.frequency >  0
-			var div =  $('<div class="clickable airplaneButton" onclick="toggleAssignedAirplane(this)" style="float: left;"></div>')
-			div.append(getAssignedAirplaneIcon(airplane))
-			div.data('airplane', airplane)
-			div.data('existingFrequency', airplaneEntry.frequency)
+			$('#planLinkAirplaneSelect').empty()
 
-			$('#planLinkAirplaneSelect').append(div)
-		})
-		if (selectableAirplanes.length == 0) {
-		    $('#planLinkDetails .noAirplaneHelp').show()
+			var selectableAirplanes = []
+			if (thisModelPlanLinkInfo.airplanes) {
+				selectableAirplanes = thisModelPlanLinkInfo.airplanes.filter(function(entry) {
+					var config = entry.airplane.configuration
+					var passengerSeats = (config.economy || 0) + (config.business || 0) + (config.first || 0)
+					return isCargoPlan() ? (config.cargoCapacity || 0) > 0 : passengerSeats > 0
+				})
+			}
+
+			$.each(selectableAirplanes, function(key, airplaneEntry) {
+	//			var option = $("<option></option>").attr("value", airplane.airplaneId).text("#" + airplane.airplaneId)
+	//			option.appendTo($("#planLinkAirplaneSelect"))
+
+				//check existing UI changes if just a refresh
+				if (isRefresh) {
+					var $existingAirplaneRow = $("#planLinkDetails .frequencyDetail .airplaneRow[data-airplaneId='" + airplaneEntry.airplane.id + "']")
+					//UI values merge into the airplane/frequency info as we want to preserve previously UI change on refresh
+					mergeAirplaneEntry(airplaneEntry, $existingAirplaneRow)
+				}
+
+				var airplane = airplaneEntry.airplane
+				airplane.isAssigned = airplaneEntry.frequency >  0
+				var div =  $('<div class="clickable airplaneButton" onclick="toggleAssignedAirplane(this)" style="float: left;"></div>')
+				div.append(getAssignedAirplaneIcon(airplane))
+				div.data('airplane', airplane)
+				div.data('existingFrequency', airplaneEntry.frequency)
+
+				$('#planLinkAirplaneSelect').append(div)
+			})
+			if (selectableAirplanes.length == 0) {
+				$('#planLinkDetails .noAirplaneHelp').show()
+			} else {
+				$('#planLinkDetails .noAirplaneHelp').hide()
+			}
+			toggleUtilizationRate($('#planLinkAirplaneSelect'), $('#planLinkExtendedDetails .toggleUtilizationRateBox'))
+			toggleCondition($('#planLinkAirplaneSelect'), $('#planLinkExtendedDetails .toggleConditionBox'))
+
+
+			$('#planLinkDuration').text(getDurationText(thisModelPlanLinkInfo.duration))
+
+			if (!isRefresh) { //for refresh, do not reload the existing link, otherwise refresh on config change would show the new values in confirmation dialog etc
+				existingLink = planLinkInfo.existingLink
+			}
+
+			if (existingLink) {
+				$("#planLinkServiceLevel").val(existingLink.rawQuality / 20)
+			} else {
+				$("#planLinkServiceLevel").val(1)
+			}
+
+			updateFrequencyDetail(thisModelPlanLinkInfo)
+
+			if (thisModelPlanLinkInfo.cost && thisModelPlanLinkInfo.cost !== 0) {
+				$('#planLinkSetupCostRow').show()
+				$('#planLinkSetupCost').text("$" + commaSeparateNumber(thisModelPlanLinkInfo.cost))
+			} else {
+				$('#planLinkSetupCostRow').hide()
+			}
+
+			var serviceLevelBar = $("#serviceLevelBar")
+			generateImageBar(serviceLevelBar.data("emptyIcon"), serviceLevelBar.data("fillIcon"), 5, serviceLevelBar, $("#planLinkServiceLevel"))
+			$("#planLinkExtendedDetails").show()
 		} else {
-		    $('#planLinkDetails .noAirplaneHelp').hide()
+			$("#planLinkExtendedDetails").hide()
 		}
-		toggleUtilizationRate($('#planLinkAirplaneSelect'), $('#planLinkExtendedDetails .toggleUtilizationRateBox'))
-		toggleCondition($('#planLinkAirplaneSelect'), $('#planLinkExtendedDetails .toggleConditionBox'))
-
-
-		$('#planLinkDuration').text(getDurationText(thisModelPlanLinkInfo.duration))
-
-		if (!isRefresh) { //for refresh, do not reload the existing link, otherwise refresh on config change would show the new values in confirmation dialog etc
-		    existingLink = planLinkInfo.existingLink
-        }
-
-		if (existingLink) {
-			$("#planLinkServiceLevel").val(existingLink.rawQuality / 20)
-		} else {
-			$("#planLinkServiceLevel").val(1)
-		}
-
-		updateFrequencyDetail(thisModelPlanLinkInfo)
-
-		if (thisModelPlanLinkInfo.cost && thisModelPlanLinkInfo.cost !== 0) {
-			$('#planLinkSetupCostRow').show()
-			$('#planLinkSetupCost').text("$" + commaSeparateNumber(thisModelPlanLinkInfo.cost))
-		} else {
-			$('#planLinkSetupCostRow').hide()
-		}
-
-		var serviceLevelBar = $("#serviceLevelBar")
-		generateImageBar(serviceLevelBar.data("emptyIcon"), serviceLevelBar.data("fillIcon"), 5, serviceLevelBar, $("#planLinkServiceLevel"))
-		$("#planLinkExtendedDetails").show()
 	} else {
 		$("#planLinkExtendedDetails").hide()
 	}
@@ -1815,6 +1824,27 @@ function updateTotalValues() {
         $("#planLinkDetails .future").hide()
     }
 
+    var hasPassengerConfig = false
+    $("#planLinkDetails .frequencyDetail .airplaneRow").each(function(index, airplaneRow) {
+        var airplane = $(airplaneRow).data("airplane")
+        if (airplane) {
+            var config = airplane.configuration
+            var passengerSeats = (config.economy || 0) + (config.business || 0) + (config.first || 0)
+            if (passengerSeats > 0) {
+                hasPassengerConfig = true
+            }
+        }
+    })
+
+    $("#planLinkDetails .warningList .passenger-config-warning").remove()
+    if (isCargoPlan() && hasPassengerConfig) {
+        $("#planLinkDetails .warningList").append(
+            "<div class='warning passenger-config-warning'><img src='/assets/images/icons/exclamation-red-frame.png'>&nbsp;" +
+            "Warning: You are creating a cargo route with a plane that has a passenger configuration" +
+            "</div>"
+        )
+    }
+
 
     $('#planLinkAirplaneSelect').removeClass('glow')
     $('.noAirplaneHelp').removeClass('glow')
@@ -1822,11 +1852,14 @@ function updateTotalValues() {
          disableButton($("#planLinkDetails .modifyLink"), "Must assign airplanes and frequency")
 
         var thisModelPlanLinkInfo = planLinkInfoByModel[selectedModelId]
-        var availableForMode = thisModelPlanLinkInfo.airplanes.filter(function(entry) {
-            var config = entry.airplane.configuration
-            var passengerSeats = (config.economy || 0) + (config.business || 0) + (config.first || 0)
-            return isCargoPlan() ? (config.cargoCapacity || 0) > 0 && passengerSeats == 0 : passengerSeats > 0
-        })
+        var availableForMode = []
+        if (thisModelPlanLinkInfo && thisModelPlanLinkInfo.airplanes) {
+            availableForMode = thisModelPlanLinkInfo.airplanes.filter(function(entry) {
+                var config = entry.airplane.configuration
+                var passengerSeats = (config.economy || 0) + (config.business || 0) + (config.first || 0)
+                return isCargoPlan() ? (config.cargoCapacity || 0) > 0 : passengerSeats > 0
+            })
+        }
         if (availableForMode.length == 0) {
             $('.noAirplaneHelp').addClass('glow')
         } else {

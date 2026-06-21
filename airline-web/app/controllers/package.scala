@@ -474,7 +474,8 @@ package object controllers {
         "advertising" -> JsNumber(details.advertising),
         "loanInterest" -> JsNumber(details.loanInterest),
         "dividends" -> JsNumber(details.dividends),
-        "cargoRevenue" -> JsNumber(details.cargoRevenue)
+        "cargoRevenue" -> JsNumber(details.cargoRevenue),
+        "cargoExpense" -> JsNumber(details.cargoExpense)
       ))
     }
   }

@@ -19,8 +19,8 @@ object IncomeSource {
       "REPLACE INTO " + BALANCE_DETAILS_TABLE +
       "(airline, ticket_revenue, lounge_revenue, staff, staff_overtime, flight_crew, fuel, fuel_tax," +
       " fuel_normalized, deprecation, airport_rentals, inflight_service, delay, maintenance, lounge," +
-      " advertising, loan_interest, dividends, period, cycle, cargo_revenue)" +
-      " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+      " advertising, loan_interest, dividends, period, cycle, cargo_revenue, cargo_expense)" +
+      " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
     try {
       connection.setAutoCommit(false)
       balances.foreach { case (bal, det) =>
@@ -55,6 +55,7 @@ object IncomeSource {
         detStmt.setInt(19, det.period.id)
         detStmt.setInt(20, det.cycle)
         detStmt.setLong(21, det.cargoRevenue)
+        detStmt.setLong(22, det.cargoExpense)
         detStmt.addBatch()
       }
       balStmt.executeBatch()
@@ -193,7 +194,8 @@ object IncomeSource {
       dividends = rs.getLong("d.dividends"),
       period = period,
       cycle = cycle,
-      cargoRevenue = rs.getLong("d.cargo_revenue"))
+      cargoRevenue = rs.getLong("d.cargo_revenue"),
+      cargoExpense = rs.getLong("d.cargo_expense"))
     (bal, det)
   }
 
@@ -208,6 +210,11 @@ object IncomeSource {
         val exists = try columns.next() finally columns.close()
         if (!exists) {
           scala.util.Using.resource(connection.prepareStatement(s"ALTER TABLE $BALANCE_DETAILS_TABLE ADD COLUMN cargo_revenue BIGINT NOT NULL DEFAULT 0")) { _.executeUpdate() }
+        }
+        val columnsExpense = connection.getMetaData.getColumns(null, null, BALANCE_DETAILS_TABLE, "cargo_expense")
+        val existsExpense = try columnsExpense.next() finally columnsExpense.close()
+        if (!existsExpense) {
+          scala.util.Using.resource(connection.prepareStatement(s"ALTER TABLE $BALANCE_DETAILS_TABLE ADD COLUMN cargo_expense BIGINT NOT NULL DEFAULT 0")) { _.executeUpdate() }
         }
       }
       cargoSchemaEnsured = true

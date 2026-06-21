@@ -723,12 +723,13 @@ function updateIncomeSheet(b) {
 	$('#balFuelNormalized').text(fmt(b.fuelNormalized))
 	$('#balDeprication').text(fmt(b.deprecation))
 	$('#balAirportRentals').text(fmt(b.airportRentals))
+	$('#balCargoRentals').text(fmt(b.cargoExpense || 0))
 	$('#balInflightService').text(fmt(b.inflightService))
 	$('#balDelay').text(fmt(b.delay))
 	$('#balMaintenance').text(fmt(b.maintenance))
 	$('#balLounge').text(fmt(b.lounge))
 	$('#balAdvertising').text(fmt(b.advertising))
-	const totalExpense = b.staff + b.staffOvertime + b.flightCrew + b.fuelNormalized + b.deprecation + b.airportRentals + b.inflightService + b.delay + b.maintenance + b.lounge + b.advertising
+	const totalExpense = b.staff + b.staffOvertime + b.flightCrew + b.fuelNormalized + b.deprecation + b.airportRentals + (b.cargoExpense || 0) + b.inflightService + b.delay + b.maintenance + b.lounge + b.advertising
 	$('#balExpenseTot').text(fmt(totalExpense))
 	$('#balOperatingIncome').text(fmt(b.normalizedOperatingIncome))
 	$('#balFuelTax').text(fmt(b.fuelTax))

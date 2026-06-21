@@ -88,15 +88,17 @@ object AirlineSimulation {
         NotificationSource.insertNotification(Notification(airline.id, NotificationCategory.GAME_OVER, gameOverMessage, cycle))
       }
 
-      val (linksRevenue, linksAirportFee, linksCrewCost, linksFuelCost, linksFuelTax, linksInflightCost, linksDelayCompensation, linksMaintenanceCost, linksDepreciation, linksLoungeCost, linksCargoRevenue) = flightLinkResultByAirline.get(airline.id) match {
+      val (linksRevenue, linksAirportFee, linksCrewCost, linksFuelCost, linksFuelTax, linksInflightCost, linksDelayCompensation, linksMaintenanceCost, linksDepreciation, linksLoungeCost, linksCargoRevenue, linksCargoAirportFee) = flightLinkResultByAirline.get(airline.id) match {
           case Some(lc) =>
-            lc.foldLeft((0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)) {
-              case ((r, a, c, f, t, i, d, m, depr, l, cargo), lcd) =>
+            lc.foldLeft((0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)) {
+              case ((r, a, c, f, t, i, d, m, depr, l, cargo, cargoFee), lcd) =>
+                val currentCargoFee = if (lcd.link.transportType == TransportType.CARGO_FLIGHT) lcd.airportFees else 0
                 (r + lcd.revenue, a + lcd.airportFees, c + lcd.crewCost, f + lcd.fuelCost,
                   t + lcd.fuelTax, i + lcd.inflightCost, d + lcd.delayCompensation,
-                  m + lcd.maintenanceCost, depr + lcd.depreciation, l + lcd.loungeCost, cargo + lcd.cargoRevenue)
+                  m + lcd.maintenanceCost, depr + lcd.depreciation, l + lcd.loungeCost, cargo + lcd.cargoRevenue,
+                  cargoFee + currentCargoFee)
             }
-          case None => (0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)
+          case None => (0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)
         }
 
       
@@ -473,6 +475,17 @@ object AirlineSimulation {
       }
       airline.setReputation(targetReputation)
 
+      val linksPassengerAirportFee = linksAirportFee - linksCargoAirportFee
+      val cargoAssetUpkeep = if (SoloConfig.assetsEnabled) {
+        AirportAssetSource.loadAirportAssetsByAirline(airline.id)
+          .filter(_.assetType == AirportAssetType.CARGO_TERMINAL)
+          .map(_.weeklyUpkeep.toLong)
+          .sum
+      } else {
+        0L
+      }
+      val cargoExpense = linksCargoAirportFee + cargoAssetUpkeep
+
       val weeklyDetails = AirlineBalanceDetails(
         airlineId = airline.id,
         ticketRevenue = linksRevenue - linksCargoRevenue,
@@ -484,7 +497,7 @@ object AirlineSimulation {
         fuelTax = -linksFuelTax,
         fuelNormalized = -linksFuelCost, // negative normalized cost at $70/barrel
         deprecation = -linksDepreciation,
-        airportRentals = -linksAirportFee,
+        airportRentals = -linksPassengerAirportFee,
         inflightService = -linksInflightCost,
         delay = -linksDelayCompensation,
         maintenance = -linksMaintenanceCost,
@@ -493,7 +506,8 @@ object AirlineSimulation {
         loanInterest = loanInterestEntry,
         dividends = -dividendsPaid,
         cargoRevenue = linksCargoRevenue,
-        cycle = cycle)
+        cycle = cycle,
+        cargoExpense = -cargoExpense)
       val weeklyBalance = AirlineBalance(
         airlineId = airline.id,
         income = airlineProfit.toLong,
