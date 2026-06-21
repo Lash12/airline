@@ -989,6 +989,24 @@ function updatePlanLinkInfo(linkInfo, isRefresh) {
 	$('#planLinkFromAirportName').attr("href", `/airport/${linkInfo.fromAirportCode}`).html(getCountryFlagImg(linkInfo.fromCountryCode) + linkInfo.fromAirportCity + "<i class='pl-2 iata'>" + linkInfo.fromAirportCode + "</i>")
 	planLinkInfo = linkInfo
 
+	if (!linkInfo.existingLink) {
+	    if (!isRefresh) {
+	        var defaultType = "FLIGHT";
+	        $('#planLinkTransportType').val(defaultType);
+	        setPlanTransportType(defaultType);
+	    }
+	    if (linkInfo.cargoFreightersEnabled) {
+	        $('#planLinkTransportType').closest('.table-row').show();
+	    } else {
+	        $('#planLinkTransportType').closest('.table-row').hide();
+	    }
+	} else {
+	    var existingType = linkInfo.existingLink.isCargo ? "CARGO_FLIGHT" : "FLIGHT";
+	    $('#planLinkTransportType').val(existingType);
+	    setPlanTransportType(existingType);
+	    $('#planLinkTransportType').closest('.table-row').hide();
+	}
+
 	if (activeAirline.baseAirports.length > 1) { //only allow changing from airport if this is a new link and there are more than 1 base
 		$('#planLinkFromAirportEditIcon').show()
 		//fill the from list

@@ -72,7 +72,7 @@ class AirportAssetApplication @Inject()(cc: ControllerComponents) extends Abstra
           val hasBase = AirlineSource.loadAirlineBaseByAirlineAndAirport(airlineId, airportId).isDefined
           val owned = AirportAssetSource.loadAirportAssetsByAirport(airport).filter(_.airline.id == airlineId)
           val ownedByType = owned.map(a => (a.assetType.id, a.level)).toMap
-          val catalog = AirportAssetType.values.map(t => catalogJson(t, airport, ownedByType.getOrElse(t.id, 0)))
+          val catalog = AirportAssetType.values.filter(t => t != AirportAssetType.CARGO_TERMINAL || SoloConfig.cargoAssetsEnabled).map(t => catalogJson(t, airport, ownedByType.getOrElse(t.id, 0)))
           Ok(Json.obj(
             "enabled" -> true,
             "hasBase" -> hasBase,
@@ -96,27 +96,31 @@ class AirportAssetApplication @Inject()(cc: ControllerComponents) extends Abstra
         case (None, _) => NotFound(s"airport $airportId not found")
         case (_, None) => BadRequest(s"unknown asset type $assetTypeId")
         case (Some(airport), Some(assetType)) =>
-          val airline = request.user
-          val currentCycle = CycleSource.loadCycle()
-          val existing = AirportAssetSource.loadAirportAssetsByAirport(airport).find(a => a.airline.id == airlineId && a.assetType == assetType)
-          val currentLevel = existing.map(_.level).getOrElse(0)
-          val targetLevel = currentLevel + 1
-          val hasBase = AirlineSource.loadAirlineBaseByAirlineAndAirport(airlineId, airportId).isDefined
-          val cost = assetType.constructionCost(airport, targetLevel)
-
-          if (existing.exists(_.status == AirportAssetStatus.UNDER_CONSTRUCTION)) {
-            BadRequest("This asset is already under construction.")
+          if (assetType == AirportAssetType.CARGO_TERMINAL && !SoloConfig.cargoAssetsEnabled) {
+            BadRequest("Cargo terminal is not enabled")
           } else {
-            AirportAsset.validateBuild(hasBase, airport.size, assetType, currentLevel, targetLevel, airline.getBalance(), cost) match {
-              case Some(reason) => BadRequest(reason)
-              case None =>
-                val completion = currentCycle + assetType.constructionDuration
-                existing match {
-                  case Some(asset) => AirportAssetSource.updateAirportAsset(asset.copy(level = targetLevel, status = AirportAssetStatus.UNDER_CONSTRUCTION, completionCycle = completion))
-                  case None => AirportAssetSource.saveAirportAsset(AirportAsset(airline, airport, assetType, targetLevel, AirportAssetStatus.UNDER_CONSTRUCTION, completion))
-                }
-                AirlineSource.saveLedgerEntry(AirlineLedgerEntry(airlineId, currentCycle, LedgerType.AIRPORT_ASSET_CONSTRUCTION, -cost, Some(s"${assetType.label} at ${airport.iata} Lv$targetLevel")))
-                Ok(Json.obj("ok" -> true, "completionCycle" -> completion))
+            val airline = request.user
+            val currentCycle = CycleSource.loadCycle()
+            val existing = AirportAssetSource.loadAirportAssetsByAirport(airport).find(a => a.airline.id == airlineId && a.assetType == assetType)
+            val currentLevel = existing.map(_.level).getOrElse(0)
+            val targetLevel = currentLevel + 1
+            val hasBase = AirlineSource.loadAirlineBaseByAirlineAndAirport(airlineId, airportId).isDefined
+            val cost = assetType.constructionCost(airport, targetLevel)
+
+            if (existing.exists(_.status == AirportAssetStatus.UNDER_CONSTRUCTION)) {
+              BadRequest("This asset is already under construction.")
+            } else {
+              AirportAsset.validateBuild(hasBase, airport.size, assetType, currentLevel, targetLevel, airline.getBalance(), cost) match {
+                case Some(reason) => BadRequest(reason)
+                case None =>
+                  val completion = currentCycle + assetType.constructionDuration
+                  existing match {
+                    case Some(asset) => AirportAssetSource.updateAirportAsset(asset.copy(level = targetLevel, status = AirportAssetStatus.UNDER_CONSTRUCTION, completionCycle = completion))
+                    case None => AirportAssetSource.saveAirportAsset(AirportAsset(airline, airport, assetType, targetLevel, AirportAssetStatus.UNDER_CONSTRUCTION, completion))
+                  }
+                  AirlineSource.saveLedgerEntry(AirlineLedgerEntry(airlineId, currentCycle, LedgerType.AIRPORT_ASSET_CONSTRUCTION, -cost, Some(s"${assetType.label} at ${airport.iata} Lv$targetLevel")))
+                  Ok(Json.obj("ok" -> true, "completionCycle" -> completion))
+              }
             }
           }
       }

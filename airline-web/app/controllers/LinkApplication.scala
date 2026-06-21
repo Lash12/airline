@@ -268,6 +268,9 @@ class LinkApplication @Inject()(cc: ControllerComponents) extends AbstractContro
   def addCargoLink(airlineId : Int) = AuthenticatedAirline(airlineId) { request => addCargoLinkBlock(airlineId, request) }
 
   def addCargoLinkBlock(airlineId : Int, request : AuthenticatedRequest[AnyContent, Airline]) : Result = {
+    if (!SoloConfig.cargoEnabled || !SoloConfig.cargoFreightersEnabled) {
+      return Forbidden("Cargo freighters are not enabled")
+    }
     val json = request.body.asInstanceOf[AnyContentAsJson].json
     val fromAirport = AirportCache.getAirport((json \ "fromAirportId").as[Int], true).getOrElse(return BadRequest("From airport not found"))
     val toAirport = AirportCache.getAirport((json \ "toAirportId").as[Int], true).getOrElse(return BadRequest("To airport not found"))
@@ -376,6 +379,9 @@ class LinkApplication @Inject()(cc: ControllerComponents) extends AbstractContro
     //check if the assigned planes are owned by this airline and have minutes left for this
     incomingLink.getAssignedAirplanes().foreach {
       case(airplane, assignment) =>
+        if (airplane.configuration.cargoCapacity > 0) {
+          return BadRequest(s"Cannot assign freighter-configured airplane $airplane to passenger link")
+        }
         if (airplane.owner.id != airlineId){
           return BadRequest(s"Cannot insert link - airplane $airplane is not owned by ${request.user}")
         }
@@ -980,7 +986,9 @@ class LinkApplication @Inject()(cc: ControllerComponents) extends AbstractContro
           "suggestedPrice" -> suggestedPrice,
           "cost" -> cost,
           "cargoDemand" -> cargoDemand,
-          "cargoDemandReverse" -> cargoDemandReverse) ++
+          "cargoDemandReverse" -> cargoDemandReverse,
+          "cargoFreightersEnabled" -> SoloConfig.cargoFreightersEnabled,
+          "cargoEnabled" -> SoloConfig.cargoEnabled) ++
           Json.obj("modelPlanLinkInfo" -> Json.toJson(planLinkInfoByModel)) ++
           estimatedDifficulty.fold(Json.obj())(difficulty => Json.obj("estimatedDifficulty" -> difficulty)) ++
           deleteLinkRefund.fold(Json.obj())(refund => Json.obj("deleteLinkRefund" -> refund))
