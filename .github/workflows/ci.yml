@@ -9,6 +9,19 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+          MYSQL_DATABASE: airline
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
 
     steps:
       - name: Checkout code
@@ -34,10 +47,8 @@ jobs:
       - name: Install e2e dependencies
         run: npm ci --prefix e2e
 
-      # Full `sbt test` needs a live MySQL instance, so CI stops at
-      # compile-level verification plus Playwright suite discovery.
-      - name: Compile airline-data and publish locally
-        run: cd airline-data && sbt compile publishLocal
+      - name: Test airline-data and publish locally
+        run: cd airline-data && sbt test publishLocal
 
       - name: Compile airline-web
         run: cd airline-web && sbt compile
