@@ -12,7 +12,9 @@
 node_modules
 e2e/test-results/
 e2e/playwright-report/
+e2e/shots/
 e2e/ui-*.mjs
 airline-web/*.log
 AGENTS.md
 .agents/
+.superpowers/

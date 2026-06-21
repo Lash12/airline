@@ -300,11 +300,75 @@ this checkout is the Desktop one (`C:\Users\logan\Desktop\Airline\airline`), git
 `airline/` subdir; C-1 commit `f9144132` is local on `master` and still needs pushing/deploying
 (can be folded into the C-2 deploy).
 
+## 2026-06-21 — Cargo data surfacing, airport mobile UX, DB pool fix (shipped + deployed)
+
+All on `master`, deployed to OptiPlex (`airline.ashhome.org` → `192.168.1.52`), CI green. Air Cargo
+C-1..C-4 (belly revenue, freighters, Cargo Terminal, expense split) are all shipped now — the
+"Air Cargo C-1/C-2" sections above are historical.
+
+**1. Cargo decision-data surfacing + flights/office polish** (commits `7e9909b4`..`6f2d9424`)
+- Aircraft market + hangar show cargo capacity: new **Cargo** column + detail line
+  `Freighter X t / Belly Y t`. Serialized `bellyCargoCapacity` in `package.scala`
+  `AirplaneModelWrites` (`freighterCargoCapacity` was already there). `formatCargoTons()` in
+  `airplane.js` renders `—` instead of `NaN` if a stale payload lacks the field.
+- Route planner: `Capacity vs demand (~N% fill)` row (`updatePlanCapacityVsDemand` in `airline.js`),
+  pax + cargo.
+- Flights list: Load Factor / Profit / Margin color-coded (`.positive`/`.negative` in `main.css`).
+- Office income sheet: net + operating income colored by sign, cargo revenue shown as % of total,
+  subtotal/total separator rule.
+- **GOTCHA (cost us a NaN bug):** `/api/<ver>/airplane-models` (`AirplaneApplication.getAirplaneModels`)
+  is cached **4 weeks, public, keyed by `currentApiVersion`**. Adding/removing a model-JSON field
+  REQUIRES bumping `currentApiVersion` (`airline-web/.../controllers/package.scala:23`), or browsers
+  serve the stale cached payload. Bumped `v5.1.2 → v5.1.3` this session. Always bump on model-schema
+  change.
+
+**2. Airport page mobile UX** (spec `docs/superpowers/specs/2026-06-21-airport-mobile-ux-design.md`,
+plan `docs/superpowers/plans/2026-06-21-airport-mobile-ux.md`; commits `58dbd81`..`ec4c5dc4`)
+- Asset detail modal `#airportAssetDetailsModal`: tap any built-asset/catalog row → prominent image +
+  benefit/ROI/payback + one large Build/Upgrade/Sell button. Inline table buttons removed.
+  `openAssetDetailsModal(descriptor)` in `airport.js`; rows build the descriptor.
+- Airport tables scroll horizontally on mobile (≤640px): `#airportCanvas .table.data` →
+  `display:block; overflow-x:auto` while rows/cells stay `table-row`/`table-cell` (browser wraps them
+  in one anonymous table → content-sized, aligned columns), capped at `calc(100vw - 24px)` so wide
+  tables scroll internally and narrow ones don't. **Lesson:** these are CSS-table layout — `min-width`
+  on `table-row` and `overflow-x` on `display:table` are ignored (the first two attempts failed on
+  this); and the global `mobile.css .table.data .cell` rule uses `!important`, so airport overrides
+  must too.
+- `abbreviateMoney()` in `gadgets.js` (Jest-tested) → `$1.2M`/`$340K`; `formatAssetMoney()` gates by
+  viewport. `e2e/tests/airport-mobile.spec.ts` is part of the deploy verify suite.
+
+**3. DB connection-pool exhaustion fix** (commit `23359d62`) — PRODUCTION INCIDENT
+- Symptom: Flights page empty (header, **no rows and no "no routes" tip**) + intermittent HTTP 500s
+  (login, etc.); "refreshes don't fix." The flights loader only renders on AJAX success, so a 500 on
+  `/links-details` leaves the header with nothing — that was the tell.
+- Root cause: Hikari pool (max **10**) exhausted — `SQLTransientConnectionException ... Connection is
+  not available` + `Apparent connection leak detected` in `web.log`. `AirlineSource.loadAirlinesByQueryString`
+  held its read connection across enrichment sub-loaders (`loadAllianceMemberByAirlines`,
+  `loadAirlineBasesByAirlines`, `loadAirlineStatsForAirlines`), each of which takes its own connection
+  → **two pool connections held at once** → exhaustion under concurrency. The
+  `loadAirlineStatsForAirlines` (reputation/stats) enrichment in this hot path was the tipping point.
+- Fix: scope the read connection to just the query; run enrichment after it is released
+  (`airline-data/.../data/AirlineSource.scala`). Immediate relief via `docker restart airline-app`;
+  durable fix deployed.
+- **Ops notes:** OptiPlex app log is **in-container** at `/home/airline/web.log` (NOT `docker logs`,
+  which only shows the supervisor wrapper). SSH: `ssh -i ~/.ssh/airline_optiplex_ed25519 root@192.168.1.52`.
+  Containers: `airline-app`, `airline-db`, `airline-cloudflared`.
+
+### Next steps
+- **Airport Cargo Demand panel** (backlog in `docs/air-cargo-plan.md`): `/airports/:id/demand`
+  (`Application.computeAirportDemandJson`) is passenger-only; needs a per-airport cargo-demand
+  aggregate + demand-JSON field, then extend `renderDemandCards` in `airport.js`. Deferred from the
+  airport pass (was out of "no new backend endpoint" scope).
+- **DB resilience follow-up:** the nested-connection pattern likely exists elsewhere — grep
+  `airline-data` for `Meta.getConnection()` calls made inside another `getConnection` block and apply
+  the same "release before sub-loaders" fix. Consider bumping Hikari `maximumPoolSize` above 10 as
+  defense-in-depth (see `HIKARI_TUNING.md`); not done this session.
+- **Minor (logged):** airport asset catalog button can read "Max level" while the reason text says
+  build-base-first — an unreachable combo, left as-is.
+
 ## Suggested Next Feature Phase
 
-- **Air Cargo C-2** — see the dedicated section above and `glittery-finding-zebra.md`. C-1 (demand
-  layer) is committed; C-2 turns spare belly capacity into bounded, automatic per-link revenue.
-- After cargo: Cargo Terminal airport asset (C-3) and dedicated freighters (C-4) remain designed-
-  only in `docs/air-cargo-plan.md`, explicitly out of the current release.
+- **Air Cargo C-1..C-4 are all shipped/deployed.** Remaining cargo work is the Airport Cargo Demand
+  panel (see Next steps above) and any economy tuning.
 - Tuning backlog: the `solo.airportAssets.*` cost/upkeep/income multipliers and `solo.ai.bases.*`
   knobs can be adjusted live once playtest shows how the cadence/economy feel.
