@@ -29,14 +29,14 @@ object RouteForecastService {
       return Left("FEATURE_DISABLED: Route forecast backend is disabled in solo configuration.")
     }
 
-    val airlineOption = AirlineSource.loadAirlineById(airlineId)
+    val airlineOption = AirlineSource.loadAirlineById(airlineId, fullLoad = true)
     if (airlineOption.isEmpty) {
       return Left(s"Airline $airlineId not found.")
     }
     val airline = airlineOption.get
 
-    val fromAirportOption = AirportSource.loadAirportById(originAirportId)
-    val toAirportOption = AirportSource.loadAirportById(destinationAirportId)
+    val fromAirportOption = AirportSource.loadAirportById(originAirportId, fullLoad = true)
+    val toAirportOption = AirportSource.loadAirportById(destinationAirportId, fullLoad = true)
 
     if (fromAirportOption.isEmpty || toAirportOption.isEmpty) {
       return Left("UNAVAILABLE_DATA: One or both airports not found.")
