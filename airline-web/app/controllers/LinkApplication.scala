@@ -1734,6 +1734,41 @@ class LinkApplication @Inject()(cc: ControllerComponents) extends AbstractContro
   }
 
   case class ModelPlanLinkInfo(model: Model, duration : Int, flightMinutesRequired : Int, isAssigned : Boolean, maxFrequency : Int, airplanes : List[(Airplane, Int)], cost: Int = 0)
+
+  def getRouteForecast(airlineId: Int, originAirportId: Int, destinationAirportId: Int) = AuthenticatedAirline(airlineId) { implicit request =>
+    import com.patson.RouteForecastService
+    import play.api.libs.json._
+
+    implicit val routeForecastResultWrites = new Writes[RouteForecastService.RouteForecastResult] {
+      def writes(result: RouteForecastService.RouteForecastResult): JsValue = Json.obj(
+        "originAirportId" -> result.originAirportId,
+        "destinationAirportId" -> result.destinationAirportId,
+        "passengerDemandEstimate" -> result.passengerDemandEstimate,
+        "cargoDemandEstimate" -> result.cargoDemandEstimate,
+        "expectedRevenue" -> result.expectedRevenue,
+        "expectedCost" -> result.expectedCost,
+        "expectedProfit" -> result.expectedProfit,
+        "confidenceLevel" -> result.confidenceLevel,
+        "competitionLevel" -> result.competitionLevel,
+        "recommendedAircraftModels" -> result.recommendedAircraftModels,
+        "recommendedFrequency" -> result.recommendedFrequency,
+        "reasons" -> result.reasons
+      )
+    }
+
+    RouteForecastService.getForecast(airlineId, originAirportId, destinationAirportId) match {
+      case Left(error) =>
+        if (error.startsWith("FEATURE_DISABLED")) {
+          Forbidden(error)
+        } else if (error.startsWith("UNAVAILABLE_DATA")) {
+          NotFound(error)
+        } else {
+          BadRequest(error)
+        }
+      case Right(result) =>
+        Ok(Json.toJson(result))
+    }
+  }
 }
 
 object LinkApplication {

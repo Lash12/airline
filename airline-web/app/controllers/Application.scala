@@ -842,6 +842,43 @@ class Application @Inject()(cc: ControllerComponents, val configuration: play.ap
     }
   }
 
+  def getAirportCargoOpportunities(airportId: Int) = Action { request =>
+    request.headers.get(IF_NONE_MATCH) match {
+      case Some(etag) if etag == s""""$currentCycle"""" =>
+        NotModified
+      case _ =>
+        val json = Option(ResponseCache.cargoOpportunitiesCache.getIfPresent(airportId)).filter(_._1 == currentCycle).map(_._2).getOrElse {
+          val result = computeAirportCargoOpportunitiesJson(airportId)
+          ResponseCache.cargoOpportunitiesCache.put(airportId, (currentCycle, result))
+          result
+        }
+        Ok(json).withHeaders(CACHE_CONTROL -> CYCLE_CACHE_CONTROL, ETAG -> s""""$currentCycle"""")
+    }
+  }
+
+  private def computeAirportCargoOpportunitiesJson(airportId: Int): JsValue = {
+    if (!SoloConfig.cargoEnabled) {
+      Json.arr()
+    } else {
+      val opportunities = com.patson.CargoMarketVisibilityService.getCargoOpportunities(airportId)
+      Json.toJson(opportunities.map { opt =>
+        Json.obj(
+          "originAirportId" -> opt.originAirportId,
+          "destinationAirportId" -> opt.destinationAirportId,
+          "destinationCode" -> opt.destinationCode,
+          "destinationName" -> opt.destinationName,
+          "weeklyCargoDemand" -> opt.weeklyCargoDemand,
+          "weeklyCargoServed" -> opt.weeklyCargoServed,
+          "weeklyCargoUnserved" -> opt.weeklyCargoUnserved,
+          "estimatedYield" -> opt.estimatedYield,
+          "recommendedAircraftModelIds" -> Json.toJson(opt.recommendedAircraftModelIds),
+          "notes" -> opt.notes
+        )
+      })
+    }
+  }
+
+
   private def computeAirportCargoDemandJson(airportId: Int): JsValue = {
     if (!SoloConfig.cargoEnabled) {
       Json.arr()

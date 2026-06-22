@@ -108,6 +108,7 @@ object Constants {
   val LOAN_INTEREST_RATE_TABLE = "loan_interest_rate"
   val NOTIFICATION_TABLE = "notification"
   val PUSH_SUBSCRIPTION_TABLE = "push_subscription"
+  val SCHEMA_PATCH_TABLE = "schema_patch"
   val WORLD_NEWS_TABLE = "world_news"
   val WORLD_NEWS_WATERMARK_TABLE = "world_news_watermark"
   val LAST_CHAT_ID_TABLE = "last_chat_id"

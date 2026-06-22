@@ -97,6 +97,11 @@ ssh airline-dev "docker exec airline-db mysql -u\"\$(docker exec airline-db prin
 - Prefer `scripts/optiplex-deploy.sh` / `OptiPlex Deploy & Verify` for deploys.
 - SSH can be used for read-only checks, logs, DB inspection, and one-off validation.
 - If changing Scala locally, run `airline-data publishLocal` before compiling `airline-web`.
+- Schema migrations run automatically as a startup step, not a separate pre-deploy command:
+  `SchemaPatchRunner.run()` fires from `com.patson.MainSimulation`, the web app's `Module`,
+  and `com.patson.init.MainInit` (fresh-DB bootstrap). No manual SQL step is needed for a
+  deploy that only adds entries to `SchemaMigrations.ordered` — see
+  `docs/database-migrations.md`.
 
 ## Known Worktree Notes
 

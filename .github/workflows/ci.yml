@@ -55,6 +55,7 @@ jobs:
           cd airline-data &&
           sbt
           "testOnly
+          com.patson.SchemaPatchRunnerSpec
           com.patson.CargoDemandGeneratorSpec
           com.patson.CargoAllocationSpec
           com.patson.AirplaneModelSpec

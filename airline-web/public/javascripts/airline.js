@@ -1374,7 +1374,100 @@ function updatePlanLinkInfo(linkInfo, isRefresh) {
 	updatePricePercentage();
 	calculateDemand();
 	$("#planLinkDetails div.value").show()
+	fetchAndShowRouteForecast(planLinkState.fromAirportId, planLinkState.toAirportId);
 }
+
+function showRouteForecast(forecast) {
+    if (!forecast) {
+        $('#routeForecastContainer').hide();
+        return;
+    }
+    
+    // Confidence Level
+    var confidence = forecast.confidenceLevel || 'LOW';
+    var confidenceColor = '#aaa';
+    if (confidence === 'HIGH') confidenceColor = '#78cd6b';
+    else if (confidence === 'MEDIUM') confidenceColor = '#e3b80d';
+    else if (confidence === 'LOW') confidenceColor = '#d66061';
+    $('#forecastConfidence').text(confidence).css('color', confidenceColor);
+
+    // Competition Level
+    var competition = forecast.competitionLevel || 'NONE';
+    var competitionColor = '#aaa';
+    if (competition === 'NONE' || competition === 'LOW') competitionColor = '#78cd6b';
+    else if (competition === 'MEDIUM') competitionColor = '#e3b80d';
+    else if (competition === 'HIGH') competitionColor = '#d66061';
+    $('#forecastCompetition').text(competition).css('color', competitionColor);
+
+    // Demand
+    $('#forecastPaxDemand').text(commaSeparateNumber(forecast.passengerDemandEstimate));
+    
+    if (forecast.cargoDemandEstimate > 0) {
+        $('#forecastCargoDemand').text(commaSeparateNumber(forecast.cargoDemandEstimate));
+        $('#forecastCargoDemandRow').show();
+    } else {
+        $('#forecastCargoDemandRow').hide();
+    }
+
+    // Revenue, Cost, Profit
+    $('#forecastRevenue').text('$' + commaSeparateNumber(forecast.expectedRevenue));
+    $('#forecastCost').text('$' + commaSeparateNumber(forecast.expectedCost));
+    
+    var profit = forecast.expectedProfit || 0;
+    var profitText = (profit < 0 ? '-$' : '$') + commaSeparateNumber(Math.abs(profit));
+    var profitColor = profit >= 0 ? '#78cd6b' : '#d66061';
+    $('#forecastProfit').text(profitText).css('color', profitColor);
+
+    // Recommended aircraft models (Comparison cards/rows)
+    var aircraftHtml = '';
+    if (forecast.recommendedAircraftModels && forecast.recommendedAircraftModels.length > 0) {
+        forecast.recommendedAircraftModels.forEach(function(modelName) {
+            aircraftHtml += '<div class="aircraft-card" style="padding: 6px 10px; border: 1px dashed #57A34B; border-radius: 4px; background: rgba(87, 163, 75, 0.1); display: flex; justify-content: space-between; align-items: center;">';
+            aircraftHtml += '  <span style="font-weight: bold; color: #78cd6b; font-size: 11px;">' + modelName + '</span>';
+            if (forecast.recommendedFrequency) {
+                aircraftHtml += '  <span style="font-size: 11px; color: #ccc;">Rec. Freq: ' + forecast.recommendedFrequency + '/wk</span>';
+            }
+            aircraftHtml += '</div>';
+        });
+    } else {
+        aircraftHtml = '<div style="font-style: italic; opacity: 0.6; font-size: 11px;">No recommended aircraft models</div>';
+    }
+    $('#forecastAircraftRecommendations').html(aircraftHtml);
+
+    // Reasons/analysis
+    var reasonsHtml = '';
+    if (forecast.reasons && forecast.reasons.length > 0) {
+        forecast.reasons.forEach(function(reason) {
+            reasonsHtml += '<li style="margin-bottom: 2px;">' + reason + '</li>';
+        });
+    } else {
+        reasonsHtml = '<li>No specific market analysis available.</li>';
+    }
+    $('#forecastReasons').html(reasonsHtml);
+
+    $('#routeForecastContainer').show();
+}
+
+function fetchAndShowRouteForecast(fromAirportId, toAirportId) {
+    if (!fromAirportId || !toAirportId) {
+        $('#routeForecastContainer').hide();
+        return;
+    }
+    $.ajax({
+        type: 'GET',
+        url: "/airlines/" + activeAirline.id + "/route-forecast",
+        data: { "originAirportId": fromAirportId, "destinationAirportId": toAirportId },
+        dataType: 'json',
+        success: function(forecast) {
+            showRouteForecast(forecast);
+        },
+        error: function(jqXHR) {
+            console.log("Forecast not available or disabled: " + jqXHR.status);
+            $('#routeForecastContainer').hide();
+        }
+    });
+}
+
 
 function calculateDemand() {
     const totalDemand = {

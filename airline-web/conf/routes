@@ -35,6 +35,7 @@ GET		 /airports/:airportId/links	controllers.Application.getLinksByAirport(airpo
 GET	 	 /airports/:airportId/traffic-analytics	controllers.Application.getAirportTrafficAnalytics(airportId : Int)
 GET	 	 /airports/:airportId/demand	      controllers.Application.getAirportDemand(airportId : Int)
 GET	 	 /airports/:airportId/cargo-demand	      controllers.Application.getAirportCargoDemand(airportId : Int)
+GET          /airports/:airportId/cargo-opportunities   controllers.Application.getAirportCargoOpportunities(airportId : Int)
 GET	 	 /airports/:airportId/champions	      controllers.Application.getAirportChampions(airportId : Int, airlineId: Option[Int])
 GET      /airports/:airportId/generic-transits     controllers.GenericTransitApplication.getGenericTransits(airportId: Int)
 
@@ -93,6 +94,7 @@ PUT		 /airlines/:airlineId/stock-op/:operation			controllers.AirlineApplication.
 PUT		 /airlines/:airlineId/dividends						controllers.AirlineApplication.setDividends(airlineId: Int)
 POST	 /airlines/:airlineId/plan-link	  controllers.LinkApplication.planLink(airlineId : Int)
 POST	 /airlines/:airlineId/get-link-negotiation	  controllers.LinkApplication.getLinkNegotiation(airlineId : Int)
+GET      /airlines/:airlineId/route-forecast            controllers.LinkApplication.getRouteForecast(airlineId: Int, originAirportId: Int, destinationAirportId: Int)
 GET	     /airlines/:airlineId/office-capacity	  controllers.AirlineApplication.getOfficeCapacity(airlineId : Int)
 GET		 /airlines/:airlineId/finances  controllers.AirlineApplication.getAirlineFinances(airlineId : Int)
 GET		 /airlines/:airlineId/loans  controllers.BankApplication.viewLoans(airlineId : Int)

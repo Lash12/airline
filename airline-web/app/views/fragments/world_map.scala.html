@@ -277,8 +277,55 @@
 									<div style="width:calc(100% - 165px)"><p class="leading-tight" id="planLinkAffinity"></p></div>
 								</div>
 
+								<!-- Route Forecast & Opportunity Planner -->
+								<div id="routeForecastContainer" class="section-card" style="display:none; margin: 12px 0; padding: 12px; border: 1px solid #444; border-radius: 8px; background: #1e1e22; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+									<h4 style="margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: #57A34B; display: flex; align-items: center; gap: 6px; border-bottom: 1px solid #333; padding-bottom: 6px;">
+										<img src="/assets/images/icons/chart-up.png" style="width: 16px; height: 16px; filter: hue-rotate(90deg);">
+										Route Opportunity Forecast
+									</h4>
+									<div class="table data" style="width: 100%; margin-bottom: 8px;">
+										<div class="table-row">
+											<div class="label" style="width: 50%; font-size: 12px; padding: 4px 0;">Confidence Level:</div>
+											<div class="value" id="forecastConfidence" style="font-size: 12px; font-weight: bold; padding: 4px 0; text-align: right;">-</div>
+										</div>
+										<div class="table-row">
+											<div class="label" style="font-size: 12px; padding: 4px 0;">Competition:</div>
+											<div class="value" id="forecastCompetition" style="font-size: 12px; font-weight: bold; padding: 4px 0; text-align: right;">-</div>
+										</div>
+										<div class="table-row">
+											<div class="label" style="font-size: 12px; padding: 4px 0;">Estimated Pax Demand:</div>
+											<div class="value" id="forecastPaxDemand" style="font-size: 12px; padding: 4px 0; text-align: right;">-</div>
+										</div>
+										<div class="table-row" id="forecastCargoDemandRow" style="display: none;">
+											<div class="label" style="font-size: 12px; padding: 4px 0;">Estimated Cargo Demand:</div>
+											<div class="value" id="forecastCargoDemand" style="font-size: 12px; padding: 4px 0; text-align: right;">-</div>
+										</div>
+										<div class="table-row">
+											<div class="label" style="font-size: 12px; padding: 4px 0;">Est. Weekly Revenue:</div>
+											<div class="value" id="forecastRevenue" style="font-size: 12px; padding: 4px 0; text-align: right;">-</div>
+										</div>
+										<div class="table-row">
+											<div class="label" style="font-size: 12px; padding: 4px 0;">Est. Weekly Cost:</div>
+											<div class="value" id="forecastCost" style="font-size: 12px; padding: 4px 0; text-align: right;">-</div>
+										</div>
+										<div class="table-row" style="border-top: 1px dashed #333;">
+											<div class="label" style="font-size: 12px; font-weight: bold; padding: 6px 0;">Est. Weekly Profit:</div>
+											<div class="value" id="forecastProfit" style="font-size: 12px; font-weight: bold; padding: 6px 0; text-align: right;">-</div>
+										</div>
+									</div>
+									<div style="margin-top: 10px;">
+										<h5 style="margin: 0 0 6px 0; font-size: 12px; font-weight: bold; color: #ccc;">Recommended Aircraft:</h5>
+										<div id="forecastAircraftRecommendations" style="display: flex; flex-direction: column; gap: 6px;"></div>
+									</div>
+									<div style="margin-top: 12px; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px;">
+										<h5 style="margin: 0 0 4px 0; font-size: 11px; font-weight: bold; color: #aaa;">Market Assessment:</h5>
+										<ul id="forecastReasons" style="margin: 0; padding-left: 14px; font-size: 11px; color: #bbb; line-height: 1.4;"></ul>
+									</div>
+								</div>
+
 								<div class="flex-row py-2">
 									<div style="width:162px"><p>Direct Demand:<br><small><i>at current prices</i></small></p></div>
+
 									<div class="h-4">
 										<span id="planLinkDirectDemand"></span>
 										<div class="tooltip pl-1">

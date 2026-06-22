@@ -222,10 +222,13 @@ object SoloConfig {
   // cargo-demand size; captureRatio is the fraction of a pair's cargo demand a single route can win;
   // revenuePerUnitKm prices a carried cargo-unit per km. captureRatio/revenuePerUnitKm are consumed
   // by the belly-cargo revenue step (Phase C-2); demandAmplitude + enabled drive the demand layer (C-1).
-  val cargoEnabled : Boolean = boolAt("solo.cargo.enabled", false)
+  var cargoEnabled : Boolean = boolAt("solo.cargo.enabled", false)
   val cargoDemandAmplitude : Double = doubleAt("solo.cargo.demandAmplitude", 1.0)
   val cargoCaptureRatio : Double = doubleAt("solo.cargo.captureRatio", 0.5)
   val cargoRevenuePerUnitKm : Double = doubleAt("solo.cargo.revenuePerUnitKm", 0.0002)
   val cargoAssetsEnabled : Boolean = boolAt("solo.cargo.assets.enabled", false)
   val cargoFreightersEnabled : Boolean = boolAt("solo.cargo.freighters.enabled", false)
+
+  // Route forecast backend
+  var routeForecastEnabled : Boolean = boolAt("solo.routeForecast.enabled", false)
 }

@@ -14,6 +14,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
 object MainSimulation extends App {
+  SchemaPatchRunner.run()
+
   val CYCLE_DURATION : Int = 60 * 29
   val MIN_CYCLE_MINUTES : Int = 5 //roughly cycle compute time + DB rest buffer
   val MAX_CYCLE_MINUTES : Int = 24 * 60
