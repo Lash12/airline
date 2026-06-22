@@ -1078,7 +1078,7 @@ class LinkApplication @Inject()(cc: ControllerComponents) extends AbstractContro
       case None => //new link
 
         //validate from airport is a base
-        fromAirport.getAirlineBase(airline.id) match {
+        airline.getBases().find(_.airport.id == fromAirport.id) match {
           case None => return Some(("Cannot fly from this airport, this is not a base!", NO_BASE))
           case Some(base) => base
         }
