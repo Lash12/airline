@@ -813,11 +813,7 @@ class LinkApplication @Inject()(cc: ControllerComponents) extends AbstractContro
       case Some(fromAirport) =>
         AirportCache.getAirport(toAirportId, true) match {
           case Some(toAirport) =>
-            if (airline.getBases().map(_.airport.id).contains(fromAirportId)) { //make sure it has a base for the from Airport
-              Right((fromAirport, toAirport))
-            } else {
-              Left(s"from Airport $fromAirportId is not a base of ${airline.name}")
-            }
+            Right((fromAirport, toAirport))
           case None =>
             Left(s"from Airport $fromAirportId is not found")
         }
@@ -1766,7 +1762,28 @@ class LinkApplication @Inject()(cc: ControllerComponents) extends AbstractContro
           BadRequest(error)
         }
       case Right(result) =>
-        Ok(Json.toJson(result))
+        val compatibilityJson = for {
+          fromAirport <- AirportCache.getAirport(originAirportId, true)
+          toAirport <- AirportCache.getAirport(destinationAirportId, true)
+        } yield {
+          val existingLink = LinkSource.loadFlightLinkByAirportsAndAirline(originAirportId, destinationAirportId, airlineId)
+          getRejectionReason(request.user, fromAirport, toAirport, existingLink) match {
+            case Some((description, rejectionType)) =>
+              Json.obj(
+                "compatible" -> false,
+                "blockingReason" -> description,
+                "blockingReasonCode" -> rejectionType.toString
+              )
+            case None =>
+              Json.obj(
+                "compatible" -> true,
+                "blockingReason" -> JsNull,
+                "blockingReasonCode" -> JsNull
+              )
+          }
+        }
+
+        Ok(Json.toJson(result).as[JsObject] ++ compatibilityJson.getOrElse(Json.obj()))
     }
   }
 }

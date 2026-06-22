@@ -48,6 +48,13 @@ function createTestContext() {
   const mockDocument = {
     hidden: false,
     addEventListener: jest.fn(),
+    _elementsById: {},
+    getElementById: jest.fn((id) => {
+      if (!mockDocument._elementsById[id]) {
+        mockDocument._elementsById[id] = { textContent: '' }
+      }
+      return mockDocument._elementsById[id]
+    }),
     createElement: jest.fn().mockImplementation(() => {
       return {
         innerHTML: '',
@@ -196,5 +203,49 @@ describe('showRouteForecast', () => {
     ctx.showRouteForecast(mockForecast)
 
     expect(elements['#forecastCargoDemandRow'].hide).toHaveBeenCalled()
+  })
+
+  test('shows incompatibility warning when forecast says route is blocked', () => {
+    const { ctx, elements } = createTestContext()
+
+    ctx.showRouteForecast({
+      passengerDemandEstimate: 150,
+      cargoDemandEstimate: 0,
+      expectedRevenue: 20000,
+      expectedCost: 18000,
+      expectedProfit: 2000,
+      confidenceLevel: 'LOW',
+      competitionLevel: 'NONE',
+      recommendedAircraftModels: [],
+      recommendedFrequency: null,
+      reasons: ['Demand exists but route is currently blocked.'],
+      compatible: false,
+      blockingReason: 'Cannot fly from this airport, this is not a base!'
+    })
+
+    expect(elements['#forecastCompatibilityWarning'].text).toHaveBeenCalledWith('Cannot fly from this airport, this is not a base!')
+    expect(elements['#forecastCompatibilityWarning'].show).toHaveBeenCalled()
+  })
+})
+
+describe('showPlanLinkError', () => {
+  test('renders rejection from error response instead of silently failing', () => {
+    const { ctx, elements } = createTestContext()
+
+    ctx.showPlanLinkError({
+      responseJSON: {
+        error: 'Cannot plan this route.',
+        rejection: {
+          description: 'Cannot fly from this airport, this is not a base!',
+          type: 'NO_BASE',
+        },
+      },
+      responseText: 'Cannot plan this route.',
+    })
+
+    expect(ctx.document.getElementById('linkRejectionReason').textContent).toBe('Cannot fly from this airport, this is not a base!')
+    expect(elements['.linkRejection'].show).toHaveBeenCalled()
+    expect(elements['#addLinkButton'].hide).toHaveBeenCalled()
+    expect(elements['#planLinkModelRow'].hide).toHaveBeenCalled()
   })
 })

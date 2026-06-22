@@ -893,6 +893,7 @@ function planLink(fromAirport, toAirport, isRefresh) {
 	planLinkState.toAirportId = parseInt(toAirport)
     setActiveDiv($('#planLinkDetails'))
     $('#planLinkDetails .warning').hide()
+    resetRouteForecast()
 
     var loadPlanLink = function() {
         // Read airlineId here (not at planLink call-time) so a switch during the
@@ -915,6 +916,10 @@ function planLink(fromAirport, toAirport, isRefresh) {
             error: function(jqXHR, textStatus, errorThrown) {
                     console.log(JSON.stringify(jqXHR));
                     console.log("AJAX error: " + textStatus + ' : ' + errorThrown);
+                    showPlanLinkError(jqXHR)
+                    if (!isRefresh) {
+                        showMapOverlay($('#sidePanel'));
+                    }
             },
             beforeSend: function() {
                 $('body .loadingSpinner').show()
@@ -930,6 +935,8 @@ function planLink(fromAirport, toAirport, isRefresh) {
     } else {
         loadPlanLink()
     }
+
+    fetchAndShowRouteForecast(planLinkState.fromAirportId, planLinkState.toAirportId);
 }
 
 var planLinkState = { fromAirportId: null, toAirportId: null }
@@ -1374,7 +1381,6 @@ function updatePlanLinkInfo(linkInfo, isRefresh) {
 	updatePricePercentage();
 	calculateDemand();
 	$("#planLinkDetails div.value").show()
-	fetchAndShowRouteForecast(planLinkState.fromAirportId, planLinkState.toAirportId);
 }
 
 function showRouteForecast(forecast) {
@@ -1407,6 +1413,12 @@ function showRouteForecast(forecast) {
         $('#forecastCargoDemandRow').show();
     } else {
         $('#forecastCargoDemandRow').hide();
+    }
+
+    if (forecast.compatible === false && forecast.blockingReason) {
+        $('#forecastCompatibilityWarning').text(forecast.blockingReason).show();
+    } else {
+        $('#forecastCompatibilityWarning').hide().text('');
     }
 
     // Revenue, Cost, Profit
@@ -1448,22 +1460,48 @@ function showRouteForecast(forecast) {
     $('#routeForecastContainer').show();
 }
 
+function resetRouteForecast() {
+    $('#routeForecastContainer').hide();
+    $('#forecastCompatibilityWarning').hide().text('');
+}
+
+function showPlanLinkError(jqXHR) {
+    var response = jqXHR && jqXHR.responseJSON ? jqXHR.responseJSON : null;
+    var rejection = response && response.rejection ? response.rejection : null;
+    var message = rejection && rejection.description
+        ? rejection.description
+        : ((response && response.error) || jqXHR.responseText || 'Route planning failed for this airport pair.');
+
+    document.getElementById('linkRejectionReason').textContent = message;
+    $('.linkRejection').show();
+    $('#addLinkButton').hide();
+    $('#updateLinkButton').hide();
+    $('#deleteLinkButton').hide();
+    $('#planLinkExtendedDetails').hide();
+    $('#planLinkModelRow').hide();
+    $('#extendedPanel').hide();
+}
+
 function fetchAndShowRouteForecast(fromAirportId, toAirportId) {
     if (!fromAirportId || !toAirportId) {
         $('#routeForecastContainer').hide();
         return;
     }
+    var airlineId = activeAirline.id;
     $.ajax({
         type: 'GET',
-        url: "/airlines/" + activeAirline.id + "/route-forecast",
+        url: "/airlines/" + airlineId + "/route-forecast",
         data: { "originAirportId": fromAirportId, "destinationAirportId": toAirportId },
         dataType: 'json',
         success: function(forecast) {
+            if (activeAirline.id !== airlineId || planLinkState.fromAirportId !== parseInt(fromAirportId) || planLinkState.toAirportId !== parseInt(toAirportId)) {
+                return;
+            }
             showRouteForecast(forecast);
         },
         error: function(jqXHR) {
             console.log("Forecast not available or disabled: " + jqXHR.status);
-            $('#routeForecastContainer').hide();
+            resetRouteForecast();
         }
     });
 }
