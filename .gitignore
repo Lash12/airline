@@ -9,6 +9,7 @@
 /.bash_history
 /airline-data/.bsp
 *.sql
+!/airline-data/src/main/resources/db/migration/*.sql
 node_modules
 e2e/test-results/
 e2e/playwright-report/
