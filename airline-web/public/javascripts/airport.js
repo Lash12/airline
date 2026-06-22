@@ -377,19 +377,16 @@ function renderAirportAssets(airportId, data) {
 		$row.append($('<div class="cell" style="width:18%; text-align:right;"></div>').text(entry.constructionDuration))
 
 		var affordable = data.balance >= entry.nextLevelCost
+		// Max-level is a hard cap and wins over base/size/cash so the label and reason
+		// stay aligned (a maxed asset at an airport whose base was removed reads "Max
+		// level", not "Upgrade to N").
 		var reason = null
-		if (!data.hasBase) { reason = 'Build a base at this airport first.' }
-		else if (!entry.canUpgrade) { reason = 'Already at max level.' }
+		if (!entry.canUpgrade) { reason = 'Already at max level.' }
+		else if (!data.hasBase) { reason = 'Build a base at this airport first.' }
 		else if (!entry.meetsSize) { reason = 'Airport is too small for this asset.' }
 		else if (!affordable) { reason = 'Not enough cash.' }
-		var actionLabel
-		if (!data.hasBase) {
-			actionLabel = entry.ownedLevel === 0 ? 'Build' : ('Upgrade to ' + (entry.ownedLevel + 1))
-		} else if (!entry.canUpgrade) {
-			actionLabel = 'Max level'
-		} else {
-			actionLabel = entry.ownedLevel === 0 ? 'Build' : ('Upgrade to ' + (entry.ownedLevel + 1))
-		}
+		var actionLabel = !entry.canUpgrade ? 'Max level'
+			: (entry.ownedLevel === 0 ? 'Build' : ('Upgrade to ' + (entry.ownedLevel + 1)))
 
 		var rows = [
 			{ label: 'Size required:', value: String(entry.sizeRequirement) },
@@ -1606,6 +1603,7 @@ function showBaseDetailsModal() {
 var _demandEtag = null
 
 var _cargoDemandEtag = null
+var _cargoDemandEtagAirportId = null
 
 async function loadAirportCargoDemand(airportId) {
     const section = document.getElementById('airportCargoDemandSection')
@@ -1613,11 +1611,15 @@ async function loadAirportCargoDemand(airportId) {
     if (!container) return
     try {
         const headers = {}
-        if (_cargoDemandEtag) headers['If-None-Match'] = _cargoDemandEtag
+        // The server ETag is keyed only on the cycle, so only reuse it for the same
+        // airport — otherwise switching airports in one cycle 304s and leaves the
+        // previous airport's cargo cards rendered under the new header.
+        if (_cargoDemandEtag && _cargoDemandEtagAirportId === airportId) headers['If-None-Match'] = _cargoDemandEtag
         const response = await fetch('/airports/' + airportId + '/cargo-demand', { headers })
         if (response.status === 304) return
         if (!response.ok) { if (section) section.style.display = 'none'; return }
         _cargoDemandEtag = response.headers.get('ETag')
+        _cargoDemandEtagAirportId = airportId
         renderCargoDemandCards(await response.json())
     } catch (e) {
         console.error('loadAirportCargoDemand failed', e)
