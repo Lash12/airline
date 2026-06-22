@@ -355,16 +355,41 @@ plan `docs/superpowers/plans/2026-06-21-airport-mobile-ux.md`; commits `58dbd81`
   Containers: `airline-app`, `airline-db`, `airline-cloudflared`.
 
 ### Next steps
-- **Airport Cargo Demand panel** (backlog in `docs/air-cargo-plan.md`): `/airports/:id/demand`
-  (`Application.computeAirportDemandJson`) is passenger-only; needs a per-airport cargo-demand
-  aggregate + demand-JSON field, then extend `renderDemandCards` in `airport.js`. Deferred from the
-  airport pass (was out of "no new backend endpoint" scope).
-- **DB resilience follow-up:** the nested-connection pattern likely exists elsewhere — grep
-  `airline-data` for `Meta.getConnection()` calls made inside another `getConnection` block and apply
-  the same "release before sub-loaders" fix. Consider bumping Hikari `maximumPoolSize` above 10 as
-  defense-in-depth (see `HIKARI_TUNING.md`); not done this session.
-- **Minor (logged):** airport asset catalog button can read "Max level" while the reason text says
-  build-base-first — an unreachable combo, left as-is.
+- Backlog A/B/C below were all completed 2026-06-21 — see the
+  "Cargo demand panel + DB pool hardening" section.
+
+## Cargo demand panel + DB pool hardening (A/B/C) — shipped 2026-06-21
+
+Spec `docs/superpowers/specs/2026-06-21-cargo-demand-and-db-hardening-design.md`,
+plan `docs/superpowers/plans/2026-06-21-cargo-demand-and-db-hardening.md`. All on `master`,
+deployed to OptiPlex, CI green. Live-verified: `/airports/3599/cargo-demand` → 200, 15 sorted rows
+(JFK 580, LHR 577, EWR 557…), panel renders.
+
+- **A — Airport Cargo Demand panel:** new pure `CargoDemandGenerator.topCargoDestinations(from,
+  candidates, relationshipsByCountry, limit)` (airline-data, unit-tested) + new
+  `GET /airports/:id/cargo-demand` (`Application.getAirportCargoDemand` / `computeAirportCargoDemandJson`,
+  `ResponseCache.cargoDemandCache`, cycle-cached + 304) returning top-15 `{toAirportId, toAirportName,
+  toAirportIata, cargoDemand}`, gated on `SoloConfig.cargoEnabled`. Frontend `loadAirportCargoDemand`
+  + `renderCargoDemandCards` in `airport.js` (cards reuse the passenger demand-card style), section
+  `#airportCargoDemandSection` hidden when empty/cargo-off.
+- **B — DB pool hardening:** `application.conf` `hikari.maxPoolSize 8 → 16`;
+  `AllianceSource.loadAlliancesByQueryString` now releases its read connection before
+  `loadAllianceMembersByAllianceId` (same nested-connection fix as `AirlineSource`).
+- **C — catalog label:** `renderAirportAssets` catalog button: max-level now wins over
+  no-base/size/cash in BOTH label and reason so they stay aligned.
+
+### Remaining follow-ups (lower priority)
+- **Other nested-connection spots** (cache-fault risk, not yet fixed): `LinkSource.loadLinksByQueryString`
+  / `loadLinkConsumptionsByQuery`, `AirlineSource.loadAirlineBasesByQueryString`,
+  `AirportAssetSource.loadByCriteria` call in-memory caches mid-iteration that open a connection only
+  on a cold-cache miss. Apply the "read rows, release connection, resolve cache refs after" pattern if
+  pool pressure recurs.
+- **`_demandEtag` (passenger) has the same cycle-only-etag bug** the cargo one was fixed for — switching
+  airports in one cycle can 304 to stale passenger demand cards. Key it by airportId like
+  `_cargoDemandEtag` (airport.js).
+- **`topCargoDestinations` perf:** recomputes per-pair each cache-miss instead of reusing the module's
+  per-cycle memoized matrix (`demandFor`/`prepareCargoCache`); bounded by `ResponseCache` (one sweep
+  per airport per cycle) so low priority.
 
 ## Suggested Next Feature Phase
 
