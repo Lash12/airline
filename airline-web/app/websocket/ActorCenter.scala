@@ -166,6 +166,12 @@ sealed class LocalMainActor(remoteActor: ActorSelection) extends Actor {
       println(s"$actor is terminated!!")
 
     case KeepAlivePing =>
+      // Also re-send "subscribe" on every tick (not just once in preStart). Pekko can silently
+      // drop a message sent to an ActorSelection before the remote association is fully up, so a
+      // one-shot subscribe at boot can be lost with no DisassociatedEvent to trigger a resubscribe.
+      // BridgeActor's "subscribe" handler is idempotent (just overwrites its single registered
+      // actor), so resending it harmlessly self-heals within one pingInterval if it was ever lost.
+      remoteActor ! "subscribe"
       remoteActor ! KeepAlivePing
       pendingResetTask.foreach(_.cancel())
       pendingResetTask = Some(context.system.scheduler.scheduleOnce(resetTimeout, self, ConnectionTimeout))
