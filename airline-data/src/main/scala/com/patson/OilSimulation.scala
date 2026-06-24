@@ -41,7 +41,8 @@ object OilSimulation {
   val BOUNDARY_ZONE_FACTOR = 0.35
   val BOUNDARY_ZONE_VELOCITY_ADJUSTMENT = 3
   val HIGH_PRICE_THRESHOLD = MAX_PRICE - (MAX_PRICE - MIN_PRICE) * BOUNDARY_ZONE_FACTOR
-  val LOW_PRICE_THRESHOLD = MIN_PRICE + (MAX_PRICE - MIN_PRICE) * BOUNDARY_ZONE_FACTOR 
+  val LOW_PRICE_THRESHOLD = MIN_PRICE + (MAX_PRICE - MIN_PRICE) * BOUNDARY_ZONE_FACTOR
+  val REVERSION_STRENGTH = 0.03 //~23-week half-life pull toward DEFAULT_PRICE
 
   def computeNextPrice(previousPrice : Double, previousVelocity : Double) : Double = {
     var bellRandom = 0.0
@@ -51,8 +52,9 @@ object OilSimulation {
     bellRandom /= 2
 
     val acceleration =  bellRandom * MAX_VELOCITY_DELTA_FACTOR * (3.5 + Math.abs(previousVelocity))
+    val reversionTerm = REVERSION_STRENGTH * (OilPrice.DEFAULT_PRICE - previousPrice)
 
-    var newVelocity = previousVelocity / 5 + acceleration
+    var newVelocity = previousVelocity / 5 + acceleration + reversionTerm
      
      //now adjust the acceleration if it's very close to boundary zone
      if (previousPrice <= LOW_PRICE_THRESHOLD && newVelocity < 0) { //still dropping
