@@ -84,6 +84,9 @@ function connectWebSocket(airlineId) {
                 } else {
                     scheduleRefresh(5000, 25000)
                 }
+                if (typeof updateTotalValues === 'function' && $("#planLinkDetails").is(":visible")) {
+                    updateTotalValues()
+                }
             }
         } else if (json.messageType == "broadcastMessage") {
             queuePrompt("broadcastMessagePopup", json.message)
