@@ -2,8 +2,8 @@
 		<div class="mainPanel">
 			<div class="section tight">
 				<div class="no-highlight flex-row">
-                    <a class="px-2 button text py-1 flex-align-center tooltip-attr tooltip-attr-bottom" data-tooltip="Sort by last updated" onclick="toggleLinksTableSortOrder($('#hiddenLinkSortBy'))"><img src='@routes.Assets.versioned("/images/icons/clock-frame.png")'></a>
-                    <a class="px-2 button text py-1 flex-align-center tooltip-attr tooltip-attr-bottom" data-tooltip="Show / Hide Filter Row" onclick="toggleLinksTableFilterRow()"><img src='@routes.Assets.versioned("/images/icons/funnel.png")'></a>
+                    <a class="px-2 button text py-1 flex-align-center tooltip-attr tooltip-attr-bottom" data-tooltip="Sort by last updated" onclick="toggleLinksTableSortOrder($('#hiddenLinkSortBy'))"><img src='@views.AssetUrl("/images/icons/clock-frame.png")'></a>
+                    <a class="px-2 button text py-1 flex-align-center tooltip-attr tooltip-attr-bottom" data-tooltip="Show / Hide Filter Row" onclick="toggleLinksTableFilterRow()"><img src='@views.AssetUrl("/images/icons/funnel.png")'></a>
                     <a class="px-2 button text flex-align-center tooltip-attr tooltip-attr-bottom opacity-80" data-tooltip="Show Averages" onclick="toggleLinksTableAverage()" style="font-family:monospace; font-size: 18px;">x̄</a>
                     <div class="ml-4 mt-2">
                         <select id="linksTableTypeFilter" onchange="filterLinksTable()" class="select-menu" style="font-size: 12px; padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1); background: #333; color: #fff; vertical-align: middle;">
@@ -110,13 +110,13 @@
 								<div class="tooltip clickable">
 									<span style="vertical-align:middle">No flights yet</span>
 									<img class="info svg"
-										src='@routes.Assets.versioned("/images/icons/information.svg")'
+										src='@views.AssetUrl("/images/icons/information.svg")'
 										style="vertical-align:middle">
 									<span class="tooltiptext below">
 										<h4>First build your Headquarters</h4>
-                                        <img data-src='@routes.Assets.versioned("/images/tutorial/build-hq.gif")' loading="lazy" alt="">
+                                        <img data-src='@views.AssetUrl("/images/tutorial/build-hq.gif")' loading="lazy" alt="">
                                         <h4 style="margin-top: 8px;">Then select the Destination Airport from the world map</h4>
-                                        <img data-src='@routes.Assets.versioned("/images/tutorial/plan-link-1.gif")' loading="lazy" alt="">
+                                        <img data-src='@views.AssetUrl("/images/tutorial/plan-link-1.gif")' loading="lazy" alt="">
 									</span>
 								</div>
 							</div>
@@ -140,7 +140,7 @@
               </div>
               <div class="divider-v"></div>
               <span class="font-uppercase">Quality</span>
-              <div id="bulkUpdateQualityBar" data-empty-icon='@routes.Assets.versioned("/images/icons/star-empty.svg")' data-fill-icon='@routes.Assets.versioned("/images/icons/star-full.svg")'></div>
+              <div id="bulkUpdateQualityBar" data-empty-icon='@views.AssetUrl("/images/icons/star-empty.svg")' data-fill-icon='@views.AssetUrl("/images/icons/star-full.svg")'></div>
               <input type="hidden" id="bulkUpdateQualityLevel" value="1" />
               <button class="button px-4 py-1" onclick="submitBulkUpdateQuality()">Update Quality</button>
               <div class="divider-v mx-5"></div>

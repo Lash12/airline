@@ -92,7 +92,7 @@
                         <div class="cell label">Tag Color:</div>
                         <div class="cell value">
                             <input type="color" class="picker tagColor">
-                            <img src='@routes.Assets.versioned("images/icons/reset.svg")' class="img-button svg" id="resetAllianceLabelColorBtn">
+                            <img src='@views.AssetUrl("images/icons/reset.svg")' class="img-button svg" id="resetAllianceLabelColorBtn">
                         </div>
                     </div>
                     <div class="table-row">
@@ -101,7 +101,7 @@
                             <span style="display: flex; align-items: center; gap: 4px;">
                                 <img class="allianceLogo" src="" style="height: 24px; width: auto; max-width: 60px;">
                                 <img src="/assets/images/icons/picture--plus.png" class="img-button" id="uploadAllianceLogoBtn" style="display: none;">
-                                <img class="img-button svg hover-rotate" src='@routes.Assets.versioned("images/icons/gear.svg")' class="img-button" id="editAllianceLogoBtn" style="display: none;">
+                                <img class="img-button svg hover-rotate" src='@views.AssetUrl("images/icons/gear.svg")' class="img-button" id="editAllianceLogoBtn" style="display: none;">
                             </span>
                         </div>
                     </div>
@@ -115,7 +115,7 @@
                 <button class="button" id="applyForAllianceButton"
                     style="display: none; margin-top: 4px;">Apply</button>
                 <span id="applyForAllianceRejectionSpan" style="display: none;">
-                    <img src='@routes.Assets.versioned("/images/icons/prohibition.png")'>
+                    <img src='@views.AssetUrl("/images/icons/prohibition.png")'>
                     <span class="warning">Cannot join alliance</span>&nbsp;
                     <span id="applyForAllianceRejection" class="warning"></span>
                 </span>

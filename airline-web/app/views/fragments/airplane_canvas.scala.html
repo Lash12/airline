@@ -126,7 +126,7 @@
 										<div class="maintenanceFactorSection pb-2">
 											<span class="factor" style="font-weight: bold; font-size: x-large;">1.0</span>
 											<span class="tooltip">
-												<img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+												<img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 												<span class="tooltiptext alignLeft below" style="width: 400px;">
 													<div style="font-weight: bold;">
 			    										<p class="remarks" style="margin-top:10px;">Airplane maintenance cost is multiplied by this factor. Maintenance factor =&nbsp;<span class="baseFactor"></span>&nbsp;+&nbsp;<span class="familyFactor"></span>&nbsp;* Airplane Family # +&nbsp;<span class="modelFactor"></span>&nbsp;* Airplane Model #</p>
@@ -149,8 +149,8 @@
 									<div class="sectionContainer" style="display: flex; flex-wrap: wrap;">
 									</div>
                                     <div class="flex-row px-2 pb-1">
-                                        <div><input type="checkbox" onclick="toggleUtilizationRate($('#airplaneCanvas .hangar .sectionContainer'), $(this))" class="toggleUtilizationRateBox"><img src='@routes.Assets.versioned("/images/icons/clock-select-remain.png")' data-tooltip="Toggle Utilization Rate"/></div>
-                                        <div><input type="checkbox" onclick="toggleCondition($('#airplaneCanvas .hangar .sectionContainer'), $(this))" class="toggleConditionBox"><img class="img-button svg hover-rotate" src='@routes.Assets.versioned("images/icons/gear.svg")' data-tooltip="Toggle Airplane Condition"/></div>
+                                        <div><input type="checkbox" onclick="toggleUtilizationRate($('#airplaneCanvas .hangar .sectionContainer'), $(this))" class="toggleUtilizationRateBox"><img src='@views.AssetUrl("/images/icons/clock-select-remain.png")' data-tooltip="Toggle Utilization Rate"/></div>
+                                        <div><input type="checkbox" onclick="toggleCondition($('#airplaneCanvas .hangar .sectionContainer'), $(this))" class="toggleConditionBox"><img class="img-button svg hover-rotate" src='@views.AssetUrl("images/icons/gear.svg")' data-tooltip="Toggle Airplane Condition"/></div>
                                         <div class="ml-auto flex-align-center">
                                             <div class="tooltip-attr flex-align-center" data-tooltip="Check this to select multiple aircraft">
                                                 <input type="checkbox" onclick="togglePlaneSelect()">
@@ -212,7 +212,7 @@
 <!--                                </div>-->
                                 <p class="pt-4 pb-2">
                                     <span id="AMC_pricePax"></span>
-                                    <a class='button' onclick="showAircraftInfoModal()" title="Aircraft info"><img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'/></a>
+                                    <a class='button' onclick="showAircraftInfoModal()" title="Aircraft info"><img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'/></a>
                                 </p>
 							</div>
 							<div class="section">

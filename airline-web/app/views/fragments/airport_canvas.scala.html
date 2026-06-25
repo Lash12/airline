@@ -12,7 +12,7 @@
 							  <p>
 									<span class="airportAffinityZone"></span>
 									<span class="tooltip pl-1">
-										<img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+										<img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 										<span class="tooltiptext below" style="width: 400px;">
 											Each affinity shared with another airport increases demand between the two airports especially over long distances. <b>Cultural-political</b> affinities only apply on international routes; <b>trade</b> affinities always apply.
 										</span>
@@ -26,20 +26,20 @@
 							  </div>
 							  <div class="item">
 								  <div class="i-label">Travel Rate<div class="tooltip">
-									  <img loading="lazy" class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+									  <img loading="lazy" class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 									  <span class="tooltiptext" style="width: 400px;">
 										<p>The travel rate directly modifies the demand generated from this airport. As more passengers are transported from this airport, the travel rate will increase.</p>
 									  </span>
 								  </div></div>
 								  <div class="flex-row">
 									  <div><b id="airportTravelRate"></b></div>
-									  <img class="svg" loading="lazy" src='@routes.Assets.versioned("/images/icons/rate.svg")' />
+									  <img class="svg" loading="lazy" src='@views.AssetUrl("/images/icons/rate.svg")' />
 								  </div>
 							  </div>
 							  <div class="item">
 								  <div class="i-label">Population</div>
 								  <div class="i-value">
-                                      <img loading="lazy" title="Population coverage" width="20" src='@routes.Assets.versioned("/images/icons/population.svg")'>
+                                      <img loading="lazy" title="Population coverage" width="20" src='@views.AssetUrl("/images/icons/population.svg")'>
                                       <div id="airportDetailsPopulation"></div>
                                   </div>
 							  </div>
@@ -52,20 +52,20 @@
 							  </div>
 							  <div class="item">
 								  <div class="i-label">Airport scale <div class="tooltip">
-									  <img class="info svg" loading="lazy" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+									  <img class="info svg" loading="lazy" src='@views.AssetUrl("/images/icons/information.svg")'>
 									  <span class="tooltiptext" style="width: 400px;">
 										<p>Larger airports with more gates, runways, and other facilities are a higher "<b>airport scale</b>." Higher scale airports have higher aircraft landing fees and base upkeep costs.</p>
 									  </span>
 								  </div></div>
 								  <div class="i-value tooltip-attr tooltip-attr-bottom" data-tooltip="Airport Scale">
-									  <img loading="lazy" width="20px" height="20px" src='@routes.Assets.versioned("/images/icons/airplane-takeoff.svg")'>
+									  <img loading="lazy" width="20px" height="20px" src='@views.AssetUrl("/images/icons/airplane-takeoff.svg")'>
 									  <span class="airportSize"></span>
 								  </div>
 							  </div>
 							  <div class="item">
 								  <div class="i-label">Middle income
 									  <div class="tooltip">
-										  <img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+										  <img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 										  <div class="tooltiptext" style="width: 400px;">
 											  <p>In-game, the very poor do not take flights. Highly populous airports with large middle classes will have the most outgoing passengers.</p>
 											  <p>Additionally, airports with higher incomes will have more outgoing demand for premium seats.</p>
@@ -73,14 +73,14 @@
 									  </div>
 								  </div>
 								  <div class="i-value">
-                                      <img loading="lazy" title="Middle income" width="20" src='@routes.Assets.versioned("/images/icons/house.svg")'>
+                                      <img loading="lazy" title="Middle income" width="20" src='@views.AssetUrl("/images/icons/house.svg")'>
 									  <div id="airportDetailsPopMiddleIncome"></div>
 								  </div>
 							  </div>
 							  <div class="item">
 								  <div class="i-label"><span class="airportCityName">Airport</span> elites
 									  <div class="tooltip">
-										  <img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+										  <img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 										  <span class="tooltiptext" style="width: 400px;">
 											  <p>In-game, population, income, and inequality is applied to determine how much of
 												each airport is low, middle, and extremely-high income. You can see the <b>gini coefficient</b> (inequality) in the country list.</p>
@@ -89,12 +89,12 @@
 								  </div>
 								  <div class="i-value">
                                       <div id="airportDetailsPopElite"></div>
-                                      <img class="info svg" src='@routes.Assets.versioned("/images/icons/airport-features/ELITE_CHARM.png")'>
+                                      <img class="info svg" src='@views.AssetUrl("/images/icons/airport-features/ELITE_CHARM.png")'>
                                   </div>
 							  </div>
 							  <div class="item">
 								  <div class="i-label" data-tooltip="Higher income generates more demand and more premium passengers.">GDP per capita</div>
-								  <div class="i-value"><img title="Average income per capita" width="20" src='@routes.Assets.versioned("/images/icons/money.svg")' style="margin-right: 5px;"><span id="airportDetailsIncomeLevel"></span></div>
+								  <div class="i-value"><img title="Average income per capita" width="20" src='@views.AssetUrl("/images/icons/money.svg")' style="margin-right: 5px;"><span id="airportDetailsIncomeLevel"></span></div>
 							  </div>
 						  </div>
 					  </div>
@@ -106,7 +106,7 @@
 								  <div class="i-value">
 									  <span id="airportDetailsBaseUpkeep"></span>
 									  <span class="tooltip" onmouseover="showBaseUpkeepModal()">
-										  <img class="info svg" src='@routes.Assets.versioned("images/icons/information.svg")'>
+										  <img class="info svg" src='@views.AssetUrl("images/icons/information.svg")'>
 										  <span class="tooltiptext below" style="width: 400px;"></span>
 									  </span>
 								  </div>
@@ -116,7 +116,7 @@
                                     <div class="i-value" style="display: flex; align-items: center;">
 										<img class="airlineTitleIcon svg" style='display: none;'>
 										<p class="airlineTitle titleCue"></p>
-                                        <img class="img-button svg hover-rotate detailsIcon openCountryRelationship" src='@routes.Assets.versioned("images/icons/gear.svg")' data-tooltip='Manage Relationship'>
+                                        <img class="img-button svg hover-rotate detailsIcon openCountryRelationship" src='@views.AssetUrl("images/icons/gear.svg")' data-tooltip='Manage Relationship'>
 									</div>
 								</div>
 								<div class="item">
@@ -125,7 +125,7 @@
 								</div>
 								<div class="item">
 									<div class="i-label">Airport Loyalty
-									    <img src='@routes.Assets.versioned("/images/icons/information.svg")'
+									    <img src='@views.AssetUrl("/images/icons/information.svg")'
 											class="svg info clickable airportLoyaltyBonusTrigger" style="vertical-align:text-bottom"
 											onmouseover="showAppealBreakdown($(this), $('#appealBonusDetailsTooltip').data('loyaltyBreakdown'))"
 											onmouseout="hideAppealBreakdown()"/>
@@ -139,7 +139,7 @@
 									<div class="i-value" style="display: flex; align-items: center;">
 										<span id="airportDetailsStaff"></span>
 										<span class="tooltip" onmouseover="showBaseDetailsModal()">
-											<img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+											<img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 											<span class="tooltiptext below alignLeft" style="width: 400px;"></span>
 										</span>
 									</div>
@@ -162,16 +162,16 @@
 						<h5>
 							Loyalist Trend
 							<span class="tooltip">
-									<img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+									<img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 									<span class="tooltiptext below alignLeft" style="width: 400px;">
 										<p>Loyalty is very important. With more loyalty a passenger is more likely to choose your airline and to pay higher ticket prices.</p>
 										<p>Gain loyalists by providing satisfying service! Different passenger types care for different attributes, for example flight quality or price. For more info, please refer to the survey</p>
-										<img src='@routes.Assets.versioned("/images/tutorial/survey-button.png")'
+										<img src='@views.AssetUrl("/images/tutorial/survey-button.png")'
 											style="box-shadow: 0 0 2px 1px rgba(255, 255, 255, 0.2);">
 										<p>Having the most loyalists at an airport also makes you the "champion" of the airport, giving you additional reputation.</p>
 									</span>
 							</span>
-							<img src='@routes.Assets.versioned("/images/icons/chart-up.png")' class="clickable"
+							<img src='@views.AssetUrl("/images/icons/chart-up.png")' class="clickable"
 								title="View History" onclick="showLoyalistHistoryModal()" style="vertical-align: text-bottom">
 						</h5>
 						<div>
@@ -191,7 +191,7 @@
 
 			  <div class="section-grid">
 				  <div class="section tight flex-col">
-					  <h3 class="pt-2 inline-icons"><img src='@routes.Assets.versioned("/images/icons/crown.png")'> Rankings</h3>
+					  <h3 class="pt-2 inline-icons"><img src='@views.AssetUrl("/images/icons/crown.png")'> Rankings</h3>
 					  <div id="airportDetailsChampionList" style="width: 100%; margin-bottom: 15px;" class="table data">
 						  <div class="table-header">
 							  <div class="cell" style="width: 5%">&nbsp;</div>
@@ -210,7 +210,7 @@
 				  </div>
 				  <div class="section">
 					  <h4 class="inline-icons pt-4"><img height="16px"
-								   src='@routes.Assets.versioned("/images/icons/building-hedge.png")'> Airline Headquarters</h4>
+								   src='@views.AssetUrl("/images/icons/building-hedge.png")'> Airline Headquarters</h4>
 					  <div id="airportDetailsHeadquarterList" style="width: 100%; margin-bottom: 15px;"
 						   class="table data">
 						  <div class="table-header">
@@ -223,7 +223,7 @@
 							  <div class="cell clickable" style="width: 13%; text-align: right;" data-sort-property="avgDistance" data-sort-order="descending" onclick="toggleAirportBaseSortOrder($(this), '#airportDetailsHeadquarterList')">Average Distance</div>
 						  </div>
 					  </div>
-					  <h4 class="inline-icons pt-4"><img src='@routes.Assets.versioned("/images/icons/building-low.png")'>Airline Bases</h4>
+					  <h4 class="inline-icons pt-4"><img src='@views.AssetUrl("/images/icons/building-low.png")'>Airline Bases</h4>
 					  <div id="airportDetailsBaseList" style="width: 100%; margin-bottom: 15px;" class="table data">
 						  <div class="table-header">
 							  <div class="cell clickable" style="width: 30%" data-sort-property="airlineName" data-sort-order="ascending" onclick="toggleAirportBaseSortOrder($(this), '#airportDetailsBaseList')">Airline</div>
@@ -235,7 +235,7 @@
 							  <div class="cell clickable" style="width: 13%; text-align: right;" data-sort-property="avgDistance" data-sort-order="descending" onclick="toggleAirportBaseSortOrder($(this), '#airportDetailsBaseList')">Average Distance</div>
 						  </div>
 					  </div>
-					  <h4 class="inline-icons pt-4"><img src='@routes.Assets.versioned("/images/icons/sofa.png")'> Airline Lounges<span class="tooltip">
+					  <h4 class="inline-icons pt-4"><img src='@views.AssetUrl("/images/icons/sofa.png")'> Airline Lounges<span class="tooltip">
                           <img class="info svg" loading="lazy" src="/assets/images/icons/information.svg">
                           <span class="tooltiptext alignLeft" style="width: 320px;" id="tooltip_lounge"></span>
                       </span></h4>

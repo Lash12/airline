@@ -1,6 +1,6 @@
 
 	<div style="display: none;" class="extendedTopBarDetails flex-row items-center gap-1">
-        <p class="tooltip-attr tooltip-attr-bottom" data-tooltip="An estimate of how long until next week."><img src='@routes.Assets.versioned("/images/icons/clock-moon-phase.png")' style="vertical-align: middle;"><span class="nextTickEstimation label" style="font-weight: bold;">Estimating...</span></p>
+        <p class="tooltip-attr tooltip-attr-bottom" data-tooltip="An estimate of how long until next week."><img src='@views.AssetUrl("/images/icons/clock-moon-phase.png")' style="vertical-align: middle;"><span class="nextTickEstimation label" style="font-weight: bold;">Estimating...</span></p>
         <p class="flex-row items-center gap-1" style="margin: 0;">
             <span class="clickable label" onclick="promptSimSpeed()" title="Change simulation speed (minutes per game week)">&#9881; Speed</span>
             <span class="clickable label" onclick="promptFastForward()" title="Fast-forward: run the next N weeks back-to-back">&#9193; Fast-fwd</span>
@@ -9,22 +9,22 @@
         <div style="display: none; margin-right: auto;" id="logoutDivMobile">
             <span id="currentUserNameMobile" class="label"></span>
             <a id="airlineSwitcherBtnMobile">
-                <img src='@routes.Assets.versioned("/images/icons/reset.svg")' style="height: 24px" alt="switch airlines"> Switch
+                <img src='@views.AssetUrl("/images/icons/reset.svg")' style="height: 24px" alt="switch airlines"> Switch
             </a>
         </div>
-        <span style="padding: 0 4px;"><img style="width: 22px;" class="img-button svg svg-hover-blue svg-monochrome" src='@routes.Assets.versioned("images/icons/options.svg")' onclick="toggleSettings()" title="Settings"></span>
-        <div onclick="logout()"><img src='@routes.Assets.versioned("images/icons/24px/logout.png")' title="Login"></div>
+        <span style="padding: 0 4px;"><img style="width: 22px;" class="img-button svg svg-hover-blue svg-monochrome" src='@views.AssetUrl("images/icons/options.svg")' onclick="toggleSettings()" title="Settings"></span>
+        <div onclick="logout()"><img src='@views.AssetUrl("images/icons/24px/logout.png")' title="Login"></div>
         <a class="no-highlight px-2" href="https://discord.gg/e6VgGswVep"  target="_blank">
-            <img src='@routes.Assets.versioned("/images/buttons/Discord-Logo-Color.png")' loading="lazy" style="height: 24px" title="Official Discord">
+            <img src='@views.AssetUrl("/images/buttons/Discord-Logo-Color.png")' loading="lazy" style="height: 24px" title="Official Discord">
         </a>
         <a class="no-highlight px-2" href="https://www.patreon.com/myflyclub/"  target="_blank">
-            <img class="" src='@routes.Assets.versioned("/images/buttons/patreon_mark_coral.jpg")' loading="lazy" style="height: 24px" title="Become a Patreon to support this project!">
+            <img class="" src='@views.AssetUrl("/images/buttons/patreon_mark_coral.jpg")' loading="lazy" style="height: 24px" title="Become a Patreon to support this project!">
         </a>
 	</div>
   	<div id="topBar" class="menubar">
         <div class="topBarDetails">
             <p class="currentTime label tooltip-attr tooltip-attr-bottom desktopOnly" data-tooltip="One week lasts ~ 30min and one year is 48 weeks or 24 hours in realtime. "></p>
-            <p class="tooltip-attr tooltip-attr-bottom desktopOnly" data-tooltip="An estimate of how long until next week."><img src='@routes.Assets.versioned("/images/icons/clock-moon-phase.png")' style="vertical-align: middle;"><span class="nextTickEstimation label" style="font-weight: bold;">Estimating...</span></p>
+            <p class="tooltip-attr tooltip-attr-bottom desktopOnly" data-tooltip="An estimate of how long until next week."><img src='@views.AssetUrl("/images/icons/clock-moon-phase.png")' style="vertical-align: middle;"><span class="nextTickEstimation label" style="font-weight: bold;">Estimating...</span></p>
             <p class="desktopOnly"><span class="clickable label tooltip-attr tooltip-attr-bottom" data-tooltip="Change simulation speed (minutes per game week)" onclick="promptSimSpeed()">&#9881;</span> <span class="clickable label tooltip-attr tooltip-attr-bottom" data-tooltip="Fast-forward: run the next N weeks back-to-back" onclick="promptFastForward()">&#9193;</span> <span class="fastForwardStatus label tooltip-attr tooltip-attr-bottom" data-tooltip="Fast-forward weeks remaining (each week still takes the normal compute time)" style="display:none;color:gold;font-weight:bold;"></span></p>
             <p class="tooltip-attr tooltip-attr-bottom" data-tooltip="Cash money">$<span class="balance"></span></p>
             <p class="tooltip-attr tooltip-attr-bottom actionPoints" data-tooltip="Action Points"></p>
@@ -43,12 +43,12 @@
             </div>
             <div class="reputationStars desktopOnly" id="topReputationStars"></div>
             <div title="Latest Oil Price" class="latestOilPriceShortCut clickable" onclick="showOilCanvas()">
-                <img src='@routes.Assets.versioned("/images/icons/oil-barrel.png")'>
+                <img src='@views.AssetUrl("/images/icons/oil-barrel.png")'>
                 <span class="oilprice label"></span>
             </div>
         </div>
   		<div class="flex-align-center desktopOnly">
-			<span  style="padding: 0 4px;"><img style="width: 22px;" class="img-button svg svg-hover-blue svg-monochrome" src='@routes.Assets.versioned("images/icons/options.svg")' onclick="toggleSettings()" title="Settings"></span>
+			<span  style="padding: 0 4px;"><img style="width: 22px;" class="img-button svg svg-hover-blue svg-monochrome" src='@views.AssetUrl("images/icons/options.svg")' onclick="toggleSettings()" title="Settings"></span>
 			<div style="display: none;" id="logoutDiv" class="topBarItem flex-row gap-0">
 				<span id="currentUserName" class="label"></span>
 				<div id="airlineSwitcherBtn" class="button" style="display:none; width:90px">Switch</div>
@@ -56,12 +56,12 @@
 			</div>
 			<div class="topBarItem no-highlight" id="discordDiv">
 				<a href="https://discord.gg/e6VgGswVep"  target="_blank">
-					<img src='@routes.Assets.versioned("/images/buttons/Discord-Logo-Color.png")' style="max-height: 30px; vertical-align: middle;" title="Official Discord">
+					<img src='@views.AssetUrl("/images/buttons/Discord-Logo-Color.png")' style="max-height: 30px; vertical-align: middle;" title="Official Discord">
 				</a>
 			</div>
 			<div class="topBarItem" id="patreonDiv">
 				<a href="https://www.patreon.com/myflyclub/"  target="_blank">
-					<img src='@routes.Assets.versioned("/images/buttons/become_a_patron_button.png")' loading="lazy" style="max-height: 30px; vertical-align: middle;" title="Become a Patreon to support this project!">
+					<img src='@views.AssetUrl("/images/buttons/become_a_patron_button.png")' loading="lazy" style="max-height: 30px; vertical-align: middle;" title="Become a Patreon to support this project!">
 				</a>
 			</div>
 		</div>

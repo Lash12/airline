@@ -18,9 +18,9 @@
 			<div style="width : 100%" class="routeList pb-2">
 			</div>
 			<div style="display: flex; align-items: center;">
-				<img class="clickable prev" title="View passenger map of previous week" src='@routes.Assets.versioned("/images/icons/arrow-180.png")'/>
+				<img class="clickable prev" title="View passenger map of previous week" src='@views.AssetUrl("/images/icons/arrow-180.png")'/>
 				<span style="width: 95px;"><span class="cycleDeltaText"></span>&nbsp;week(s) ago</span>
-				<img class="clickable next" title="View passenger map of next week" src='@routes.Assets.versioned("/images/icons/arrow.png")'/>
+				<img class="clickable next" title="View passenger map of next week" src='@views.AssetUrl("/images/icons/arrow.png")'/>
 			</div>
 			<button type="button" title="Exit Passenger Map" class="button glow exitPaxMap" onclick="hideLinkHistoryView()" style="margin-top: auto">Exit Passenger Map</button>
 		</div>
@@ -28,11 +28,11 @@
 	  <div id="heatmapControlPanel" class="mapControlPanel" style="display: none; width: 250px; flex-direction: column; align-items:center">
 		  <h4>Influence Heatmap</h4>
 		  <div style="display: flex; align-items: center;">
-			  <img class="clickable prevPrev" title="100 weeks backward" src='@routes.Assets.versioned("/images/icons/control-double-180.png")'/>
-			  <img class="clickable prev" title="10 weeks backward" src='@routes.Assets.versioned("/images/icons/control-180.png")'/>
+			  <img class="clickable prevPrev" title="100 weeks backward" src='@views.AssetUrl("/images/icons/control-double-180.png")'/>
+			  <img class="clickable prev" title="10 weeks backward" src='@views.AssetUrl("/images/icons/control-180.png")'/>
 			  <span style="width: 95px; margin: 0 15px 0 15px;"><span class="cycleDeltaText"></span>&nbsp;weeks ago</span>
-			  <img class="clickable next" title="10 weeks forward" src='@routes.Assets.versioned("/images/icons/control.png")'/>
-			  <img class="clickable nextNext" title="100 weeks forward" src='@routes.Assets.versioned("/images/icons/control-double.png")'/>
+			  <img class="clickable next" title="10 weeks forward" src='@views.AssetUrl("/images/icons/control.png")'/>
+			  <img class="clickable nextNext" title="100 weeks forward" src='@views.AssetUrl("/images/icons/control-double.png")'/>
 		  </div>
 		  <form>
 		  <input type="radio" name="heatmapType" value="loyalistImpact" checked/>Impact

@@ -10,7 +10,7 @@
 						<div class="section">
 							<h4 class="py-2">Fuel Consumption History
 								<span class="tooltip">
-									<img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+									<img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 									<p class="tooltiptext below" style="width: 400px;">
 										Fuel consumption details of previous week
 									</p>
@@ -25,7 +25,7 @@
 							</div>
 							<h4 class="pt-4">Inventory Policy
 								<span class="tooltip">
-									<img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+									<img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 									<p class="tooltiptext below" style="width: 400px;">
 										Airline keeps an inventory of fuel to buffer oil price fluctuations<br/>
 										<br/>
@@ -41,7 +41,7 @@
 									<div class="value">
 										<div id="currentInventoryPolicyDiv">
 											<span id="currentInventoryPolicy"></span>
-                                            <img class="img-button svg hover-rotate" src='@routes.Assets.versioned("images/icons/gear.svg")' id="editOilInventoryPolicyButton" onclick="editOilInventoryPolicy()"/>
+                                            <img class="img-button svg hover-rotate" src='@views.AssetUrl("images/icons/gear.svg")' id="editOilInventoryPolicyButton" onclick="editOilInventoryPolicy()"/>
 										</div>
 										<div id="editInventoryPolicyDiv" style="display:none;">
 											<div class="table data" id="editInventoryPolicyTable">
@@ -51,7 +51,7 @@
 														<div class="cell" style="width: 10%"> </div>
 												</div>
 											</div>
-											<div><img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'><span class="warning"></span></div>
+											<div><img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'><span class="warning"></span></div>
 										</div>
 									</div>
 								</div>
@@ -62,7 +62,7 @@
 							</div>
 							<h4 class="pt-4">New Oil Contract
 								<span class="tooltip">
-									<img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+									<img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 									<p class="tooltiptext"  style="width: 400px;">
 										Sign long term Oil Contract with fixed price.<br/>
 										<br/>
@@ -79,8 +79,8 @@
 									<div class="label">Contract Volume:</div>
 									<div class="value">
 										<input type="text" id="oilContractVolume" oninput="loadOilContractConsideration($('#oilContractVolume').val(), $('#oilContractDuration').val())"/> barrels
-										<img class="img-button svg" src='@routes.Assets.versioned("images/icons/reset.svg")' title="reset value" onclick="setSuggestedOilContractVolume()">
-										<img class="img-button" src='@routes.Assets.versioned("/images/icons/control-skip-090.png")' title="max value" onclick="setMaxOilContractVolume()">
+										<img class="img-button svg" src='@views.AssetUrl("images/icons/reset.svg")' title="reset value" onclick="setSuggestedOilContractVolume()">
+										<img class="img-button" src='@views.AssetUrl("/images/icons/control-skip-090.png")' title="max value" onclick="setMaxOilContractVolume()">
 									</div>
 
 								</div>
@@ -88,8 +88,8 @@
 									<div class="label">Contract Duration:</div>
 									<div class="value">
 										<input type="text" id="oilContractDuration" oninput="loadOilContractConsideration($('#oilContractVolume').val(), $('#oilContractDuration').val())"/> weeks
-										<img class="img-button svg" src='@routes.Assets.versioned("images/icons/reset.svg")' title="reset value" onclick="setSuggestedOilContractDuration()">
-										<img class="img-button" src='@routes.Assets.versioned("/images/icons/control-skip-090.png")' title="max value" onclick="setMaxOilContractDuration()">
+										<img class="img-button svg" src='@views.AssetUrl("images/icons/reset.svg")' title="reset value" onclick="setSuggestedOilContractDuration()">
+										<img class="img-button" src='@views.AssetUrl("/images/icons/control-skip-090.png")' title="max value" onclick="setMaxOilContractDuration()">
 									</div>
 								</div>
 								<div class="table-row">
@@ -103,7 +103,7 @@
 							</div>
 							<div class="button" id="signOilContractButton" style="display:none;" onclick="addOilContract($('#oilContractVolume').val(), $('#oilContractDuration').val())">Sign</div>
 							<div id="signOilContractRejectionDiv" style="display:none;">
-								<img src='@routes.Assets.versioned("/images/icons/prohibition.png")'>
+								<img src='@views.AssetUrl("/images/icons/prohibition.png")'>
 								<span id="signOilContractRejection" class="warning"></span>
 							</div>
 						</div>

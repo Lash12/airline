@@ -1,15 +1,15 @@
 				<div id="worldMapCanvas">
 					<div id="map" class="mainPanel"
-						data-headquarter-marker='@routes.Assets.versioned("images/markers/headquarter.svg")'
-						data-base-marker='@routes.Assets.versioned("images/markers/base.svg")'
-						data-base-alliance-marker='@routes.Assets.versioned("images/markers/baseAlliance.svg")'
-						data-base-alliancehq-marker='@routes.Assets.versioned("images/markers/baseAllianceHQ.svg")'
-						data-large-airport-marker='@routes.Assets.versioned("images/markers/airport-darker.svg")'
-						data-medium-airport-marker='@routes.Assets.versioned("images/markers/airport.svg")'
-						data-small-airport-marker='@routes.Assets.versioned("images/markers/airport-lighter.svg")'
-						data-gateway-airport-marker='@routes.Assets.versioned("images/markers/airport-gateway.svg")'
-						data-domestic-airport-marker='@routes.Assets.versioned("images/markers/airport-domestic.svg")'
-						data-disabled-airport-marker='@routes.Assets.versioned("images/markers/airport-transparent.svg")'>
+						data-headquarter-marker='@views.AssetUrl("images/markers/headquarter.svg")'
+						data-base-marker='@views.AssetUrl("images/markers/base.svg")'
+						data-base-alliance-marker='@views.AssetUrl("images/markers/baseAlliance.svg")'
+						data-base-alliancehq-marker='@views.AssetUrl("images/markers/baseAllianceHQ.svg")'
+						data-large-airport-marker='@views.AssetUrl("images/markers/airport-darker.svg")'
+						data-medium-airport-marker='@views.AssetUrl("images/markers/airport.svg")'
+						data-small-airport-marker='@views.AssetUrl("images/markers/airport-lighter.svg")'
+						data-gateway-airport-marker='@views.AssetUrl("images/markers/airport-gateway.svg")'
+						data-domestic-airport-marker='@views.AssetUrl("images/markers/airport-domestic.svg")'
+						data-disabled-airport-marker='@views.AssetUrl("images/markers/airport-transparent.svg")'>
 					</div>
                     <div id="mapFilters" class="mapOverlayPanel" style="position: absolute; top: 10px; left: 10px; z-index: 1000; background: rgba(30, 30, 40, 0.75); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; flex-direction: column; gap: 8px; font-size: 12px; color: #fff; font-family: sans-serif;">
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0; user-select: none;">
@@ -53,7 +53,7 @@
 										<span class="price-wrapper class-value-child business"><input type="number" id="quickPriceBusiness" class="quick-price-input price-input" data-class="business" min="1"/></span>
 										<span class="price-wrapper class-value-child first"><input type="number" id="quickPriceFirst" class="quick-price-input price-input" data-class="first" min="1"/></span>
 									</div>
-									<img id="quickPriceSave" src='@routes.Assets.versioned("images/icons/tick.svg")' class="svg img-button" style="display:none; width:18px;" title="Save prices" onclick="saveCurrentLinkPrice()"/>
+									<img id="quickPriceSave" src='@views.AssetUrl("images/icons/tick.svg")' class="svg img-button" style="display:none; width:18px;" title="Save prices" onclick="saveCurrentLinkPrice()"/>
 								</div>
 								<div id="quickPriceMessage" style="font-size:80%; min-height:1em; margin-top:-8px; padding-bottom:4px;"></div>
 									<h5 class="leading-snug opacity-80">Capacity</h5>
@@ -65,7 +65,7 @@
 									<div class="pb-3">
 										<div class="text-base font-mono" id="linkCurrentCapacity"></div>
 										<div class="future" style="display:flex; align-items: center;">
-											<span class="capacity"></span><img class="info svg awaitingAirplanes" src='@routes.Assets.versioned("/images/icons/information.svg")' title="Capacity when all airplanes are delivered">
+											<span class="capacity"></span><img class="info svg awaitingAirplanes" src='@views.AssetUrl("/images/icons/information.svg")' title="Capacity when all airplanes are delivered">
 										</div>
 									</div>
 									<input type="hidden" id="actionLinkId">
@@ -93,7 +93,7 @@
 													Quality:
 											</div>
 											<div class="value"><span id="linkQuality"></span><div class="tooltip">
-												<img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+												<img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 												<span class="tooltiptext below" style="width: 280px;">
 													<p><b>Overall quality</b> is determined by:<br>
 														- Service stars on the route (30%)<br>
@@ -143,7 +143,7 @@
 										<div class="table-row">
 											<div class="label" style="width:45%">Fuel:</div>
 											<div class="value"><span id="linkFuelCost"></span> <div class="tooltip">
-												<img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+												<img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 												<span class="tooltiptext below" style="width: 280px;">
 													<p>Flight <b>fuel costs</b> use a normalized $70 fuel cost and don't include any fuel contracts.</p>
 												</span>
@@ -152,7 +152,7 @@
 										<div class="table-row">
 											<div class="label" style="width:45%"><span class="fuelTaxRate"></span>Fuel Tax:</div>
 											<div class="value"><span id="linkFuelTax"></span> <div class="tooltip">
-												<img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+												<img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 												<span class="tooltiptext below" style="width: 280px;">
 													<p><b>Fuel tax</b> increases as your airline's reputation increases.</p>
 												</span>
@@ -161,7 +161,7 @@
 										<div class="table-row">
 											<div class="label">Labor & Crew:</div>
 											<div class="value"><span id="linkCrewCost"></span> <div class="tooltip">
-												<img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+												<img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 												<span class="tooltiptext below" style="width: 280px;">
 													<p><b>Labor & Crew Costs</b> are based on the flight duration, flight capacity, and the company-wide "Target Employee Quality" set in the office.</p>
 												</span>
@@ -170,7 +170,7 @@
 										<div class="table-row">
 											<div class="label">Airport Fees:</div>
 											<div class="value"><span id="linkAirportFees"></span> <div class="tooltip">
-												<img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+												<img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 												<span class="tooltiptext below" style="width: 280px;">
 													<p><b>Airport Rentals & Fees</b> are higher with larger aircraft and at larger airports, especially very large airports.</p>
 												</span>
@@ -179,7 +179,7 @@
 										<div class="table-row">
 											<div class="label">Service Cost / Profit:</div>
 											<div class="value"><span id="linkServiceSupplies"></span> <div class="tooltip">
-												<img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+												<img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 												<span class="tooltiptext below" style="width: 280px;">
 													<p><b>Service Costs</b> are the product of flight service stars, flight duration, and sold seats multiplied by their class level.</p>
 													<p>That is, low service stars on an economy seats is very cheap; high service stars on first class seats is quite expensive.</p>
@@ -211,8 +211,8 @@
 									<div class="divider"></div>
 									<h4 class="pt-2">
 										<span>Operators</span>
-										<img src='@routes.Assets.versioned("/images/icons/chart-up.png")' class="clickable" title="View Rival History" onclick="showLinkRivalHistory($('#actionLinkId').val())" style="vertical-align: text-bottom">
-										<img src='@routes.Assets.versioned("/images/icons/magnifier.png")' class="clickable" title="View Rival Details" onclick="showLinkRivalDetails($('#actionLinkId').val())" style="vertical-align: text-bottom">
+										<img src='@views.AssetUrl("/images/icons/chart-up.png")' class="clickable" title="View Rival History" onclick="showLinkRivalHistory($('#actionLinkId').val())" style="vertical-align: text-bottom">
+										<img src='@views.AssetUrl("/images/icons/magnifier.png")' class="clickable" title="View Rival Details" onclick="showLinkRivalDetails($('#actionLinkId').val())" style="vertical-align: text-bottom">
 									</h4>
 									<div class="table data" id="linkCompetitons" style="width: 100%">
 										<div class='table-header'>
@@ -251,7 +251,7 @@
 										<div class="link-decoration-circle"></div>
 									</div>
 									<div>
-										<p class="text-lg pb-1"><a class="clickable" id="planLinkFromAirportName"></a><img class="img-button svg hover-rotate" src='@routes.Assets.versioned("images/icons/gear.svg")' id="planLinkFromAirportEditIcon" onclick="$('#planLinkFromAirportSelect').show()" title="Change From Airport"></p>
+										<p class="text-lg pb-1"><a class="clickable" id="planLinkFromAirportName"></a><img class="img-button svg hover-rotate" src='@views.AssetUrl("images/icons/gear.svg")' id="planLinkFromAirportEditIcon" onclick="$('#planLinkFromAirportSelect').show()" title="Change From Airport"></p>
 										<div class="value"><select class="select-css" id="planLinkFromAirportSelect" onchange="planLink($(this).val(), planLinkState.toAirportId)"></select></div>
 										<p class="leading-snug"><span id="planLinkDistance"></span> <i class="planLinkFlightType"></i></p>
 										<p class="text-lg"><a class="clickable" id="planLinkToAirportName"></a></p>
@@ -264,7 +264,7 @@
 										<span id="planLinkToCountryTitle"><img class="airlineTitleIcon svg" style='display: none;'>&nbsp;<span class="airlineTitle titleCue"></span></span>,
 										<span id="planLinkToCountryRelationship">
 												<span class="total"></span>
-												<img class="pb-1 img-button svg hover-rotate detailsIcon titleCue" src='@routes.Assets.versioned("images/icons/gear.svg")' title='Manage Relationship' style="vertical-align: middle;">
+												<img class="pb-1 img-button svg hover-rotate detailsIcon titleCue" src='@views.AssetUrl("images/icons/gear.svg")' title='Manage Relationship' style="vertical-align: middle;">
 											</span>
 									</p></div>
 								</div>
@@ -330,7 +330,7 @@
 									<div class="h-4">
 										<span id="planLinkDirectDemand"></span>
 										<div class="tooltip pl-1">
-											<img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+											<img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 											<span class="tooltiptext below directDemandBreakdown" style="width: 280px;">
 												<div class="fromAirport py-2">
 													<h4>From <span class="airportLabel"></span></h4>
@@ -379,8 +379,8 @@
 									<div>
 										<h5>Economy:</h5>
 										<div>
-											<img src='@routes.Assets.versioned("/images/icons/plus.svg")' class='img-button svg svg-monochrome svg-hover-green pr-1 pb-1' onclick='increasePrice(`economy`)'  title="Increase economy price by 5%">
-											<img src='@routes.Assets.versioned("/images/icons/minus.svg")' class='img-button svg svg-monochrome svg-hover-red pr-1 pb-1' onclick='decreasePrice(`economy`)'  title="Decrease economy price by 5%">
+											<img src='@views.AssetUrl("/images/icons/plus.svg")' class='img-button svg svg-monochrome svg-hover-green pr-1 pb-1' onclick='increasePrice(`economy`)'  title="Increase economy price by 5%">
+											<img src='@views.AssetUrl("/images/icons/minus.svg")' class='img-button svg svg-monochrome svg-hover-red pr-1 pb-1' onclick='decreasePrice(`economy`)'  title="Decrease economy price by 5%">
 										</div>
 									</div>
 									<div class="m-0"><span class="price-wrapper pr-8 w-42 text-base font-mono"><input type="text" id="planLinkEconomyPrice" data-class="economy" class="price-input"/></span></div>
@@ -391,8 +391,8 @@
 									<div class="m-0">
 										<h5>Business:</h5>
 										<div>
-											<img src='@routes.Assets.versioned("/images/icons/plus.svg")' class='img-button svg svg-monochrome svg-hover-green pr-1 pb-1' onclick='increasePrice(`business`)'  title="Increase business price by 5%">
-											<img src='@routes.Assets.versioned("/images/icons/minus.svg")' class='img-button svg svg-monochrome svg-hover-red pr-1 pb-1' onclick='decreasePrice(`business`)'  title="Decrease business price by 5%">
+											<img src='@views.AssetUrl("/images/icons/plus.svg")' class='img-button svg svg-monochrome svg-hover-green pr-1 pb-1' onclick='increasePrice(`business`)'  title="Increase business price by 5%">
+											<img src='@views.AssetUrl("/images/icons/minus.svg")' class='img-button svg svg-monochrome svg-hover-red pr-1 pb-1' onclick='decreasePrice(`business`)'  title="Decrease business price by 5%">
 										</div>
 									</div>
 									<div class="m-0"><span class="price-wrapper pr-8 w-42 text-base font-mono"><input type="text" id="planLinkBusinessPrice" data-class="business" class="price-input"/></span></div>
@@ -403,8 +403,8 @@
 									<div class="m-0">
 										<h5>First:</h5>
 										<div>
-											<img src='@routes.Assets.versioned("/images/icons/plus.svg")' class='img-button svg svg-monochrome svg-hover-green pr-1 pb-1' onclick='increasePrice(`first`)'  title="Increase first price by 5%">
-											<img src='@routes.Assets.versioned("/images/icons/minus.svg")' class='img-button svg svg-monochrome svg-hover-red pr-1 pb-1' onclick='decreasePrice(`first`)'  title="Decrease first price by 5%">
+											<img src='@views.AssetUrl("/images/icons/plus.svg")' class='img-button svg svg-monochrome svg-hover-green pr-1 pb-1' onclick='increasePrice(`first`)'  title="Increase first price by 5%">
+											<img src='@views.AssetUrl("/images/icons/minus.svg")' class='img-button svg svg-monochrome svg-hover-red pr-1 pb-1' onclick='decreasePrice(`first`)'  title="Decrease first price by 5%">
 										</div>
 									</div>
 									<div>
@@ -416,9 +416,9 @@
 								<div class="flex-container-width-quarter items-center">
 									<div></div>
 									<div>
-										<img src='@routes.Assets.versioned("/images/icons/plus.svg")' class='img-button svg svg-monochrome svg-hover-green pr-1 py-1' onclick='increasePrice()'  title="Increase all prices by 5%">
-										<img src='@routes.Assets.versioned("/images/icons/minus.svg")' class='img-button svg svg-monochrome svg-hover-red pr-1 py-1' onclick='decreasePrice()'  title="Decrease all prices by 5%">
-										<img src='@routes.Assets.versioned("images/icons/reset.svg")' class='img-button svg pr-1 py-1' onclick='resetPrice()'  title="Reset to Default Ticket Prices">
+										<img src='@views.AssetUrl("/images/icons/plus.svg")' class='img-button svg svg-monochrome svg-hover-green pr-1 py-1' onclick='increasePrice()'  title="Increase all prices by 5%">
+										<img src='@views.AssetUrl("/images/icons/minus.svg")' class='img-button svg svg-monochrome svg-hover-red pr-1 py-1' onclick='decreasePrice()'  title="Decrease all prices by 5%">
+										<img src='@views.AssetUrl("images/icons/reset.svg")' class='img-button svg pr-1 py-1' onclick='resetPrice()'  title="Reset to Default Ticket Prices">
 									</div>
 									<div></div>
 									<div></div>
@@ -432,7 +432,7 @@
 										<p class="pt-2">Current quality:</p>
 										<div id="planLinkQuality"></div>
 										<p class="pt-2">Set route service stars:</p>
-										<div id="serviceLevelBar" data-empty-icon='@routes.Assets.versioned("/images/icons/star-empty.svg")' data-fill-icon='@routes.Assets.versioned("/images/icons/star-full.svg")'></div>
+										<div id="serviceLevelBar" data-empty-icon='@views.AssetUrl("/images/icons/star-empty.svg")' data-fill-icon='@views.AssetUrl("/images/icons/star-full.svg")'></div>
 										<input type="hidden" id="planLinkServiceLevel" value="1"/>
 									</div>
 									<div id="planLinkExpectedFromQuality">
@@ -477,9 +477,9 @@
 												<div style="display: inline-block">
 													<div style="display:flex ; align-items: baseline;">
 														<input type="checkbox" onclick="toggleUtilizationRate($('#planLinkAirplaneSelect'), $(this))" class="toggleUtilizationRateBox"/>
-														<img src='@routes.Assets.versioned("/images/icons/clock-select-remain.png")' title="Toggle Utilization Rate">
+														<img src='@views.AssetUrl("/images/icons/clock-select-remain.png")' title="Toggle Utilization Rate">
 														<input type="checkbox" onclick="toggleCondition($('#planLinkAirplaneSelect'), $(this))" class="toggleConditionBox"/>
-														<img class="img-button svg hover-rotate" src='@routes.Assets.versioned("images/icons/gear.svg")' data-tooltip="Toggle Airplane Condition">
+														<img class="img-button svg hover-rotate" src='@views.AssetUrl("images/icons/gear.svg")' data-tooltip="Toggle Airplane Condition">
 													</div>
 												</div>
 											</p>
@@ -487,13 +487,13 @@
 										<div class="value">
 											<div class="noAirplaneHelp" style="display: none">
 												<div class="tooltip">
-													<img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+													<img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 													<h5>
 														<span class="tooltiptext below">
 															Purchase airplane
-															<img data-src='@routes.Assets.versioned("/images/clips/buy-airplane.gif")' loading="lazy" alt="">
+															<img data-src='@views.AssetUrl("/images/clips/buy-airplane.gif")' loading="lazy" alt="">
 															Or assign airplane to this airport
-															<img data-src='@routes.Assets.versioned("/images/clips/change-airplane-base.gif")' loading="lazy" alt="">
+															<img data-src='@views.AssetUrl("/images/clips/change-airplane-base.gif")' loading="lazy" alt="">
 														 </span>
 													</h5>
 												</div>
@@ -507,7 +507,7 @@
 											<p>
 												<span>Flight Frequency:</span>
 												<div class="tooltip">
-													<img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+													<img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 													<span style="min-width:280px;" class="tooltiptext below">
 														Increase/decrease the flight frequency by selecting/deselecting the airplane icons. <br/><br/>
 														Higher frequencies increases passenger satisfaction and lowers perceived transfer costs.
@@ -551,7 +551,7 @@
 											<span id="planLinkCapacity"></span>
 											<div class="future">
 												<div style="display:flex; align-items: center;">
-													&nbsp;(<img class="info svg" class="awaitingAirplanes" src='@routes.Assets.versioned("/images/icons/information.svg")' title="Capacity when all airplanes are delivered"><span class="capacity"></span>)
+													&nbsp;(<img class="info svg" class="awaitingAirplanes" src='@views.AssetUrl("/images/icons/information.svg")' title="Capacity when all airplanes are delivered"><span class="capacity"></span>)
 												</div>
 											</div>
 										</div>
@@ -561,7 +561,7 @@
 										<div class="value">
 											<span id="planLinkFillEstimate"></span>
 											<div class="tooltip pl-1">
-												<img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+												<img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 												<span class="tooltiptext below" style="width: 240px;">Your weekly capacity compared with the direct demand at the current prices. Real traffic also includes indirect (connecting) demand, so a route can still fill above this ratio.</span>
 											</div>
 										</div>
@@ -571,7 +571,7 @@
 										<div class="value" style="">
 											<span class="staffRequired"></span>
 											<span id="linkStaffBreakdownTooltip" class="tooltip">
-												<img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+												<img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 												<span class="tooltiptext alignLeft" style="width: 400px;">
 													<h4 style="margin-bottom: 12px;">Staff Required Breakdown <span class="airlineName"></span></h4>
 													<div class="table data" style="width: 100%;">
@@ -609,7 +609,7 @@
 									</div>
 								</div>
 								<div class="linkRejection warning">
-									<div><img src='@routes.Assets.versioned("/images/icons/prohibition.png")'><span id="linkRejectionReason"></span></div>
+									<div><img src='@views.AssetUrl("/images/icons/prohibition.png")'><span id="linkRejectionReason"></span></div>
 								</div>
 								<div class="warningList">
 								</div>
@@ -719,10 +719,10 @@
                                     <div class="flex-row items-center">
                                         <span><span class="campaignOverlayRadius"></span> km</span>
                                         <div class="campaignOverlayIncrease" onclick="changeCampaignOverlayRadius(50)">
-                                            <img src='@routes.Assets.versioned("images/icons/plus.svg")' class='img-button svg svg-monochrome' width="16">
+                                            <img src='@views.AssetUrl("images/icons/plus.svg")' class='img-button svg svg-monochrome' width="16">
                                         </div>
                                         <div class="campaignOverlayDecrease" onclick="changeCampaignOverlayRadius(-50)">
-                                            <img src='@routes.Assets.versioned("images/icons/minus.svg")' class='img-button svg svg-monochrome' width="16">
+                                            <img src='@views.AssetUrl("images/icons/minus.svg")' class='img-button svg svg-monochrome' width="16">
                                         </div>
                                     </div>
                                 </div>
@@ -791,7 +791,7 @@
                     
                                 <div class="flex-row gap-4 mt-4 px-8">
                                     <button type="button" class="button search" tabindex="103" onkeypress="searchButtonKeyPress(event, $(this))" onclick="searchAction(document.querySelector('div.searchFieldContainer input.fromAirport').dataset.selectedid, document.querySelector('div.searchFieldContainer input.toAirport').dataset.selectedid)">Search</button>
-                                    <img width="20px" class="img-button svg mr-auto" onclick="resetSearchInput($(this))" src='@routes.Assets.versioned("images/icons/reset.svg")' title="reset">
+                                    <img width="20px" class="img-button svg mr-auto" onclick="resetSearchInput($(this))" src='@views.AssetUrl("images/icons/reset.svg")' title="reset">
                                 </div>
                             </div>
                     
@@ -893,7 +893,7 @@
                                 </div>
                                 <div class="flex-row">
                                     <button type="button" class="button search mt-4" tabindex="111" onkeypress="searchButtonKeyPress(event, $(this))" onclick="searchLinkHistory()">Search</button>
-                                    <img width="20px" class="clickable mr-auto" onclick="resetSearchInput($(this))" src='@routes.Assets.versioned("images/icons/reset.svg")' title="reset">
+                                    <img width="20px" class="clickable mr-auto" onclick="resetSearchInput($(this))" src='@views.AssetUrl("images/icons/reset.svg")' title="reset">
                                 </div>
                                 <div id="historySearchResult" class="section flex-grow overflow-y-auto p-0 mt-2">
                                     <div class="table data w-full" style="min-width: 700px;">

@@ -4,15 +4,15 @@
 						<div class="section min-w-52 max-w-260px">
 							<h2 class="text-center text-underline">
 								<span class="airlineName">Airline Name</span>
-                                <img class="img-button svg hover-rotate" src='@routes.Assets.versioned("images/icons/gear.svg")' onclick="editAirlineName()"/>
+                                <img class="img-button svg hover-rotate" src='@views.AssetUrl("images/icons/gear.svg")' onclick="editAirlineName()"/>
 							</h2>
 							<span class="airlineNameInputSpan" style="display: none;">
 								<input id="airlineNameInput" class="airlineNameInput" type="text" />
 								<button onclick="confirmAirlineRename($('#officeCanvas .airlineNameInput').val())" class="confirm">
-									<img src='@routes.Assets.versioned("/images/icons/tick.svg")' class="svg img-button"/>
+									<img src='@views.AssetUrl("/images/icons/tick.svg")' class="svg img-button"/>
 								</button>
 								<button onclick="cancelAirlineRename()">
-									<img src='@routes.Assets.versioned("/images/icons/cross.svg")' class='cancel svg img-button'/>
+									<img src='@views.AssetUrl("/images/icons/cross.svg")' class='cancel svg img-button'/>
 								</button>
 								<div class="warning" style="display:none;"></div>
 							</span>
@@ -30,7 +30,7 @@
 								<div class="">
 									<p class="text-center">Reputation Breakdown
 										<span class="tooltip">
-											<img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+											<img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 											<span class="tooltiptext alignLeft below" style="width: 280px;">
 												Your airline's reputation slowly moves toward the "trending to" reputation. Each reputation level gives your airline 3 additional managers.
 											</span>
@@ -40,7 +40,7 @@
 								</div>
 							</div>
 							<h4 class="pt-4 pb-4"><span class="airlineType"></span> Airline<span class="tooltip">
-											<img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+											<img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 											<div class="tooltiptext alignLeft below airlineTypeDescription" style="width: 280px;"></div>
 										</span></h4>
 							<h4>Employee settings</h4>
@@ -48,14 +48,14 @@
 							<p>Target Employee Quality:
 								<span id="serviceFundingContainer"></span>
 								<span class="tooltip">
-									<img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+									<img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 									<span class="tooltiptext alignLeft below" style="width: 220px;">Employee quality (EQ) impacts flight quality across your entire airline.</span>
 								</span>
 							</p>
 							<p class="pb-4">Projected Employee Costs: $<span id="fundingProjection"></span></p>
 
 							<h4>Aircraft Renewal<span class="tooltip">
-									<img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+									<img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 									<span class="tooltiptext alignLeft below" style="width: 280px;">
 										You may set:<br>
 										- Auto renewal, your airline will auto purchase new planes when they fall below the set condition. Having newer planes increases your quality.
@@ -80,7 +80,7 @@
 
 						<div class="section min-w-80" style="flex:1; max-width: 100%;">
 							<h4>Reputation tracks<div class="tooltip">
-									<img src='@routes.Assets.versioned("/images/icons/information.svg")'>
+									<img src='@views.AssetUrl("/images/icons/information.svg")'>
 									<div class="tooltiptext alignLeft below p-4" style="width: 320px;">
 										<p>Achieving a level on a reputation track earns an additional 25 reputation.</p>
 										<p>The tourist & elite track each time a passenger of that type takes your airline during their journey.</p>
@@ -189,7 +189,7 @@
 									</div>
 									<div class="table-row">
 										<div class="cell">Fuel (Normalized):<span class="tooltip">
-                                                    <img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+                                                    <img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
                                                     <span class="tooltiptext alignLeft below text-sm" style="width:240px;">
                                                         This is a normalized $70 / barrel fuel metric used strictly for route comparability. Your actual fuel cost depends on your fuel strategy.
                                                     </span>
@@ -198,7 +198,7 @@
 									</div>
 									<div class="table-row">
 										<div class="cell">Depreciation (Standard):<span class="tooltip">
-                                                    <img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+                                                    <img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
                                                     <span class="tooltiptext alignLeft below text-sm" style="width:240px;">
                                                         This is a standardized operational estimate based on your aircraft's list price and utilization, excluding your specific purchase discounts and the 20% fee when selling. The actual cost is the purchase price less what you sell each aircraft for, per operational week.
                                                     </span>
@@ -240,7 +240,7 @@
                                     <h5 class="subheading">Operating Income, Normalized</h5>
 									<div class="table-row">
 										<div class="cell h5"><h5>Total:<span class="tooltip">
-                                                    <img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+                                                    <img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
                                                     <span class="tooltiptext alignLeft below text-sm" style="width:240px;">
                                                         This normalized figure is used to calculate your cost and revenue per available seat unit.  
                                                     </span>
@@ -271,7 +271,7 @@
                                     <h4 class="subheading">Net Income</h4>
 									<div class="table-row">
 										<div class="cell h5">Total:<span class="tooltip">
-                                                    <img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+                                                    <img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
                                                     <span class="tooltiptext alignLeft below text-sm" style="width:240px;">
                                                         Total income is useful for understanding your cash flow and is used for determining your EPS. It does not include capital costs or bonus income.
                                                     </span>
@@ -458,11 +458,11 @@
                                     <div class="cell value">
                                         <span id="airlineCodeDisplaySpan">
                                             <span id="airlineCode"></span>
-                                            <img class="img-button svg hover-rotate" src='@routes.Assets.versioned("images/icons/gear.svg")' onclick="editAirlineCode()" />
+                                            <img class="img-button svg hover-rotate" src='@views.AssetUrl("images/icons/gear.svg")' onclick="editAirlineCode()" />
                                         </span>
                                         <span id="airlineCodeInputSpan" style="display: none;">
                                             <input id="airlineCodeInput" type="text" onkeyup="validateAirlineCode($(this).val())" />
-                                            <img class="img-button svg hover-rotate" src='@routes.Assets.versioned("/images/icons/tick.svg")' onclick="setAirlineCode($('#airlineCodeInput').val())" />
+                                            <img class="img-button svg hover-rotate" src='@views.AssetUrl("/images/icons/tick.svg")' onclick="setAirlineCode($('#airlineCodeInput').val())" />
                                             <span class="warning" style="display:none;">Code should be exactly 2 letters</span>
                                         </span>
                                     </div>
@@ -478,8 +478,8 @@
                                     <div class="cell value">
                                         <img class="airlineLogo" src='#'>
                                         <div class="flex-row pt-1 pb-4">
-                                            <img class="img-button svg hover-rotate" src='@routes.Assets.versioned("images/icons/gear.svg")'  data-tooltip="Edit Logo" onclick="editAirlineLogo()" />
-                                            <img src='@routes.Assets.versioned("/images/icons/picture--plus.png")' data-tooltip='Upload custom logo' class='img-button' style="vertical-align: middle;" onclick="showUploadLogo()" />
+                                            <img class="img-button svg hover-rotate" src='@views.AssetUrl("images/icons/gear.svg")'  data-tooltip="Edit Logo" onclick="editAirlineLogo()" />
+                                            <img src='@views.AssetUrl("/images/icons/picture--plus.png")' data-tooltip='Upload custom logo' class='img-button' style="vertical-align: middle;" onclick="showUploadLogo()" />
                                         </div>
                                     </div>
                                 </div>
@@ -549,14 +549,14 @@
 
 						<div class="section">
 							<h4>Airplane Livery
-								<img src='@routes.Assets.versioned("/images/icons/picture--plus.png")' class='img-button' style="vertical-align: middle;" onclick="showUploadLivery()">
-								<img src='@routes.Assets.versioned("/images/icons/picture--minus.png")' class='img-button' style="vertical-align: middle;" onclick="deleteLivery()">
+								<img src='@views.AssetUrl("/images/icons/picture--plus.png")' class='img-button' style="vertical-align: middle;" onclick="showUploadLivery()">
+								<img src='@views.AssetUrl("/images/icons/picture--minus.png")' class='img-button' style="vertical-align: middle;" onclick="deleteLivery()">
 							</h4>
 							<div style="position: relative; width: 100%">
 								<img class="livery" style="max-height: 300px; max-width: 100%; display: block; margin: auto;">
 							</div>
 							<h4 style="margin-top: 5px;">Company Slogan
-								<img src='@routes.Assets.versioned("/images/icons/tick.svg")' class='img-button svg' style="vertical-align: middle;" onclick="saveSlogan()">
+								<img src='@views.AssetUrl("/images/icons/tick.svg")' class='img-button svg' style="vertical-align: middle;" onclick="saveSlogan()">
 							</h4>
 							<textarea rows="3" cols="40" maxlength="200" class="slogan" style="width:99%; height: 50px;" placeholder="Your airline slogan..."></textarea>
 						</div>
@@ -627,18 +627,18 @@
 						</div>
 
 						<div class="section" >
-                            <h4>Rebuild airline<img src='@routes.Assets.versioned("/images/icons/construction.png")'/></h4>
+                            <h4>Rebuild airline<img src='@views.AssetUrl("/images/icons/construction.png")'/></h4>
                             <ul>
                                 <li class="label dot">Reset to initial game start with rebuild value of&nbsp;$<span id="resetBalance"></span>
                                     <a popovertarget="popover-reset" onmouseover="document.getElementById('popover-reset').showPopover();">
-                                        <img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+                                        <img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
                                     </a>
                                 </li>
 								<li class="label dot">Select an airport on the map to build your headquarters</li>
 								<li class="label dot">Then choose your airline type</li>
                             </ul>
                             <div class='button resetAirline rebuild' onclick='promptConfirm("Rebuild Airline?", resetAirline, true)'>Rebuild Airline</div>
-                            <h4 class="pt-4">Declare bankruptcy<img src='@routes.Assets.versioned("/images/icons/heart-break.png")'/></h4>
+                            <h4 class="pt-4">Declare bankruptcy<img src='@views.AssetUrl("/images/icons/heart-break.png")'/></h4>
                             <ul>
                                 <li class="label dot">Reset to initial game start</li>
 								<li class="label dot">Select an airport on the map to build your headquarters</li>

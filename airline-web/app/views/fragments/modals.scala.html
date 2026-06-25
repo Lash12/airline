@@ -50,7 +50,7 @@
 		<div>(POP:&nbsp;<span id="cityPopupPopulation"></span>)</div>
 		 <div>(INCOME:&nbsp;<span id="cityPopupIncomeLevel"></span>)</div>
     	<div id="cityIcons">
-    		<!-- <img alt="Your Headquarter" title="Your Headquarter" src='@routes.Assets.versioned("/images/icons/building-hedge.png")' id="popupHeadquarterIcon"><img alt="Your Base" title="Your Base" src='@routes.Assets.versioned("/images/icons/building-low.png")' id="popupBaseIcon">  -->
+    		<!-- <img alt="Your Headquarter" title="Your Headquarter" src='@views.AssetUrl("/images/icons/building-hedge.png")' id="popupHeadquarterIcon"><img alt="Your Base" title="Your Base" src='@views.AssetUrl("/images/icons/building-low.png")' id="popupBaseIcon">  -->
     	</div>
 		<div id="cityPie" style="height: 70px;"></div>
     </div>
@@ -177,7 +177,7 @@
 	  <div class="modal-content"  style="width : 480px;">
 	    <span class="close" onclick="closeModal($('#confirmationModal'))">&times;</span>
 	    <div style="display: flex; align-items: center; margin-bottom: 12px;">
-	    	<img src='@routes.Assets.versioned("/images/icons/32px/question.png")'><span style="font-size: 14px;">Confirmation</span>
+	    	<img src='@views.AssetUrl("/images/icons/32px/question.png")'><span style="font-size: 14px;">Confirmation</span>
 	    </div>
 	    <p id="confirmationPrompt" style="margin-bottom: 12px; font-size: 14px;"></p>
 	    <button type="button" class="button confirmationButton ml-0" onclick="closeModal($('#confirmationModal')); executeConfirmationTarget();">Confirm</button>
@@ -190,7 +190,7 @@
 		  <div class="modal-content"  style="width : 480px;">
 			  <span class="close" onclick="closeModal($('#selectionModal'))">&times;</span>
 			  <div style="margin-bottom: 10px;">
-				  <img class="pr-2" width="24px" src='@routes.Assets.versioned("/images/icons/question.svg")'><span style="font-size: 16px;">Selection</span>
+				  <img class="pr-2" width="24px" src='@views.AssetUrl("/images/icons/question.svg")'><span style="font-size: 16px;">Selection</span>
 			  </div>
 			  <p class="question py-4"></p>
 			  <div class="selections">
@@ -461,15 +461,15 @@
 			</div>
 			<div class="button guessButton glow" onclick="guessSantaClaus()">Search for Santa here</div>
 			<div id="santaClausExhausted" style="display: none;">
-				<div style="float:left"><img src='@routes.Assets.versioned("/images/icons/balloon-smiley-sad.png")'></div>
+				<div style="float:left"><img src='@views.AssetUrl("/images/icons/balloon-smiley-sad.png")'></div>
 				<div style="float:left"><h4>You have exhausted all your attempts! Try again next week!</h4></div>
 				<div style="clear:both; margin-bottom: 15px"></div>
 			</div>
 
 			<div id = "santaClausRewardOptions" style="display: none;">
-				<div style="float:left"><img src='@routes.Assets.versioned("/images/icons/rubber-balloons.png")'></div>
+				<div style="float:left"><img src='@views.AssetUrl("/images/icons/rubber-balloons.png")'></div>
 				<div style="float:left"> <h4>Woohoo! You have found Santa!</h4></div>
-				<div style="float:left"><img src='@routes.Assets.versioned("/images/icons/rubber-balloons.png")'></div>
+				<div style="float:left"><img src='@views.AssetUrl("/images/icons/rubber-balloons.png")'></div>
 				<div style="clear:both; margin-bottom: 15px"></div>
 
 				<h4> Please pick your reward as below, you can always come back later to make your choice!</h4>
@@ -534,15 +534,15 @@
 			</div>
 			<div class="button guessButton glow" onclick="guessEasterBunny()">Hunt for eggs here! 🥚</div>
 			<div id="easterBunnyExhausted" style="display: none;">
-				<div style="float:left"><img src='@routes.Assets.versioned("/images/icons/balloon-smiley-sad.png")'></div>
+				<div style="float:left"><img src='@views.AssetUrl("/images/icons/balloon-smiley-sad.png")'></div>
 				<div style="float:left"><h4>The Easter Bunny has hopped away! All your guesses are gone. Better luck next week! 🐰💨</h4></div>
 				<div style="clear:both; margin-bottom: 15px"></div>
 			</div>
 
 			<div id="easterBunnyRewardOptions" style="display: none;">
-				<div style="float:left"><img src='@routes.Assets.versioned("/images/icons/rubber-balloons.png")'></div>
+				<div style="float:left"><img src='@views.AssetUrl("/images/icons/rubber-balloons.png")'></div>
 				<div style="float:left"> <h4>🎉 You cracked it! You found the Easter Bunny's basket! 🧺</h4></div>
-				<div style="float:left"><img src='@routes.Assets.versioned("/images/icons/rubber-balloons.png")'></div>
+				<div style="float:left"><img src='@views.AssetUrl("/images/icons/rubber-balloons.png")'></div>
 				<div style="clear:both; margin-bottom: 15px"></div>
 
 				<h4>Pick your prize from the basket — but choose wisely, you can only pick once!</h4>
@@ -619,7 +619,7 @@
 					<h5>
 						Passenger Type
 						<div class="tooltip">
-							<img class="clickable info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+							<img class="clickable info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 							<div class="tooltiptext below" style="width: 600px; max-width: 90vw; padding: 16px; text-align:left;">
 								<p><i>Each tourist or elite transported earns reputation.</i></p>
 								<p class="pb-2">Different airports supply and demand different <b>Passenger Types</b> which weight what class and profile a passenger will be. Passenger type also determines quality and speed preferences.</p>
@@ -645,7 +645,7 @@
 					<h5>
 						Preferred Class
 						<div class="tooltip">
-							<img class="clickable info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+							<img class="clickable info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 							<div class="tooltiptext below" style="width: 600px; max-width: 90vw; padding: 16px; text-align:left;">
 								<p class="pb-2">This is a breakdown of each passenger's preferred class, not what was ticketed.</p>
 								<p class="pb-4">Higher class passengers are much more quality demanding and will pay more if your alliance has lounges at both origin & arrival airports.</p>
@@ -696,7 +696,7 @@
 					<h5>
 						Passenger Profile
 						<div class="tooltip">
-							<img class="clickable info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'>
+							<img class="clickable info svg" src='@views.AssetUrl("/images/icons/information.svg")'>
 							<div class="tooltiptext below" style="width: 600px; max-width: 90vw; padding: 16px; text-align:left;">
 								<h5>A <b>passenger's profile</b> determines when they purchase their tickets and how they weight prices and loyalty.</h5>
 								<div class="table data" style="width: 100%;">
@@ -931,9 +931,9 @@
             <div class="flex-row pt-4">
                 <p class="text-lg strong">Negotiation Difficulty:&nbsp;
                     <span class="negotiationDifficultyTotal"></span>
-                    <img class="img-button info svg" src='@routes.Assets.versioned("/images/icons/information.svg")' onmouseover="$('#negotiationDifficultyModal').fadeIn(500)">
+                    <img class="img-button info svg" src='@views.AssetUrl("/images/icons/information.svg")' onmouseover="$('#negotiationDifficultyModal').fadeIn(500)">
                     <span class="error">
-                        <img class="img-button info svg svg-monochrome svg-hover-red" src='@routes.Assets.versioned("/images/icons/cross.svg")' onmouseover="$('#negotiationDifficultyModal').fadeIn(500)" style="display: hidden;">
+                        <img class="img-button info svg svg-monochrome svg-hover-red" src='@views.AssetUrl("/images/icons/cross.svg")' onmouseover="$('#negotiationDifficultyModal').fadeIn(500)" style="display: hidden;">
                     </span>
                 </p>
             </div>
@@ -952,8 +952,8 @@
                         <div class="cell">
                             <div class="flex-row">
                                 <div class="mr-auto assignedActionPointsIcons text-xl"></div>
-                                <img class="img-button px-1 svg svg-monochrome svg-hover-red" src='@routes.Assets.versioned("images/icons/minus.svg")' onclick="changeAssignedActionPoints(-1)" />
-                                <img class="img-button px-1 svg svg-monochrome svg-hover-red" src='@routes.Assets.versioned("images/icons/plus.svg")' onclick="changeAssignedActionPoints(1)" />
+                                <img class="img-button px-1 svg svg-monochrome svg-hover-red" src='@views.AssetUrl("images/icons/minus.svg")' onclick="changeAssignedActionPoints(-1)" />
+                                <img class="img-button px-1 svg svg-monochrome svg-hover-red" src='@views.AssetUrl("images/icons/plus.svg")' onclick="changeAssignedActionPoints(1)" />
                                 <button type="button" class="button hover:bg-red" onclick="addMaximumActionPoints()">Max</button>
                                 <button type="button" class="button hover:bg-red" onclick="addMinimumRequiredActionPoints()">Min</button>
                             </div>  
@@ -963,7 +963,7 @@
                 </div>
             </div>
             <div class="rejection warning" style="display: none; align-items: center;"><img
-                    src='@routes.Assets.versioned("/images/icons/prohibition.png")'>
+                    src='@views.AssetUrl("/images/icons/prohibition.png")'>
                 <h5 class="reason"></h5>
             </div>
         </div>
@@ -1200,11 +1200,11 @@
 			<div class="flex-row gap-4">
 				<div class="flex-align-center">
 					<input type="checkbox" onclick="toggleUtilizationRate($('#modelConfigurationModal'), $(this))" class="toggleUtilizationRateBox">
-					<img src='@routes.Assets.versioned("/images/icons/clock-select-remain.png")' data-tooltip="Toggle Utilization Rate"/>
+					<img src='@views.AssetUrl("/images/icons/clock-select-remain.png")' data-tooltip="Toggle Utilization Rate"/>
 				</div>
 				<div class="flex-align-center">
 					<input type="checkbox" onclick="toggleCondition($('#modelConfigurationModal'), $(this))" class="toggleConditionBox">
-					<img class="img-button svg hover-rotate" src='@routes.Assets.versioned("images/icons/gear.svg")' data-tooltip="Toggle Airplane Condition"/>
+					<img class="img-button svg hover-rotate" src='@views.AssetUrl("images/icons/gear.svg")' data-tooltip="Toggle Airplane Condition"/>
 				</div>
 				<p style="font-style: italic;">Drag an airplane to switch its configuration. <br>Economy seats use 1 capacity, business 2.5 capacity, first 6 capacity.</p>
 			</div>
@@ -1218,8 +1218,8 @@
 			<h4 style="margin-bottom: 10px;"><span class="modelName"></span>&nbsp;Base</h4>
 			<span class="close" onclick="closeModal($('#airplaneBaseModal'))">&times;</span>
 			<div>
-				<input type="checkbox" onclick="toggleUtilizationRate($('#airplaneBaseModal'), $(this))" class="toggleUtilizationRateBox"><img src='@routes.Assets.versioned("/images/icons/clock-select-remain.png")' data-tooltip="Toggle Utilization Rate"/>
-				<input type="checkbox" onclick="toggleCondition($('#airplaneBaseModal'), $(this))" class="toggleConditionBox"><img class="img-button svg hover-rotate" src='@routes.Assets.versioned("images/icons/gear.svg")' data-tooltip="Toggle Airplane Condition"/>
+				<input type="checkbox" onclick="toggleUtilizationRate($('#airplaneBaseModal'), $(this))" class="toggleUtilizationRateBox"><img src='@views.AssetUrl("/images/icons/clock-select-remain.png")' data-tooltip="Toggle Utilization Rate"/>
+				<input type="checkbox" onclick="toggleCondition($('#airplaneBaseModal'), $(this))" class="toggleConditionBox"><img class="img-button svg hover-rotate" src='@views.AssetUrl("images/icons/gear.svg")' data-tooltip="Toggle Airplane Condition"/>
 			</div>
 			<h3 style="font-style: italic;">* Drag and drop airplane icon to another box to switch home base</h3>
 			<h3 style="font-style: italic;">* Drag and drop airplane icon to another airplane icon to swap schedules and settings</h3>
@@ -1233,8 +1233,8 @@
 		  <h4 style="margin-bottom: 10px;"><span class="modelName"></span>&nbsp;Base</h4>
 		  <span class="close" onclick="closeModal($('#allAirplaneInventoryModal'))">&times;</span>
 		  <div>
-			  <input type="checkbox" onclick="toggleUtilizationRate($('#allAirplaneInventoryModal'), $(this))" class="toggleUtilizationRateBox"><img src='@routes.Assets.versioned("/images/icons/clock-select-remain.png")' data-tooltip="Toggle Utilization Rate"/>
-			  <input type="checkbox" onclick="toggleCondition($('#allAirplaneInventoryModal'), $(this))" class="toggleConditionBox"><img class="img-button svg hover-rotate" src='@routes.Assets.versioned("images/icons/gear.svg")' data-tooltip="Toggle Airplane Condition"/>
+			  <input type="checkbox" onclick="toggleUtilizationRate($('#allAirplaneInventoryModal'), $(this))" class="toggleUtilizationRateBox"><img src='@views.AssetUrl("/images/icons/clock-select-remain.png")' data-tooltip="Toggle Utilization Rate"/>
+			  <input type="checkbox" onclick="toggleCondition($('#allAirplaneInventoryModal'), $(this))" class="toggleConditionBox"><img class="img-button svg hover-rotate" src='@views.AssetUrl("images/icons/gear.svg")' data-tooltip="Toggle Airplane Condition"/>
 			  <h3 style="font-style: italic;">* Drag and drop airplane icon to another airplane icon to swap schedules and settings</h3>
 		  </div>
 
@@ -1444,13 +1444,13 @@
 				</div>
 				<div class="homeView flex-row">
 					<p class="home m-0"></p>
-					<div data-tooltip-text="Change home airport"><img class="img-button svg hover-rotate edit" src='@routes.Assets.versioned("images/icons/gear.svg")' style="vertical-align: middle;" onclick="toggleAirplaneHome()"/></div>
-					<div data-tooltip-text="Cannot change home airport with active route(s)"><img class="info svg editDisabled" src='@routes.Assets.versioned("/images/icons/information.svg")' style="vertical-align: middle; display: none;"/></div>
+					<div data-tooltip-text="Change home airport"><img class="img-button svg hover-rotate edit" src='@views.AssetUrl("images/icons/gear.svg")' style="vertical-align: middle;" onclick="toggleAirplaneHome()"/></div>
+					<div data-tooltip-text="Cannot change home airport with active route(s)"><img class="info svg editDisabled" src='@views.AssetUrl("/images/icons/information.svg")' style="vertical-align: middle; display: none;"/></div>
 				</div>
 				<div class="homeEdit" style="display:none">
 					<select class="homeOptions select-css"></select>
-					<img src='@routes.Assets.versioned("/images/icons/tick.svg")' class='img-button svg' style="vertical-align: middle;" onclick="confirmAirplaneHome()"/>
-					<img src='@routes.Assets.versioned("/images/icons/cross.svg")' class='img-button svg' style="vertical-align: middle;" onclick="cancelAirplaneHome()"/>
+					<img src='@views.AssetUrl("/images/icons/tick.svg")' class='img-button svg' style="vertical-align: middle;" onclick="confirmAirplaneHome()"/>
+					<img src='@views.AssetUrl("/images/icons/cross.svg")' class='img-button svg' style="vertical-align: middle;" onclick="cancelAirplaneHome()"/>
 				</div>
 				<p><i id="airplaneDetailsAge"></i></p>
 				<p id="airplaneDetailsDelivery" style="font-weight: bold;"></p>
@@ -1460,16 +1460,16 @@
 				<p>Seat configuration:</p>
 				<div id="ownedAirplaneDetailModal-configurationBar" style="max-width: 90%; width: 90%; height: 20px"></div>
 				<div class="configuration-edit-button py-1 flex-row">
-					<img class="img-button svg hover-rotate edit" src='@routes.Assets.versioned("images/icons/gear.svg")' onclick="toggleAirplaneConfiguration()" title="Pick configuration"/>
+					<img class="img-button svg hover-rotate edit" src='@views.AssetUrl("images/icons/gear.svg")' onclick="toggleAirplaneConfiguration()" title="Pick configuration"/>
 					<p class="button" onclick="toggleAirplaneConfiguration()" title="Pick configuration">Swap configs</p>
 				</div>
 				<p id="configuration-warning"><i>Add more configurations to switch them here</i></p>
 				<div class="configuration-edit flex-row items-center" style="display:none">
-					<img src='@routes.Assets.versioned("/images/icons/arrow-180.png")' class='img-button svg' style="vertical-align: middle;" onclick="switchAirplaneConfigurationOption($('#ownedAirplaneDetail'), -1)"/>
+					<img src='@views.AssetUrl("/images/icons/arrow-180.png")' class='img-button svg' style="vertical-align: middle;" onclick="switchAirplaneConfigurationOption($('#ownedAirplaneDetail'), -1)"/>
 					<div class="configuration-options" style="height: 16px; width: auto; min-width: 120px;"></div>
-					<img src='@routes.Assets.versioned("/images/icons/arrow.png")' class='img-button svg' style="vertical-align: middle;" onclick="switchAirplaneConfigurationOption($('#ownedAirplaneDetail'), 1)"/>
-					<img src='@routes.Assets.versioned("/images/icons/tick.svg")' class='img-button svg' style="vertical-align: middle;" onclick="confirmAirplaneConfigurationOption()"/>
-					<img src='@routes.Assets.versioned("/images/icons/cross.svg")' class='img-button svg' style="vertical-align: middle;" onclick="cancelAirplaneConfigurationOption()"/>
+					<img src='@views.AssetUrl("/images/icons/arrow.png")' class='img-button svg' style="vertical-align: middle;" onclick="switchAirplaneConfigurationOption($('#ownedAirplaneDetail'), 1)"/>
+					<img src='@views.AssetUrl("/images/icons/tick.svg")' class='img-button svg' style="vertical-align: middle;" onclick="confirmAirplaneConfigurationOption()"/>
+					<img src='@views.AssetUrl("/images/icons/cross.svg")' class='img-button svg' style="vertical-align: middle;" onclick="cancelAirplaneConfigurationOption()"/>
 				</div>
 				<div class="flex-row">
 					<input type="hidden" id="actionAirplaneId">
@@ -1495,9 +1495,9 @@
           <div class="modal-content"  style="width : 500px;">
               <span class="close" onclick="closeEventRewardModal()">&times;</span>
 
-			  <div style="float:left"><img src='@routes.Assets.versioned("/images/icons/rubber-balloons.png")'></div>
+			  <div style="float:left"><img src='@views.AssetUrl("/images/icons/rubber-balloons.png")'></div>
 			  <div style="float:left"> <h4 class="rewardTitle"></h4></div>
-			  <div style="float:left"><img src='@routes.Assets.versioned("/images/icons/rubber-balloons.png")'></div>
+			  <div style="float:left"><img src='@views.AssetUrl("/images/icons/rubber-balloons.png")'></div>
 			  <div style="clear:both; margin-bottom: 15px"></div>
 
 			  <div class="rewardOptions" style="width: 100%">
@@ -1635,7 +1635,7 @@
 				  </div>
 			  </div>
 
-			  <h4 style="margin-bottom: 10px; margin-top: 30px;">Managers<span class="delegatesTooltip"><img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'></span></h4>
+			  <h4 style="margin-bottom: 10px; margin-top: 30px;">Managers<span class="delegatesTooltip"><img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'></span></h4>
 			  <div class="managerSection section">
 				  <div style="width: 100%; margin-bottom: 10px" class="managersAssignment table data">
 					  <div class="table-header">
@@ -1662,7 +1662,7 @@
 		  <span class="close" onclick="closeModal($('#campaignModal'))">&times;</span>
 			<div class="flex-row pb-4">
 				<h4>Active Campaigns</h4>
-				<img class="addCampaign img-button svg svg-monochrome svg-hover-green" title="Draft New Campaign" src='@routes.Assets.versioned("/images/icons/plus.svg")' onclick="toggleDraftCampaign()" width="24" height="24">
+				<img class="addCampaign img-button svg svg-monochrome svg-hover-green" title="Draft New Campaign" src='@views.AssetUrl("/images/icons/plus.svg")' onclick="toggleDraftCampaign()" width="24" height="24">
 				<div class="draftCampaign" style="display:none; text-align: center;">
 					<div class="searchInput" data-search-type="airport">
 						<input type="text" tabindex="101" class="airport" placeholder="Airport/City name" autocomplete="no" oninput="searchChange($(this))" onfocus="$(this).select();" onfocusout="searchFocusOut($(this))" onkeyup="searchKeyUp(event, $(this))" onkeydown="searchKeyDown(event, $(this))">
@@ -1705,7 +1705,7 @@
 					<div style="float: right;" class="right vertical-group">
 						<div style="width: 100%; height: 100%">
 							<div class="section">
-								<h4>Available Managers<span class="delegatesTooltip"><img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'></span></h4>
+								<h4>Available Managers<span class="delegatesTooltip"><img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'></span></h4>
 								<div class="managerStatus"></div>
 							</div>
 
@@ -1717,8 +1717,8 @@
 										<div class="value">
 											<div class="radiusControl" style="display: flex; align-items: center;">
 												<span style="width: 70%"><span class="radius"></span>km</span>
-												<div style="padding: 3px;" class="clickable increase" onclick="changeCampaignRadius(100)"><img src='@routes.Assets.versioned("/images/icons/plus-button.png")' title="Increase"/></div>
-												<div style="padding: 3px;" class="clickable decrease" onclick="changeCampaignRadius(-100)"><img src='@routes.Assets.versioned("/images/icons/minus-button.png")' title="Decrease"/></div>
+												<div style="padding: 3px;" class="clickable increase" onclick="changeCampaignRadius(100)"><img src='@views.AssetUrl("/images/icons/plus-button.png")' title="Increase"/></div>
+												<div style="padding: 3px;" class="clickable decrease" onclick="changeCampaignRadius(-100)"><img src='@views.AssetUrl("/images/icons/minus-button.png")' title="Decrease"/></div>
 											</div>
 										</div>
 									</div>
@@ -1728,7 +1728,7 @@
 									</div>
 									<div class="table-row">
 										<div class="label">Population:</div>
-										<div class="value"><img title="Population coverage" src='@routes.Assets.versioned("/images/icons/population.svg")'><span class="population"></span></div>
+										<div class="value"><img title="Population coverage" src='@views.AssetUrl("/images/icons/population.svg")'><span class="population"></span></div>
 									</div>
 									<div class="table-row">
 										<div class="label">Airport Coverage:</div>
@@ -1857,7 +1857,7 @@
 <!-- maybe deprecated -->
   <div id="managerStatusModal" class="modal">
 	  <div class="modal-content"  style="width: 480px;">
-		  <h4>Action points<span class="delegatesTooltip"><img class="info svg" src='@routes.Assets.versioned("/images/icons/information.svg")'></span></h4>
+		  <h4>Action points<span class="delegatesTooltip"><img class="info svg" src='@views.AssetUrl("/images/icons/information.svg")'></span></h4>
 		  <span class="close" onclick="closeModal($('#managerStatusModal'))">&times;</span>
 		  <div class="managerStatus py-2"></div>
 	  </div>
@@ -1963,7 +1963,7 @@
 					  <h5>Default Wallpaper</h5>
 				  </div>
 				  <div class="cell" style="text-align:left;">
-					  <img class="svg img-button" src='@routes.Assets.versioned("/images/icons/reset.svg")' onclick="changeWallpaper()" width="20">
+					  <img class="svg img-button" src='@views.AssetUrl("/images/icons/reset.svg")' onclick="changeWallpaper()" width="20">
 				  </div>
 			  </div>
 		  </div>

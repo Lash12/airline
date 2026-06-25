@@ -37,7 +37,8 @@ jobs:
             -e e2e/test-results/ \
             -e e2e/playwright-report/ \
             -e airline-data/target/ \
-            -e airline-web/target/
+            -e airline-web/target/ \
+            -e data/logos/
 
       - name: Deploy stack
         env:
@@ -70,6 +71,7 @@ jobs:
             -Dsolo.demand.memoize=true
             -Dsolo.progression.enabled=true
             -Dsolo.consultant.enabled=true
+            -Dsolo.exec.enabled=true
             -Dsolo.alliance.minMembers=2
           # Web process (sign-up + tooltips): starting capital and the same
           # economy display values so tooltips match the simulation.
@@ -92,6 +94,8 @@ jobs:
             -Dsolo.cargo.freighters.enabled=true
             -Dsolo.lounge.allowWithoutAlliance=true
             -Dsolo.alliance.minMembers=2
+            -Dsolo.exec.enabled=true
+            -Dassets.version=${{ github.sha }}
             -Dsolo.push.enabled=true
             -Dsolo.push.vapidPublicKey=${{ secrets.SOLO_PUSH_VAPID_PUBLIC_KEY }}
             -Dsolo.push.vapidPrivateKey=${{ secrets.SOLO_PUSH_VAPID_PRIVATE_KEY }}
