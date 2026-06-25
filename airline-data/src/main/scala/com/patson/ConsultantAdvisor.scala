@@ -61,6 +61,11 @@ object ConsultantAdvisor {
     }
   }
 
+  /** adviceDepth plus the CCO executive's bonus for this airline (capped at the same max). The CCO seat
+    * deepens the consultant's output; the bonus is 0 when the exec feature is off or no CCO is seated. */
+  def effectiveDepth(levels : Seq[Int], airlineId : Int) : Int =
+    Math.min(SoloConfig.consultantMaxRecs, adviceDepth(levels) + ExecutiveBuffs.adviceDepthBonus(airlineId))
+
   /** Top route recommendations for the airline, using models it already owns. allAirports and
     * countryRelationships are loaded once by the caller. */
   def recommendations(airline : Airline,
@@ -70,7 +75,7 @@ object ConsultantAdvisor {
                       ownedModels : List[Model],
                       fleetByFamily : Map[String, Int],
                       currentCycle : Int) : List[Recommendation] = {
-    val depth = adviceDepth(levels)
+    val depth = effectiveDepth(levels, airline.id)
     if (depth <= 0 || ownedModels.isEmpty) return Nil
     // Fleet-commonality bias only applies once the consultant is experienced enough.
     val considerCommonality = levels.nonEmpty && levels.max >= SoloConfig.consultantCommonalityLevel

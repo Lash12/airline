@@ -246,6 +246,9 @@ object LedgerType extends Enumeration {
       AIRPORT_ASSET_INCOME,
       AIRPORT_ASSET_UPKEEP,
       CARGO_REVENUE = Value
+  // Executive team (single-player). Weekly aggregate. Appended last so existing ordinals
+  // (persisted as entry_type) are unchanged.
+  val EXECUTIVE_SALARY = Value
 }
 
 case class AirlineLedgerEntry(airlineId : Int, cycle : Int, entryType : LedgerType.Value, amount : Long, description : Option[String] = None, id : Int = 0)

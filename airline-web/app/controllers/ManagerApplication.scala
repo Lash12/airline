@@ -1,8 +1,9 @@
 package controllers
 
-import com.patson.data.{CampaignSource, CycleSource, ManagerSource, SoloConfig}
+import com.patson.data.{CampaignSource, CycleSource, ExecutiveSource, ManagerSource, SoloConfig}
 import com.patson.data.airplane.ModelSource
-import com.patson.ConsultantAdvisor
+import com.patson.{ConsultantAdvisor, ExecutiveBuffs, ExecutiveProgression}
+import com.patson.util.ExecutiveCache
 import com.patson.model._
 import com.patson.model.campaign.Campaign
 import com.patson.model.airplane.{DiscountReason, DiscountType, ModelDiscount}
@@ -106,9 +107,92 @@ class ManagerApplication @Inject()(cc: ControllerComponents) extends AbstractCon
       "availableCount" -> managerInfo.availableCount,
       "bestLevel" -> (if (levels.isEmpty) 0 else levels.max),
       "levelDescription" -> levelDescription,
-      "adviceDepth" -> ConsultantAdvisor.adviceDepth(levels),
+      "adviceDepth" -> ConsultantAdvisor.effectiveDepth(levels, airlineId),
       "enabled" -> SoloConfig.consultantEnabled
     ))
+  }
+
+  /** One-line summary of a seat's effect at a given level, for the panel. */
+  private def execBuffSummary(role : ExecutiveRole.Value, level : Int) : String = role match {
+    case ExecutiveRole.CFO =>
+      f"${(1 - ExecutiveBuffs.fuelCostMultiplierAtLevel(level)) * 100}%.0f%% lower fuel cost"
+    case ExecutiveRole.COO =>
+      f"${(1 - ExecutiveBuffs.maintenanceCostMultiplierAtLevel(level)) * 100}%.0f%% lower maintenance cost"
+    case ExecutiveRole.CCO =>
+      s"+${ExecutiveBuffs.adviceDepthBonusAtLevel(level)} route recommendations"
+    case _ => ""
+  }
+
+  /**
+    * C-suite roster (Phase 1). Returns each Phase-1 seat with its fill state, level, salary, buff
+    * summary, and whether the airline's reputation has unlocked it. The panel hides itself on
+    * `enabled:false`. Mutations go through appointExecutive / dismissExecutive.
+    */
+  def getExecutives(airlineId : Int) = AuthenticatedAirline(airlineId) { request =>
+    if (!SoloConfig.execEnabled) {
+      Ok(Json.obj("enabled" -> false))
+    } else {
+      val reputation = request.user.getReputation()
+      val byRole = ExecutiveSource.loadByAirline(airlineId).map(e => e.role -> e).toMap
+      val seats = ExecutiveRole.phase1Roles.map { role =>
+        val unlocked = ExecutiveBuffs.isUnlocked(reputation, role)
+        val base = Json.obj(
+          "role" -> role.toString,
+          "roleName" -> ExecutiveRole.displayName(role),
+          "domain" -> ExecutiveRole.domain(role),
+          "unlocked" -> unlocked,
+          "repThreshold" -> ExecutiveBuffs.repThreshold(role)
+        )
+        byRole.get(role) match {
+          case Some(e) =>
+            base ++ Json.obj("filled" -> true, "level" -> e.level, "salary" -> e.salary, "buff" -> execBuffSummary(role, e.level),
+              "xp" -> e.xp, "nextLevelXp" -> ExecutiveProgression.xpForNextLevel(e.level))
+          case None =>
+            base ++ Json.obj("filled" -> false, "previewSalary" -> ExecutiveBuffs.salaryForLevel(1), "previewBuff" -> execBuffSummary(role, 1))
+        }
+      }
+      Ok(Json.obj("enabled" -> true, "reputation" -> reputation, "seats" -> seats))
+    }
+  }
+
+  private def parseRole(request : play.api.mvc.Request[AnyContent]) : Option[ExecutiveRole.Value] = {
+    val roleStr = request.body.asInstanceOf[AnyContentAsJson].json.\("role").as[String]
+    ExecutiveRole.values.find(_.toString == roleStr)
+  }
+
+  /** Appoint an executive to a seat at level 1. Gated by feature flag, Phase-1 seat set, reputation
+    * threshold, and one-per-seat. Salary/buffs take effect on the next sim cycle. */
+  def appointExecutive(airlineId : Int) = AuthenticatedAirline(airlineId) { request =>
+    if (!SoloConfig.execEnabled) {
+      BadRequest("Executive team is not enabled")
+    } else {
+      parseRole(request) match {
+        case None => BadRequest("Unknown role")
+        case Some(role) if !ExecutiveRole.phase1Roles.contains(role) => BadRequest("That seat is not available yet")
+        case Some(role) if !ExecutiveBuffs.isUnlocked(request.user.getReputation(), role) => BadRequest("Your reputation is too low to fill this seat")
+        case Some(role) if ExecutiveSource.loadByAirline(airlineId).exists(_.role == role) => BadRequest("That seat is already filled")
+        case Some(role) =>
+          val level = 1
+          ExecutiveSource.save(Executive(request.user, role, level, 0, CycleSource.loadCycle(), ExecutiveBuffs.salaryForLevel(level)))
+          ExecutiveCache.invalidate(airlineId)
+          Ok(Json.obj())
+      }
+    }
+  }
+
+  /** Dismiss the executive in a seat (stops salary and buff next cycle). */
+  def dismissExecutive(airlineId : Int) = AuthenticatedAirline(airlineId) { request =>
+    if (!SoloConfig.execEnabled) {
+      BadRequest("Executive team is not enabled")
+    } else {
+      parseRole(request) match {
+        case None => BadRequest("Unknown role")
+        case Some(role) =>
+          ExecutiveSource.deleteByAirlineAndRole(airlineId, role)
+          ExecutiveCache.invalidate(airlineId)
+          Ok(Json.obj())
+      }
+    }
   }
 
   def updateConsultants(airlineId : Int) = AuthenticatedAirline(airlineId) { request =>

@@ -190,6 +190,36 @@ object SoloConfig {
   val consultantMarketCount : Int = intAt("solo.consultant.marketCount", 5)
   val consultantMarketCandidateLimit : Int = intAt("solo.consultant.marketCandidateLimit", 80)
 
+  // Executive team (single-player). A small C-suite "strategy layer" above the Manager pool: each seat
+  // governs an operational domain and (from Phase 1 on) buffs it for a salary. Phase 0 is data-only —
+  // this flag merely reveals the read-only roster panel; no buffs, salary, leveling, or traits run yet.
+  // Off by default so default/multiplayer deploys are byte-identical. See docs/executive-team-plan.md.
+  val execEnabled : Boolean = boolAt("solo.exec.enabled", false)
+  // Phase 1: salary (a recurring weekly ledger debit per filled seat, scaling with level) + small
+  // per-airline domain buffs (CFO→fuel cost, COO→maintenance cost, CCO→consultant advice depth), and
+  // a reputation gate per seat. All multipliers are deliberately modest and fully knob-tuned so the
+  // economy can be balanced live. Salary is flat per level while buffs scale with the airline's spend,
+  // so a bigger network gets proportionally more from a seat — the seat is meant to be a real choice.
+  val execSalaryBase : Int = intAt("solo.exec.salaryBase", 30000)
+  val execSalaryPerLevel : Int = intAt("solo.exec.salaryPerLevel", 30000)
+  val execCfoFuelDiscountPerLevel : Double = doubleAt("solo.exec.cfo.fuelDiscountPerLevel", 0.04)
+  val execCfoMaxFuelDiscount : Double = doubleAt("solo.exec.cfo.maxFuelDiscount", 0.12)
+  val execCooMaintDiscountPerLevel : Double = doubleAt("solo.exec.coo.maintDiscountPerLevel", 0.04)
+  val execCooMaxMaintDiscount : Double = doubleAt("solo.exec.coo.maxMaintDiscount", 0.12)
+  val execCcoAdviceBonusPerLevel : Int = intAt("solo.exec.cco.adviceBonusPerLevel", 1)
+  val execCcoMaxAdviceBonus : Int = intAt("solo.exec.cco.maxAdviceBonus", 5)
+  val execCfoRepThreshold : Double = doubleAt("solo.exec.cfo.repThreshold", 0)
+  val execCooRepThreshold : Double = doubleAt("solo.exec.coo.repThreshold", 200)
+  val execCcoRepThreshold : Double = doubleAt("solo.exec.cco.repThreshold", 400)
+  // Phase 2: executives level up from how well their domain performs under them (unlike managers, who
+  // level by tenure). Each cycle a seat earns 1 xp when its domain KPI is good — CFO: a profitable
+  // week; COO: on-time rate >= threshold; CCO: average load factor >= threshold. Level = 1 + xp/xpPerLevel,
+  // capped at maxLevel; a higher level means a stronger buff and a higher salary (next cycle).
+  val execXpPerLevel : Int = intAt("solo.exec.xpPerLevel", 4)
+  val execMaxLevel : Int = intAt("solo.exec.maxLevel", 5)
+  val execCooOnTimeXpThreshold : Double = doubleAt("solo.exec.coo.onTimeXpThreshold", 0.9)
+  val execCcoLoadFactorXpThreshold : Double = doubleAt("solo.exec.cco.loadFactorXpThreshold", 0.75)
+
   // World news feed (single-player): an ambient, pull-based log of notable world
   // events (NPC route changes, etc.) surfaced in a dedicated News panel, separate from
   // the personal notification bell. Off by default. Reuses the notification store under

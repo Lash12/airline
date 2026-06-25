@@ -13,7 +13,7 @@ import com.patson.model.oil.OilPrice
 import com.patson.model.oil.OilInventoryPolicy
 import com.patson.model.oil.OilConsumptionHistory
 import com.patson.model.oil.OilConsumptionType
-import com.patson.util.{AirportChampionInfo, ChampionUtil, CountryChampionInfo}
+import com.patson.util.{AirportChampionInfo, ChampionUtil, CountryChampionInfo, ExecutiveCache}
 
 object AirlineSimulation {
   val MAX_SERVICE_QUALITY_INCREMENT : Double = 0.5
@@ -188,9 +188,14 @@ object AirlineSimulation {
       val dividendsPerShare = if (airline.getSharesOutstanding() > 0)
         dividendsPaid.toDouble / airline.getSharesOutstanding() else 0.0
 
+      // Executive team (single-player): weekly C-suite salary. 0 when the feature is off, so default
+      // deploys are unchanged. Folded into airlineExpense so the profit stat reflects it, and recorded
+      // as its own ledger entry below (the ledger is what actually moves cash via adjustAirlineBalance).
+      val executiveSalary = ExecutiveBuffs.totalWeeklySalary(airline.id)
+
       // sum it all up; create vals for EPS etc
       val airlineRevenue = linksRevenue + loungeRevenue
-      val airlineExpenseNormalized = staffCost + staffOvertimeCost + linksAirportFee + linksCrewCost + linksFuelCost + linksInflightCost + linksDelayCompensation + linksMaintenanceCost + linksDepreciation + loungeTotalCost + advertisementEntry
+      val airlineExpenseNormalized = staffCost + staffOvertimeCost + linksAirportFee + linksCrewCost + linksFuelCost + linksInflightCost + linksDelayCompensation + linksMaintenanceCost + linksDepreciation + loungeTotalCost + advertisementEntry + executiveSalary
       val airlineExpense = airlineExpenseNormalized + -loanInterestEntry + linksFuelTax + (actualFuelCost - linksFuelCost) + dividendsPaid
       val airlineProfit = airlineRevenue - airlineExpense
 
@@ -233,7 +238,8 @@ object AirlineSimulation {
             AirlineLedgerEntry(airline.id, cycle, LedgerType.CARBON_TAX, -linksFuelTax, Some(carbonTaxDescription)),
             AirlineLedgerEntry(airline.id, cycle, LedgerType.LOAN_PAYMENT, -loanPayment),
             AirlineLedgerEntry(airline.id, cycle, LedgerType.NEGATIVE_BALANCE_LOAN_INTEREST, -negativeCashInterest),
-            AirlineLedgerEntry(airline.id, cycle, LedgerType.DIVIDEND_PAYMENT, -dividendsPaid)
+            AirlineLedgerEntry(airline.id, cycle, LedgerType.DIVIDEND_PAYMENT, -dividendsPaid),
+            AirlineLedgerEntry(airline.id, cycle, LedgerType.EXECUTIVE_SALARY, -executiveSalary)
         )
 
         allLedgerEntries ++= weeklyLedger
@@ -298,6 +304,24 @@ object AirlineSimulation {
         case _ => // No link consumptions for this airline or list is empty
         // All calculated stats remain at their default values (0.0 or 1.0 for onTime)
         // RASK/CASK remain 0.0 since all link metrics are 0.
+      }
+
+      // Executive leveling (single-player, Phase 2): each filled seat earns 1 xp when its domain KPI is
+      // good this cycle, leveling up (stronger buff + higher salary) at xpPerLevel steps. Players only;
+      // skipped when the feature is off or the airline is bankrupt. Level/salary changes take effect next
+      // cycle (this cycle's salary + buffs were already resolved above), so invalidate the roster cache.
+      if (SoloConfig.execEnabled && airline.airlineType != NonPlayerAirline && !isBankrupt) {
+        val kpi = ExecutiveProgression.Kpi(airlineProfit.toLong, calculatedOnTime, calculatedLoadFactor)
+        var leveledChanged = false
+        ExecutiveSource.loadByAirline(airline.id).foreach { exec =>
+          if (!ExecutiveProgression.isMaxLevel(exec.level) && ExecutiveProgression.earnsXp(exec.role, kpi)) {
+            val newXp = exec.xp + 1
+            val newLevel = ExecutiveProgression.levelForXp(newXp)
+            ExecutiveSource.save(exec.copy(xp = newXp, level = newLevel, salary = ExecutiveBuffs.salaryForLevel(newLevel)))
+            leveledChanged = true
+          }
+        }
+        if (leveledChanged) ExecutiveCache.invalidate(airline.id)
       }
 
       //set labor quality

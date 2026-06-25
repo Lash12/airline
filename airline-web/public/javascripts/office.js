@@ -1512,6 +1512,58 @@ function resetAirline(keepAssets) {
 function updateManagerStatus() {
     updateAirlineManagerStatus($('#managerStatus .managerGroups'))
     loadConsultant()
+    loadExecutives()
+}
+
+// ---- Executive Team (single-player; Phase 0 read-only roster preview) ----
+function loadExecutives() {
+    if (typeof activeAirline === 'undefined' || !activeAirline) return
+    $.ajax({
+        type: 'GET',
+        url: "/managers/airline/" + activeAirline.id + "/executives",
+        success: function(d) {
+            if (!d.enabled) { $('#executiveStatus').hide(); return }
+            $('#executiveStatus').show()
+            var $list = $('#executiveSeatList').empty()
+            $.each(d.seats, function(i, seat) {
+                var $row = $('<div class="pb-2"></div>')
+                var header = '<b>' + seat.roleName + '</b>'
+                if (seat.filled) {
+                    header += ' &middot; Level ' + seat.level
+                    if (seat.nextLevelXp != null) {
+                        header += ' <span class="text-sm" style="opacity:0.6;">(' + seat.xp + '/' + seat.nextLevelXp + ' xp)</span>'
+                    } else {
+                        header += ' <span class="text-sm" style="opacity:0.6;">(max)</span>'
+                    }
+                } else if (!seat.unlocked) {
+                    header += ' &middot; <span style="opacity:0.6;">Locked (reputation ' + Math.round(seat.repThreshold) + ')</span>'
+                } else {
+                    header += ' &middot; <span style="opacity:0.6;">Vacant</span>'
+                }
+                $row.append('<div>' + header + '</div>')
+                $row.append('<div class="text-sm" style="opacity:0.7;">' + seat.domain + '</div>')
+                if (seat.filled) {
+                    $row.append('<div class="text-sm">Effect: ' + seat.buff + ' &middot; Salary: $' + commaSeparateNumber(seat.salary) + '/week</div>')
+                    $row.append($('<button type="button" class="button">Dismiss</button>').click(function() { changeExecutive('dismiss', seat.role) }))
+                } else if (seat.unlocked) {
+                    $row.append('<div class="text-sm">Effect: ' + seat.previewBuff + ' &middot; Salary: $' + commaSeparateNumber(seat.previewSalary) + '/week</div>')
+                    $row.append($('<button type="button" class="button">Appoint</button>').click(function() { changeExecutive('appoint', seat.role) }))
+                }
+                $list.append($row)
+            })
+        }
+    })
+}
+
+function changeExecutive(action, role) {
+    $.ajax({
+        type: 'POST',
+        url: "/managers/airline/" + activeAirline.id + "/executives/" + action,
+        contentType: 'application/json; charset=utf-8',
+        data: JSON.stringify({ role: role }),
+        success: function() { loadExecutives() },
+        error: function(x) { alert(x.responseText || 'Could not update executive') }
+    })
 }
 
 // ---- Route Consultant (single-player advice-only QOL) ----

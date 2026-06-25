@@ -223,6 +223,9 @@ POST      /managers/airline/:airlineId/aircraft-model/:modelId      controllers.
 GET      /managers/airline/:airlineId/leveling                      controllers.ManagerApplication.getLevelingManagers(airlineId: Int)
 GET      /managers/airline/:airlineId/consultants                   controllers.ManagerApplication.getConsultants(airlineId: Int)
 POST     /managers/airline/:airlineId/consultants                   controllers.ManagerApplication.updateConsultants(airlineId: Int)
+GET      /managers/airline/:airlineId/executives                    controllers.ManagerApplication.getExecutives(airlineId: Int)
+POST     /managers/airline/:airlineId/executives/appoint            controllers.ManagerApplication.appointExecutive(airlineId: Int)
+POST     /managers/airline/:airlineId/executives/dismiss            controllers.ManagerApplication.dismissExecutive(airlineId: Int)
 DELETE   /managers/airline/:airlineId/manager/:managerId            controllers.ManagerApplication.deleteManager(airlineId: Int, managerId: Int)
 
 POST		 /santa-claus/guess/:airportId/:airlineId/:difficulty   controllers.ChristmasApplication.makeGuess(airportId : Int, airlineId : Int, difficulty : String)

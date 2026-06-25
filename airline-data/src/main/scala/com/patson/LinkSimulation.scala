@@ -329,7 +329,9 @@ object LinkSimulation {
   def computeLinkAndLoungeConsumptionDetail(link: Link, cycle: Int, allAirplaneAssignments: immutable.Map[Int, LinkAssignments], passengerCostEntries: List[PassengerCost]): (LinkConsumptionDetails, List[LoungeConsumptionDetails]) = {
     val fuelCost = link.getAssignedModel() match {
       case Some(model) =>
-        calculateFuelCost(model, link.distance, link.getTotalSoldSeats, link.capacity.totalwithSeatSize, link.frequency, link.cancellationCount)
+        // CFO executive buff (single-player): multiplier is 1.0 when the feature is off or no CFO seat.
+        (calculateFuelCost(model, link.distance, link.getTotalSoldSeats, link.capacity.totalwithSeatSize, link.frequency, link.cancellationCount)
+          * ExecutiveBuffs.fuelCostMultiplier(link.airline.id)).toInt
       case None => 0
     }
 
@@ -354,7 +356,8 @@ object LinkSimulation {
       case(airplane, _) =>
         maintenanceCost += (airplane.model.baseMaintenanceCost * assignmentWeights(airplane)).toInt
     }
-    maintenanceCost = (maintenanceCost * AirplaneMaintenanceUtil.getMaintenanceFactor(link.airline.id)).toInt
+    // COO executive buff (single-player): multiplier is 1.0 when the feature is off or no COO seat.
+    maintenanceCost = (maintenanceCost * AirplaneMaintenanceUtil.getMaintenanceFactor(link.airline.id) * ExecutiveBuffs.maintenanceCostMultiplier(link.airline.id)).toInt
 
 
     val airportFees = link.getAssignedModel() match {
