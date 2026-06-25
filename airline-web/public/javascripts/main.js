@@ -215,7 +215,9 @@ function promptFastForward() {
 function renderFastForwardStatus(count) {
 	var n = count || 0
 	if (n > 0) {
-		$(".fastForwardStatus").text("⏩ " + n + " week" + (n === 1 ? "" : "s") + " left").show()
+		// No ⏩ prefix here: the Fast-fwd button immediately to the left already shows ⏩,
+		// and a second glyph reads as a duplicate button (see navbar.scala.html).
+		$(".fastForwardStatus").text(n + " week" + (n === 1 ? "" : "s") + " left").show()
 	} else {
 		$(".fastForwardStatus").hide().text("")
 	}

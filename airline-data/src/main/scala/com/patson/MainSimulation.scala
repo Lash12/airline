@@ -232,6 +232,10 @@ object MainSimulation extends App {
     var lastExecutionMs: Long = 0L
     var targetDeadline: Long = 0L // In-memory dynamic deadline
     var scheduledWakeUp: Option[org.apache.pekko.actor.Cancellable] = None
+    // True once we have already consumed a fast-forward token and scheduled the cycle to run.
+    // Prevents the 30s CheckFastForward poll from consuming a SECOND token during the
+    // DB_REST_BUFFER_MS window after ScheduleNext already committed to running a cycle.
+    var fastForwardScheduled: Boolean = false
 
     private def scheduleExecution(delayMs : Long) : Unit = {
       scheduledWakeUp.foreach(_.cancel())
@@ -250,6 +254,7 @@ object MainSimulation extends App {
         status = SimulationStatus.WAITING_CYCLE_START
         if (consumeFastForward()) {
           println("Fast-forward requested: starting next cycle immediately")
+          fastForwardScheduled = true
           targetDeadline = System.currentTimeMillis() //broadcast right after compute instead of waiting for the deadline
           scheduleExecution(DB_REST_BUFFER_MS)
         } else {
@@ -264,20 +269,25 @@ object MainSimulation extends App {
         }
 
       case CheckFastForward =>
-        //a player asked to fast-forward while we are waiting for the next deadline: run now instead
-        if (status == SimulationStatus.WAITING_CYCLE_START && consumeFastForward()) {
+        //a player asked to fast-forward while we are waiting for the next deadline: run now instead.
+        //Skip if a cycle is already scheduled (fastForwardScheduled) so we don't consume a second
+        //token during the DB_REST_BUFFER_MS window after ScheduleNext already committed to a run.
+        if (status == SimulationStatus.WAITING_CYCLE_START && !fastForwardScheduled && consumeFastForward()) {
           println("Fast-forward requested: cancelling scheduled wait and starting cycle now")
+          fastForwardScheduled = true
           targetDeadline = System.currentTimeMillis() //broadcast right after compute instead of waiting for the deadline
           scheduleExecution(0L)
         }
 
       case ExecuteProcessing if pauseWhenIdle && isIdle() && !fastForwardPending() =>
         status = SimulationStatus.WAITING_CYCLE_START
+        fastForwardScheduled = false
         println(s"Simulation paused: no player activity within the last $idleGraceMinutes min. Rechecking in $idleRecheckMinutes min")
         scheduleExecution(idleRecheckMinutes * 60000L)
 
       case ExecuteProcessing =>
         status = SimulationStatus.IN_PROGRESS
+        fastForwardScheduled = false
         val startMs = System.currentTimeMillis()
 
         try {
