@@ -1,7 +1,7 @@
 package com.patson
 
-import com.patson.data.{AirlineSource, LinkSource, SoloConfig, CountrySource, CycleSource, AirportSource}
-import com.patson.data.airplane.{AirplaneSource, ModelSource}
+import com.patson.data.{AirlineSource, AirplaneSource, LinkSource, SoloConfig, CountrySource, CycleSource, AirportSource}
+import com.patson.data.airplane.ModelSource
 import com.patson.model._
 import com.patson.model.airplane.{Airplane, AirplaneConfiguration, LinkAssignment, Model}
 import scala.collection.mutable.ListBuffer
