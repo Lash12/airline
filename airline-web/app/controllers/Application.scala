@@ -6,7 +6,7 @@ import com.patson.model.Scheduling.{TimeSlot, TimeSlotStatus}
 import com.patson.model.airplane.{Airplane, AirplaneConfiguration, Model, ModelDiscount}
 import com.patson.model.{Link, _}
 import com.patson.model.event.Olympics
-import com.patson.util.{AirlineCache, AirportCache, ChampionUtil}
+import com.patson.util.{AirlineCache, AirplaneModelCache, AirportCache, ChampionUtil}
 import controllers.AuthenticationObject.AuthenticatedAirline
 import push.PushConfig
 import play.api.libs.json.{Json, _}
@@ -872,6 +872,7 @@ class Application @Inject()(cc: ControllerComponents, val configuration: play.ap
           "weeklyCargoUnserved" -> opt.weeklyCargoUnserved,
           "estimatedYield" -> opt.estimatedYield,
           "recommendedAircraftModelIds" -> Json.toJson(opt.recommendedAircraftModelIds),
+          "recommendedAircraftModelNames" -> Json.toJson(opt.recommendedAircraftModelIds.flatMap(id => AirplaneModelCache.allModels.get(id).map(_.name))),
           "notes" -> opt.notes
         )
       })

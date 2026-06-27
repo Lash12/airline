@@ -993,6 +993,7 @@ function populateAirportDetails(airport) {
     updateAirportDestinations(airport)
     loadAirportDemand(airport.id)
     loadAirportCargoDemand(airport.id)
+    loadAirportCargoOpportunities(airport.id)
 
     if (holidayEvent === "christmas") {
         initSantaClaus()
@@ -1660,6 +1661,106 @@ function renderCargoDemandCards(demands) {
 
         card.appendChild(headerRow)
         card.appendChild(statsRow)
+        container.appendChild(card)
+    })
+}
+
+var _cargoOpportEtag = null
+var _cargoOpportEtagAirportId = null
+
+async function loadAirportCargoOpportunities(airportId) {
+    const section = document.getElementById('airportCargoOpportunitiesSection')
+    const container = document.getElementById('airportCargoOpportunitiesCards')
+    if (!container) return
+    try {
+        const headers = {}
+        if (_cargoOpportEtag && _cargoOpportEtagAirportId === airportId) headers['If-None-Match'] = _cargoOpportEtag
+        const response = await fetch('/airports/' + airportId + '/cargo-opportunities', { headers })
+        if (response.status === 304) return
+        if (!response.ok) { if (section) section.style.display = 'none'; return }
+        _cargoOpportEtag = response.headers.get('ETag')
+        _cargoOpportEtagAirportId = airportId
+        renderCargoOpportunities(await response.json(), airportId)
+    } catch (e) {
+        console.error('loadAirportCargoOpportunities failed', e)
+        if (section) section.style.display = 'none'
+    }
+}
+
+function renderCargoOpportunities(opportunities, airportId) {
+    const section = document.getElementById('airportCargoOpportunitiesSection')
+    const container = document.getElementById('airportCargoOpportunitiesCards')
+    if (!container) return
+    container.innerHTML = ''
+
+    if (!opportunities || opportunities.length === 0) {
+        if (section) section.style.display = 'none'
+        return
+    }
+    if (section) section.style.display = ''
+
+    const h3 = document.createElement('h3')
+    h3.textContent = (activeAirport ? activeAirport.city + ' ' : '') + 'Cargo Opportunities'
+    container.appendChild(h3)
+
+    const helper = document.createElement('p')
+    helper.textContent = 'Top freight lanes by unserved weekly demand'
+    helper.className = 'pb-4'
+    container.appendChild(helper)
+
+    opportunities.forEach(function(opp) {
+        const card = document.createElement('div')
+        card.className = 'card'
+
+        const headerRow = document.createElement('div')
+        headerRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;'
+        headerRow.innerHTML = '<strong class="iata">' + opp.destinationCode + '</strong><span>' + opp.destinationName + '</span>'
+
+        const demandRow = document.createElement('div')
+        demandRow.style.cssText = 'font-size:11px;color:#bbb;margin-bottom:3px;'
+        demandRow.innerHTML =
+            '&#128230; ' + commaSeparateNumber(opp.weeklyCargoDemand) + ' total' +
+            ' &nbsp;&middot;&nbsp; ' +
+            '<span style="color:#78cd6b">&#10003; ' + commaSeparateNumber(opp.weeklyCargoServed) + ' served</span>' +
+            ' &nbsp;&middot;&nbsp; ' +
+            '<span style="color:#d66061">&#10007; ' + commaSeparateNumber(opp.weeklyCargoUnserved) + ' unserved</span>'
+
+        const yieldRow = document.createElement('div')
+        yieldRow.style.cssText = 'font-size:11px;color:#ccc;margin-bottom:3px;'
+        yieldRow.textContent = 'Est. yield: $' + opp.estimatedYield.toFixed(4) + '/unit·km'
+
+        card.appendChild(headerRow)
+        card.appendChild(demandRow)
+        card.appendChild(yieldRow)
+
+        if (opp.recommendedAircraftModelNames && opp.recommendedAircraftModelNames.length > 0) {
+            const aircraftRow = document.createElement('div')
+            aircraftRow.style.cssText = 'font-size:11px;color:#aaa;margin-bottom:3px;'
+            aircraftRow.className = 'opp-aircraft'
+            aircraftRow.textContent = '✈ ' + opp.recommendedAircraftModelNames.join(', ')
+            card.appendChild(aircraftRow)
+        } else if (opp.weeklyCargoUnserved > 0) {
+            const aircraftRow = document.createElement('div')
+            aircraftRow.style.cssText = 'font-size:11px;color:#aaa;margin-bottom:3px;font-style:italic;'
+            aircraftRow.className = 'opp-aircraft'
+            aircraftRow.textContent = 'No suitable freighter aircraft for this route.'
+            card.appendChild(aircraftRow)
+        }
+
+        if (opp.notes) {
+            const notesRow = document.createElement('div')
+            notesRow.style.cssText = 'font-size:11px;color:#aaa;font-style:italic;margin-bottom:4px;'
+            notesRow.className = 'opp-notes'
+            notesRow.textContent = opp.notes
+            card.appendChild(notesRow)
+        }
+
+        const planBtn = document.createElement('button')
+        planBtn.textContent = 'Plan cargo route →'
+        planBtn.style.cssText = 'font-size:11px;padding:3px 8px;margin-top:4px;cursor:pointer;'
+        planBtn.onclick = function() { planLink(airportId, opp.destinationAirportId) }
+        card.appendChild(planBtn)
+
         container.appendChild(card)
     })
 }
