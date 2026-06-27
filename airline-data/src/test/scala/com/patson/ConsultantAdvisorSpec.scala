@@ -55,6 +55,56 @@ class ConsultantAdvisorSpec extends AnyWordSpecLike with Matchers {
     }
   }
 
+  "demandReason".must {
+    "label strong demand at 500+ pax/wk".in {
+      ConsultantAdvisor.demandReason(500) should startWith("Strong demand")
+      ConsultantAdvisor.demandReason(1000) should startWith("Strong demand")
+    }
+    "label moderate demand between 100 and 499".in {
+      ConsultantAdvisor.demandReason(100) should startWith("Moderate demand")
+      ConsultantAdvisor.demandReason(499) should startWith("Moderate demand")
+    }
+    "label thin market below 100".in {
+      ConsultantAdvisor.demandReason(0) should startWith("Thin market")
+      ConsultantAdvisor.demandReason(99) should startWith("Thin market")
+    }
+    "include the demand figure in the text".in {
+      ConsultantAdvisor.demandReason(750) should include("750")
+    }
+  }
+
+  "competitionReason".must {
+    "say no competition when capacity is 0".in {
+      ConsultantAdvisor.competitionReason(0) shouldBe "No direct competition"
+    }
+    "say low competition for small capacity (1–199)".in {
+      ConsultantAdvisor.competitionReason(1) shouldBe "Low competition"
+      ConsultantAdvisor.competitionReason(199) shouldBe "Low competition"
+    }
+    "say moderate competition for 200–999".in {
+      ConsultantAdvisor.competitionReason(200) shouldBe "Moderate competition"
+      ConsultantAdvisor.competitionReason(999) shouldBe "Moderate competition"
+    }
+    "say crowded lane at 1000+".in {
+      ConsultantAdvisor.competitionReason(1000) shouldBe "Crowded lane"
+      ConsultantAdvisor.competitionReason(5000) shouldBe "Crowded lane"
+    }
+  }
+
+  "fleetReason".must {
+    "report fleet commonality when the family is already in service".in {
+      val reason = ConsultantAdvisor.fleetReason("Boeing 737", 3, "Boeing 737-800")
+      reason should include("commonality")
+      reason should include("3")
+      reason should include("Boeing 737")
+    }
+    "report fleet expansion required when familyInFleet is 0".in {
+      val reason = ConsultantAdvisor.fleetReason("Boeing 737", 0, "Boeing 737-800")
+      reason should include("fleet expansion")
+      reason should include("Boeing 737-800")
+    }
+  }
+
   "commonalityScore".must {
     "be 0 when the family is not in the fleet".in {
       ConsultantAdvisor.commonalityScore("A320", Map.empty) shouldBe 0.0

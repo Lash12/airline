@@ -1,6 +1,6 @@
 package controllers
 
-import com.patson.data.{AirplaneSource, AirportSource, CountrySource, CycleSource, NotificationSource, SoloConfig, WorldNewsSource}
+import com.patson.data.{AirplaneSource, AirportSource, CountrySource, CycleSource, LinkSource, NotificationSource, SoloConfig, WorldNewsSource}
 import com.patson.model.{ManagerTaskType, LevelingManagerTask, Notification, NotificationCategory}
 import com.patson.ConsultantAdvisor
 import controllers.AuthenticationObject.AuthenticatedAirline
@@ -81,7 +81,8 @@ class NotificationApplication @Inject()(cc: ControllerComponents) extends Abstra
           if (r.config.firstVal > 0) Some(s"${r.config.firstVal}F") else None
         ).flatten.mkString(" ")
         val base = s"${r.from.iata} → ${r.to.iata} · ${f"${r.distance}%,d"} km · ${r.model.name} ($cabin) · ~$$${f"${r.estWeeklyProfit}%,d"}/wk"
-        val msg = if (considerCommonality && r.familyInFleet > 0) s"$base · fits your ${r.familyKey} fleet (${r.familyInFleet})" else base
+        val summary = if (considerCommonality && r.familyInFleet > 0) s"$base · fits your ${r.familyKey} fleet (${r.familyInFleet})" else base
+        val msg = s"$summary||${buildRecSidecar(r, airlineId, fleetByFamily)}"
         Notification(airlineId = airlineId, category = NotificationCategory.CONSULTANT_ADVICE, message = msg, cycle = currentCycle, targetId = Some(s"${r.from.id}-${r.to.id}"))
       }
       if (notifications.nonEmpty) NotificationSource.insertNotificationsBulk(notifications)
@@ -93,13 +94,36 @@ class NotificationApplication @Inject()(cc: ControllerComponents) extends Abstra
       val marketNotifs = market.map { mi =>
         val suggestion = mi.suggested.map(_.name).getOrElse("no in-range aircraft")
         val tag = if (mi.ownedFits) s"✓ serve with $suggestion" else s"⚠ fleet gap — consider $suggestion"
-        val msg = s"${mi.from.iata} ↔ ${mi.to.iata} · ${f"${mi.demand}%,d"} pax/wk · ${f"${mi.distance}%,d"} km · $tag"
+        val summary = s"${mi.from.iata} ↔ ${mi.to.iata} · ${f"${mi.demand}%,d"} pax/wk · ${f"${mi.distance}%,d"} km · $tag"
+        val msg = s"$summary||${buildMarketSidecar(mi)}"
         Notification(airlineId = airlineId, category = NotificationCategory.MARKET_OVERVIEW, message = msg, cycle = currentCycle, targetId = Some(s"${mi.from.id}-${mi.to.id}"))
       }
       if (marketNotifs.nonEmpty) NotificationSource.insertNotificationsBulk(marketNotifs)
 
       Ok(Json.obj("count" -> recs.size, "markets" -> market.size, "cycle" -> currentCycle))
     }
+  }
+
+  private def buildRecSidecar(r: ConsultantAdvisor.Recommendation, airlineId: Int, fleetByFamily: Map[String, Int]): String = {
+    val compLinks =
+      LinkSource.loadFlightLinksByAirports(r.from.id, r.to.id).filterNot(_.airline.id == airlineId) ++
+      LinkSource.loadFlightLinksByAirports(r.to.id, r.from.id).filterNot(_.airline.id == airlineId)
+    val compCap = compLinks.map(_.capacity.total).sum
+    val requiresExpansion = fleetByFamily.getOrElse(r.familyKey, 0) == 0
+    val reasons = List(
+      ConsultantAdvisor.demandReason(r.totalDemand),
+      ConsultantAdvisor.competitionReason(compCap),
+      ConsultantAdvisor.fleetReason(r.familyKey, r.familyInFleet, r.model.name)
+    )
+    Json.stringify(Json.obj("r" -> reasons, "x" -> requiresExpansion))
+  }
+
+  private def buildMarketSidecar(mi: ConsultantAdvisor.MarketInsight): String = {
+    val demandStr = ConsultantAdvisor.demandReason(mi.demand)
+    val fleetStr = if (mi.ownedFits) "Your fleet can serve this market"
+      else mi.suggested.fold("Requires fleet expansion")(m => s"Requires fleet expansion — consider ${m.name}")
+    val reasons = List(demandStr, fleetStr)
+    Json.stringify(Json.obj("r" -> reasons, "x" -> !mi.ownedFits))
   }
 
   // Market overview list (pull-based, separate from the bell).

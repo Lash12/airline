@@ -21,7 +21,7 @@ object ConsultantAdvisor {
   // every real commercial aircraft, turboprops included, cruises well above this.
   private val MIN_PRACTICAL_SPEED_KPH = 300
 
-  case class Recommendation(from : Airport, to : Airport, distance : Int, estWeeklyProfit : Long, model : Model, config : AirplaneConfiguration, familyKey : String, familyInFleet : Int)
+  case class Recommendation(from : Airport, to : Airport, distance : Int, totalDemand : Int, estWeeklyProfit : Long, model : Model, config : AirplaneConfiguration, familyKey : String, familyInFleet : Int)
 
   /** A big-market opportunity surfaced regardless of the current fleet, with a suggested aircraft and
     * whether the player already owns something that can serve it. */
@@ -41,6 +41,23 @@ object ConsultantAdvisor {
 
   /** Family key for fleet-commonality: the model family if set, else the model name. */
   def familyKeyOf(model : Model) : String = if (model.family.nonEmpty) model.family else model.name
+
+  def demandReason(totalDemand : Int) : String = {
+    val fmt = f"$totalDemand%,d"
+    if (totalDemand >= 500) s"Strong demand: ~$fmt pax/wk"
+    else if (totalDemand >= 100) s"Moderate demand: ~$fmt pax/wk"
+    else s"Thin market: ~$fmt pax/wk"
+  }
+
+  def competitionReason(competitorTotalCapacity : Int) : String =
+    if (competitorTotalCapacity == 0) "No direct competition"
+    else if (competitorTotalCapacity < 200) "Low competition"
+    else if (competitorTotalCapacity < 1000) "Moderate competition"
+    else "Crowded lane"
+
+  def fleetReason(familyKey : String, familyInFleet : Int, modelName : String) : String =
+    if (familyInFleet > 0) s"Fleet commonality: $familyInFleet ${familyKey} in service"
+    else s"Requires fleet expansion — no ${modelName} in your fleet"
 
   /** Fractional ranking bonus (0..maxBonus) for a family the player already operates, growing with
     * how many of that family are in the fleet. Pure (keyed by family string); unit-tested. */
@@ -208,13 +225,14 @@ object ConsultantAdvisor {
     val fitting = models.filter(m => m.range >= distance && to.runwayLength >= m.runwayRequirement && from.runwayLength >= m.runwayRequirement)
     if (fitting.isEmpty) return None
     val bothWays = demandByClass(from, to, countryRelationships) + demandByClass(to, from, countryRelationships)
+    val totalDemand = bothWays.total
     fitting.flatMap { model =>
       buildLink(airline, from, to, model, demand, distance, currentCycle).map { case (link, config) =>
         val profit = estimateWeeklyProfit(link, bothWays, currentCycle)
         val key = familyKeyOf(model)
         val count = fleetByFamily.getOrElse(key, 0)
         val rankScore = profit.toDouble * (if (considerCommonality) 1.0 + commonalityScore(key, fleetByFamily) else 1.0)
-        (Recommendation(from, to, distance, profit, model, config, key, count), rankScore)
+        (Recommendation(from, to, distance, totalDemand, profit, model, config, key, count), rankScore)
       }
     }.sortBy(-_._2).headOption
   }

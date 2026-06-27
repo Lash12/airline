@@ -1631,27 +1631,69 @@ function loadConsultantAdvice() {
     })
 }
 
+function _parseSidecar(message) {
+    var sepIdx = (message || '').indexOf('||')
+    if (sepIdx < 0) return { main: message || '', sidecar: null }
+    var main = message.slice(0, sepIdx)
+    var sidecar = null
+    try { sidecar = JSON.parse(message.slice(sepIdx + 2)) } catch(e) {}
+    return { main: main, sidecar: sidecar }
+}
+
+function _reasonChips(reasons) {
+    if (!reasons || !reasons.length) return ''
+    return '<div style="margin-top:3px;">' + reasons.map(function(r) {
+        return '<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:rgba(255,255,255,0.08);color:#bbb;margin-right:3px;display:inline-block;margin-bottom:2px;">' + r + '</span>'
+    }).join('') + '</div>'
+}
+
+function _planBtn(fromId, toId) {
+    if (!fromId || !toId) return ''
+    return '<button class="button consultant-plan-btn" style="font-size:10px;padding:2px 8px;margin-top:5px;" ' +
+        'data-from="' + fromId + '" data-to="' + toId + '">Plan this route &#9658;</button>'
+}
+
+function consultantPlanRoute(fromId, toId) {
+    planLink(parseInt(fromId), parseInt(toId))
+}
+
 function renderConsultantAdvice(list) {
     var $c = $('#consultantAdviceList'); $c.empty()
     if (!list || list.length === 0) {
         $('#consultantAsOf').text('')
         $('#consultantRecsHeading').hide()
-        $c.html("<p class='text-sm' style='opacity:0.7;'>No advice yet — assign a consultant, then click Refresh advice.</p>")
+        $c.html("<p class='text-sm' style='opacity:0.7;'>No advice yet. Assign a manager to the Consultant role, then click <em>Refresh advice</em>. Advice appears only after the first Refresh.</p>")
         return
     }
     $('#consultantRecsHeading').show()
-    $('#consultantAsOf').text("Advice as of " + cycleToYearWeek(list[0].cycle))
+    $('#consultantAsOf').text("Last refreshed: " + cycleToYearWeek(list[0].cycle))
     list.forEach(function(n) {
-        var stamp = "Yr " + Math.floor(n.cycle / 48) + " Wk " + (n.cycle % 48)
-        var parts = (n.message || '').split(' · ')
-        var route = parts.shift() || n.message
+        var parsed = _parseSidecar(n.message)
+        var parts = parsed.main.split(' · ')
+        var route = parts.shift() || parsed.main
         var detail = parts.join(' · ')
+        var sidecar = parsed.sidecar
+        var reasons = sidecar && sidecar.r ? sidecar.r : []
+        var requiresExpansion = sidecar && sidecar.x
+        var ids = n.targetId ? n.targetId.split('-') : []
+        var fromId = ids[0] || null
+        var toId = ids[1] || null
+
+        var expansionBadge = requiresExpansion
+            ? '<span class="consultant-expansion-badge" style="font-size:10px;padding:1px 5px;border-radius:3px;background:rgba(224,160,48,0.2);color:#e0a030;margin-left:5px;">&#9888; Fleet expansion needed</span>'
+            : ''
+
         $c.append(
-            "<div class='py-1' style='border-bottom:1px solid rgba(255,255,255,0.1);'>" +
-            "<div><strong>" + route + "</strong> <span class='text-sm' style='opacity:0.5;'>" + stamp + "</span></div>" +
-            "<div class='text-sm' style='opacity:0.8;'>" + detail + "</div>" +
-            "</div>"
+            '<div class="py-1 consultant-rec-card" style="border-bottom:1px solid rgba(255,255,255,0.1);">' +
+            '<div><strong class="consultant-rec-route">' + route + '</strong>' + expansionBadge + '</div>' +
+            '<div class="text-sm" style="opacity:0.8;">' + detail + '</div>' +
+            _reasonChips(reasons) +
+            _planBtn(fromId, toId) +
+            '</div>'
         )
+    })
+    $c.on('click', '.consultant-plan-btn', function() {
+        consultantPlanRoute($(this).data('from'), $(this).data('to'))
     })
 }
 
@@ -1659,19 +1701,36 @@ function renderMarketOverview(list) {
     var $c = $('#consultantMarketList'); $c.empty()
     if (!list || list.length === 0) {
         $('#consultantMarketHeading').hide()
+        $c.html('<p class="text-sm" style="opacity:0.7;">Market overview unlocks when your consultant reaches a higher level. Keep them assigned to gain experience.</p>')
         return
     }
     $('#consultantMarketHeading').show()
     list.forEach(function(n) {
-        var parts = (n.message || '').split(' · ')
-        var market = parts.shift() || n.message
+        var parsed = _parseSidecar(n.message)
+        var parts = parsed.main.split(' · ')
+        var market = parts.shift() || parsed.main
         var detail = parts.join(' · ')
-        var gap = /fleet gap/i.test(n.message)
+        var sidecar = parsed.sidecar
+        var reasons = sidecar && sidecar.r ? sidecar.r : []
+        var requiresExpansion = sidecar ? sidecar.x : /fleet gap/i.test(parsed.main)
+        var ids = n.targetId ? n.targetId.split('-') : []
+        var fromId = ids[0] || null
+        var toId = ids[1] || null
+
+        var badge = requiresExpansion
+            ? '<span class="consultant-expansion-badge" style="font-size:10px;padding:1px 5px;border-radius:3px;background:rgba(224,160,48,0.2);color:#e0a030;margin-left:5px;">&#9888; Fleet expansion needed</span>'
+            : '<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:rgba(120,205,107,0.2);color:#78cd6b;margin-left:5px;">&#10003; Fleet fits</span>'
+
         $c.append(
-            "<div class='py-1' style='border-bottom:1px solid rgba(255,255,255,0.1);'>" +
-            "<div><strong>" + market + "</strong></div>" +
-            "<div class='text-sm' style='opacity:0.8;" + (gap ? "color:#e0a030;" : "") + "'>" + detail + "</div>" +
-            "</div>"
+            '<div class="py-1 consultant-market-card" style="border-bottom:1px solid rgba(255,255,255,0.1);">' +
+            '<div><strong class="consultant-market-route">' + market + '</strong>' + badge + '</div>' +
+            '<div class="text-sm" style="opacity:0.8;">' + detail + '</div>' +
+            _reasonChips(reasons) +
+            _planBtn(fromId, toId) +
+            '</div>'
         )
+    })
+    $c.on('click', '.consultant-plan-btn', function() {
+        consultantPlanRoute($(this).data('from'), $(this).data('to'))
     })
 }
