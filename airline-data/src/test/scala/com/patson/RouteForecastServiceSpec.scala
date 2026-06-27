@@ -88,6 +88,26 @@ class RouteForecastServiceSpec extends AnyWordSpecLike with Matchers with Before
       forecast.reasons.exists(r => r.contains("cargo demand") && r.contains(" belly cargo revenue")) shouldBe true
     }
 
+    "return candidateAircraft with at least one entry for a normal JFK-LAX forecast" in {
+      SoloConfig.routeForecastEnabled = true
+      SoloConfig.cargoEnabled = true
+
+      val jfk = AirportSource.loadAirportByIata("JFK", true).get
+      val lax = AirportSource.loadAirportByIata("LAX", true).get
+
+      val result = RouteForecastService.getForecast(testAirlineId, jfk.id, lax.id)
+      result.isRight shouldBe true
+      val forecast = result.toOption.get
+      forecast.candidateAircraft should not be empty
+      val primary = forecast.candidateAircraft.head
+      primary.modelName should not be empty
+      primary.frequency should be > 0
+      primary.weeklyPaxCapacity should be > 0
+      primary.estimatedRevenue should be > 0L
+      primary.estimatedCost should be > 0L
+      primary.youOwnThis shouldBe false
+    }
+
     "return competition level HIGH/MEDIUM when competitor flights exist on the route" in {
       SoloConfig.routeForecastEnabled = true
       SoloConfig.cargoEnabled = false

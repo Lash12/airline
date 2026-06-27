@@ -1735,20 +1735,35 @@ class LinkApplication @Inject()(cc: ControllerComponents) extends AbstractContro
     import com.patson.RouteForecastService
     import play.api.libs.json._
 
+    implicit val aircraftCandidateWrites = new Writes[RouteForecastService.AircraftCandidate] {
+      def writes(c: RouteForecastService.AircraftCandidate): JsValue = Json.obj(
+        "modelName"           -> c.modelName,
+        "frequency"           -> c.frequency,
+        "weeklyPaxCapacity"   -> c.weeklyPaxCapacity,
+        "weeklyCargoCapacity" -> c.weeklyCargoCapacity,
+        "estimatedRevenue"    -> c.estimatedRevenue,
+        "estimatedCost"       -> c.estimatedCost,
+        "estimatedProfit"     -> c.estimatedProfit,
+        "youOwnThis"          -> c.youOwnThis,
+        "note"                -> c.note
+      )
+    }
+
     implicit val routeForecastResultWrites = new Writes[RouteForecastService.RouteForecastResult] {
       def writes(result: RouteForecastService.RouteForecastResult): JsValue = Json.obj(
-        "originAirportId" -> result.originAirportId,
-        "destinationAirportId" -> result.destinationAirportId,
+        "originAirportId"         -> result.originAirportId,
+        "destinationAirportId"    -> result.destinationAirportId,
         "passengerDemandEstimate" -> result.passengerDemandEstimate,
-        "cargoDemandEstimate" -> result.cargoDemandEstimate,
-        "expectedRevenue" -> result.expectedRevenue,
-        "expectedCost" -> result.expectedCost,
-        "expectedProfit" -> result.expectedProfit,
-        "confidenceLevel" -> result.confidenceLevel,
-        "competitionLevel" -> result.competitionLevel,
+        "cargoDemandEstimate"     -> result.cargoDemandEstimate,
+        "expectedRevenue"         -> result.expectedRevenue,
+        "expectedCost"            -> result.expectedCost,
+        "expectedProfit"          -> result.expectedProfit,
+        "confidenceLevel"         -> result.confidenceLevel,
+        "competitionLevel"        -> result.competitionLevel,
         "recommendedAircraftModels" -> result.recommendedAircraftModels,
-        "recommendedFrequency" -> result.recommendedFrequency,
-        "reasons" -> result.reasons
+        "recommendedFrequency"    -> result.recommendedFrequency,
+        "reasons"                 -> result.reasons,
+        "candidateAircraft"       -> Json.toJson(result.candidateAircraft)
       )
     }
 

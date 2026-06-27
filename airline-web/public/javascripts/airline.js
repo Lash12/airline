@@ -1439,9 +1439,37 @@ function showRouteForecast(forecast) {
     var profitColor = profit >= 0 ? '#78cd6b' : '#d66061';
     $('#forecastProfit').text(profitText).css('color', profitColor);
 
-    // Recommended aircraft models (Comparison cards/rows)
+    // Aircraft options — rich candidate cards when available, simple list as fallback
     var aircraftHtml = '';
-    if (forecast.recommendedAircraftModels && forecast.recommendedAircraftModels.length > 0) {
+    if (forecast.candidateAircraft && forecast.candidateAircraft.length > 0) {
+        forecast.candidateAircraft.forEach(function(c) {
+            var profitAmt = c.estimatedProfit || 0;
+            var profitColor = profitAmt >= 0 ? '#78cd6b' : '#d66061';
+            var profitSign = profitAmt < 0 ? '-' : '';
+            var fmt = typeof abbreviateMoney === 'function' ? abbreviateMoney : function(v) { return '$' + commaSeparateNumber(v); };
+            aircraftHtml += '<div class="candidate-card" style="padding:6px 10px;border:1px dashed #57A34B;border-radius:4px;background:rgba(87,163,75,0.1);margin-bottom:4px;">';
+            aircraftHtml += '<div style="display:flex;justify-content:space-between;align-items:center;">';
+            aircraftHtml += '<strong class="candidate-model-name" style="color:#78cd6b;font-size:11px;">' + c.modelName + '</strong>';
+            if (c.youOwnThis) {
+                aircraftHtml += '<span class="candidate-own-badge" style="font-size:10px;color:#e3b80d;">&#9733; You own this</span>';
+            }
+            aircraftHtml += '</div>';
+            aircraftHtml += '<div class="candidate-stats" style="font-size:11px;color:#bbb;margin:2px 0;">';
+            aircraftHtml += c.frequency + '&times;/wk &nbsp;&middot;&nbsp; ' + commaSeparateNumber(c.weeklyPaxCapacity) + ' pax';
+            if (c.weeklyCargoCapacity > 0) {
+                aircraftHtml += ' &nbsp;&middot;&nbsp; ' + commaSeparateNumber(c.weeklyCargoCapacity) + ' cargo';
+            }
+            aircraftHtml += '</div>';
+            aircraftHtml += '<div class="candidate-financials" style="font-size:11px;color:#ccc;margin:2px 0;">';
+            aircraftHtml += 'Rev: ' + fmt(c.estimatedRevenue) + ' &nbsp;&middot;&nbsp; Cost: ' + fmt(c.estimatedCost);
+            aircraftHtml += ' &nbsp;&middot;&nbsp; <span class="candidate-profit" style="color:' + profitColor + ';">Profit: ' + profitSign + fmt(Math.abs(profitAmt)) + '</span>';
+            aircraftHtml += '</div>';
+            if (c.note) {
+                aircraftHtml += '<div class="candidate-note" style="font-size:10px;color:#999;font-style:italic;margin-top:2px;">' + c.note + '</div>';
+            }
+            aircraftHtml += '</div>';
+        });
+    } else if (forecast.recommendedAircraftModels && forecast.recommendedAircraftModels.length > 0) {
         forecast.recommendedAircraftModels.forEach(function(modelName) {
             aircraftHtml += '<div class="aircraft-card" style="padding: 6px 10px; border: 1px dashed #57A34B; border-radius: 4px; background: rgba(87, 163, 75, 0.1); display: flex; justify-content: space-between; align-items: center;">';
             aircraftHtml += '  <span style="font-weight: bold; color: #78cd6b; font-size: 11px;">' + modelName + '</span>';
@@ -1455,11 +1483,16 @@ function showRouteForecast(forecast) {
     }
     $('#forecastAircraftRecommendations').html(aircraftHtml);
 
-    // Reasons/analysis
+    // Reasons/analysis — Warning: prefixed reasons shown in amber
     var reasonsHtml = '';
     if (forecast.reasons && forecast.reasons.length > 0) {
-        forecast.reasons.forEach(function(reason) {
+        var warnings = forecast.reasons.filter(function(r) { return r.indexOf('Warning:') === 0; });
+        var infos = forecast.reasons.filter(function(r) { return r.indexOf('Warning:') !== 0; });
+        infos.forEach(function(reason) {
             reasonsHtml += '<li style="margin-bottom: 2px;">' + reason + '</li>';
+        });
+        warnings.forEach(function(reason) {
+            reasonsHtml += '<li style="margin-bottom: 2px; color: #e3b80d;">' + reason + '</li>';
         });
     } else {
         reasonsHtml = '<li>No specific market analysis available.</li>';

@@ -79,6 +79,7 @@ function createTestContext() {
     document: mockDocument,
     localStorage: mockLocalStorage,
     commaSeparateNumber: commaSeparateNumber,
+    abbreviateMoney: jest.fn(function(v) { return '$' + Math.abs(Math.round(v)); }),
     activeAirline: { id: 1, baseAirports: [], headquarterAirport: { airportId: 10 } },
     planLinkState: { fromAirportId: 10, toAirportId: 20 },
     planTransportType: "FLIGHT",
@@ -203,6 +204,61 @@ describe('showRouteForecast', () => {
     ctx.showRouteForecast(mockForecast)
 
     expect(elements['#forecastCargoDemandRow'].hide).toHaveBeenCalled()
+  })
+
+  test('renders candidateAircraft comparison cards when present', () => {
+    const { ctx, elements } = createTestContext()
+
+    const mockForecast = {
+      passengerDemandEstimate: 750,
+      cargoDemandEstimate: 100,
+      expectedRevenue: 120000,
+      expectedCost: 80000,
+      expectedProfit: 40000,
+      confidenceLevel: 'HIGH',
+      competitionLevel: 'NONE',
+      recommendedAircraftModels: ['Boeing 737-800'],
+      recommendedFrequency: 14,
+      reasons: [],
+      candidateAircraft: [
+        {
+          modelName: 'Boeing 737-800',
+          frequency: 14,
+          weeklyPaxCapacity: 2380,
+          weeklyCargoCapacity: 112,
+          estimatedRevenue: 120000,
+          estimatedCost: 80000,
+          estimatedProfit: 40000,
+          youOwnThis: false,
+          note: 'Best size and efficiency for this market.'
+        },
+        {
+          modelName: 'Airbus A220-100',
+          frequency: 21,
+          weeklyPaxCapacity: 2541,
+          weeklyCargoCapacity: 63,
+          estimatedRevenue: 95000,
+          estimatedCost: 70000,
+          estimatedProfit: 25000,
+          youOwnThis: true,
+          note: 'Smaller option; lower seat count reduces risk on thin demand.'
+        }
+      ]
+    }
+
+    ctx.showRouteForecast(mockForecast)
+
+    expect(elements['#forecastAircraftRecommendations'].html).toHaveBeenCalled()
+    const html = elements['#forecastAircraftRecommendations'].html.mock.calls[0][0]
+    // Primary candidate present
+    expect(html).toContain('Boeing 737-800')
+    expect(html).toContain('candidate-model-name')
+    expect(html).toContain('candidate-profit')
+    // Smaller candidate with youOwnThis badge
+    expect(html).toContain('Airbus A220-100')
+    expect(html).toContain('candidate-own-badge')
+    // Note text
+    expect(html).toContain('Best size and efficiency')
   })
 
   test('shows incompatibility warning when forecast says route is blocked', () => {

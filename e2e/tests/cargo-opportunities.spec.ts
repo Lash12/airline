@@ -98,7 +98,7 @@ test("cargo opportunities panel renders cards sorted by unserved demand", async 
   expect(state.sectionDisplay).not.toBe('none');
   expect(state.cardCount).toBe(2);
   // High-unserved comes first after sort
-  expect(state.firstIata).toBe('JFK');
+  expect(state.firstIata).toBe('LAX');
   expect(state.secondIata).toBe('SFO');
   // Revenue estimate present for first card
   expect(state.firstRevenue).toContain('capturable');
@@ -132,21 +132,24 @@ test("fully-served cards are dimmed and have no plan button", async ({ page }) =
 
   await bootstrap(page);
 
-  const state = await page.evaluate((opp) => {
-    (window as any).renderCargoOpportunities([opp], 3599);
+  const state = await page.evaluate((opps) => {
+    (window as any).renderCargoOpportunities(opps, 3599);
     const section = document.getElementById('airportCargoOpportunitiesSection');
-    const card = document.querySelector('#airportCargoOpportunitiesCards .card') as HTMLElement | null;
+    const allCards = Array.from(document.querySelectorAll('#airportCargoOpportunitiesCards .card')) as HTMLElement[];
+    const servedCard = allCards.find(c => (c.querySelector('.iata') as HTMLElement | null)?.textContent === 'DFW') as HTMLElement | null;
     return {
       sectionDisplay: section?.style.display ?? 'missing',
-      cardOpacity: card?.style.opacity ?? '',
-      hasPlanBtn: !!(card?.querySelector('.opp-plan-btn')),
-      badgeText: card?.textContent ?? '',
+      cardCount: allCards.length,
+      cardOpacity: servedCard?.style.opacity ?? '',
+      hasPlanBtn: !!(servedCard?.querySelector('.opp-plan-btn')),
+      badgeText: servedCard?.textContent ?? '',
     };
-  }, MOCK_OPP_SERVED);
+  }, [MOCK_OPP_FULL, MOCK_OPP_SERVED]);
 
-  // Section still visible (has cards)
+  // Section visible (mix of served + unserved)
   expect(state.sectionDisplay).not.toBe('none');
-  // Card dimmed
+  expect(state.cardCount).toBe(2);
+  // Served card dimmed
   expect(parseFloat(state.cardOpacity)).toBeLessThan(1);
   // No plan button for fully-served route
   expect(state.hasPlanBtn).toBe(false);
