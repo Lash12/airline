@@ -15,7 +15,7 @@ verification: every deploy must boot the game and pass the Playwright suite.
 | Setup guide | `SMALL_SERVER.md` |
 | Playwright e2e scaffold (homepage smoke test, baseURL :9000) | `e2e/` |
 | Compile CI on GitHub-hosted runners | `.github/workflows/ci.yml` |
-| Pause-when-idle flag (off by default) | `simulation.pauseWhenIdle` in `airline-data/src/main/resources/application.conf` |
+| Pause-when-idle flag | `simulation.pauseWhenIdle` exists in code but is **permanently disabled by product decision** — do not enable |
 | Per-cycle phase timing logs | `MainSimulation.startCycle` (`>>>>> cycle N phase timings:`) |
 | Disabled legacy deploy (manual-only) | `.github/workflows/production-deploy.yml` |
 
@@ -39,8 +39,8 @@ Either way: DHCP reservation or static IP; `apt install docker.io docker-compose
 
 **Memory budget inside a 6 GB guest** (8 GB host case): MySQL container limit 1.5 G,
 app container limit 3.5 G → reduce to **3 G** by trimming `.docker/data/start.sh`
-to `-Xmx1280M` if OOM appears; runner service ~150 MB; OS the rest. With
-`simulation.pauseWhenIdle=true` the steady-state idle load is near zero.
+to `-Xmx1280M` if OOM appears; runner service ~150 MB; OS the rest.
+(Pause-when-idle is abandoned by product decision — CPU between cycles is low but non-zero.)
 
 ## Part 2 — Runner registration (human, ~15 min)
 
@@ -74,15 +74,12 @@ to `-Xmx1280M` if OOM appears; runner service ~150 MB; OS the rest. With
 ```
 Credentials come from the compose file (already there); no new secrets needed.
 
-### 3.2 Enable pause-when-idle on the box without forking config
-Add an env passthrough to `.docker/data/start.sh`:
-```
-SBT_OPTS="-Xmx1536M ... $SIM_EXTRA_OPTS" sbt "runMain com.patson.MainSimulation"
-```
-and have the deploy workflow export
-`SIM_EXTRA_OPTS="-Dsimulation.pauseWhenIdle=true"` into the container environment
-(compose `environment:` entry or `docker exec -e`). Typesafe Config reads `-D`
-system properties, so no conf file edits are needed and upstream defaults stay.
+### ~~3.2 Enable pause-when-idle~~ — ABANDONED
+
+Do not add `-Dsimulation.pauseWhenIdle=true` to any deploy config.
+Pause-when-idle is abandoned by product decision (2026-06). The `SIM_EXTRA_OPTS`
+env-passthrough pattern is still valid for other solo flags; just never use it
+for `pauseWhenIdle` or `idleGraceMinutes`.
 
 ### 3.3 `.github/workflows/optiplex-deploy.yml` (new)
 ```
@@ -120,7 +117,7 @@ upstream's flow plus verification.
       (`restart: unless-stopped` may need adding to docker-compose.small.yaml)
 - [ ] `workflow_dispatch` run from a clean guest: deploy completes, e2e passes
 - [ ] Second dispatch is fast (no re-init, cached sbt target) and idempotent
-- [ ] With no players, sim logs show "Simulation paused" and guest CPU is near idle
+- [ ] ~~With no players, sim logs show "Simulation paused"~~ — N/A, pause-when-idle abandoned
 - [ ] Fork-PR approval requirement verified in repo Actions settings
 
 ## Ops crib sheet

@@ -1601,6 +1601,7 @@ function showBaseDetailsModal() {
 }
 
 var _demandEtag = null
+var _demandEtagAirportId = null
 
 var _cargoDemandEtag = null
 var _cargoDemandEtagAirportId = null
@@ -1670,16 +1671,18 @@ async function loadAirportDemand(airportId) {
 
     try {
         const headers = {}
-        if (_demandEtag) headers['If-None-Match'] = _demandEtag
+        // Gate on airportId: server ETag is cycle-keyed only, so reuse only for the same airport.
+        if (_demandEtag && _demandEtagAirportId === airportId) headers['If-None-Match'] = _demandEtag
 
         const response = await fetch('/airports/' + airportId + '/demand', { headers })
-        if (response.status === 304) return  // cached, container unchanged from last render
+        if (response.status === 304) return  // cached, same airport same cycle
 
         if (!response.ok) {
             container.innerHTML = '<div class="table-row"><div class="cell">-</div></div>'
             return
         }
         _demandEtag = response.headers.get('ETag')
+        _demandEtagAirportId = airportId
         const demands = await response.json()
         renderDemandCards(demands)
     } catch (e) {

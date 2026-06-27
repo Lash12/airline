@@ -113,27 +113,26 @@ object LinkSource {
   
   def loadLinksByQueryString(queryString : String, parameters : List[Any], loadDetails : Map[DetailType.Value, Boolean] = SIMPLE_LOAD) = {
     ensureCargoSchema()
+
+    case class LinkRow(id: Int, fromAirportId: Int, toAirportId: Int, airlineId: Int, transportType: Int,
+      priceEconomy: Int, priceBusiness: Int, priceFirst: Int, distance: Int,
+      capacityEconomy: Int, capacityBusiness: Int, capacityFirst: Int,
+      quality: Int, duration: Int, frequency: Int, flightNumber: Int, airplaneModel: Int, cargoCapacity: Int)
+
+    val rows = new ListBuffer[LinkRow]()
+    val linkIds : Set[Int] = new HashSet[Int]
+    val airportIds : Set[Int] = new HashSet[Int]
+
+    // Phase 1: read raw rows and release the connection before any enrichment calls.
+    // Enrichment (AirportCache, AirlineCache, AirplaneSource) may each open their own
+    // connections on a cache miss; holding this connection across them risks pool exhaustion.
     val connection = Meta.getConnection()
-    
-    try {  
+    try {
       val preparedStatement = connection.prepareStatement(queryString)
-      
       for (i <- 0 until parameters.size) {
         preparedStatement.setObject(i + 1, parameters(i))
       }
-      
       val resultSet = preparedStatement.executeQuery()
-      
-      val links = new ListBuffer[Transport]()
-      
-      case class LinkRow(id: Int, fromAirportId: Int, toAirportId: Int, airlineId: Int, transportType: Int,
-        priceEconomy: Int, priceBusiness: Int, priceFirst: Int, distance: Int,
-        capacityEconomy: Int, capacityBusiness: Int, capacityFirst: Int,
-        quality: Int, duration: Int, frequency: Int, flightNumber: Int, airplaneModel: Int, cargoCapacity: Int)
-      val rows = new ListBuffer[LinkRow]()
-      val linkIds : Set[Int] = new HashSet[Int]
-      val airportIds : Set[Int] = new HashSet[Int]
-
       while (resultSet.next()) {
         val id = resultSet.getInt("id")
         linkIds += id
@@ -147,87 +146,88 @@ object LinkSource {
           resultSet.getInt("quality"), resultSet.getInt("duration"), resultSet.getInt("frequency"),
           resultSet.getInt("flight_number"), resultSet.getInt("airplane_model"), resultSet.getInt("cargo_capacity"))
       }
-
       resultSet.close()
       preparedStatement.close()
-
-      val assignedAirplaneCache : Map[Int, Map[Airplane, LinkAssignment]] = loadDetails.get(DetailType.AIRPLANE) match {
-        case Some(fullLoad) => loadAssignedAirplanesByLinks(connection, linkIds.toList)
-        case None => Map.empty
-      }
-
-      val airportCache : Map[Int, Airport] = loadDetails.get(DetailType.AIRPORT) match {
-        case Some(fullLoad) => AirportCache.getAirports(airportIds.toList, fullLoad)
-        case None => airportIds.map(id => (id, Airport.fromId(id))).toMap
-      }
-
-      rows.foreach { row =>
-        val fromAirport = airportCache.get(row.fromAirportId) //Do not use AirportCache as fullLoad will be slow
-        val toAirport = airportCache.get(row.toAirportId) //Do not use AirportCache as fullLoad will be slow
-        val airline = loadDetails.get(DetailType.AIRLINE) match {
-          case Some(fullLoad) => AirlineCache.getAirline(row.airlineId, fullLoad).orElse(Some(Airline.fromId(row.airlineId)))
-          case None => Some(Airline.fromId(row.airlineId))
-        }
-
-        if (fromAirport.isDefined && toAirport.isDefined && airline.isDefined) {
-          val transportType = TransportType(row.transportType)
-          val link = {
-            import TransportType._
-            transportType match {
-              case FLIGHT =>
-                Link(
-                  fromAirport.get,
-                  toAirport.get,
-                  airline.get,
-                  LinkClassValues.getInstance(row.priceEconomy, row.priceBusiness, row.priceFirst),
-                  row.distance,
-                  LinkClassValues.getInstance(row.capacityEconomy, row.capacityBusiness, row.capacityFirst),
-                  row.quality,
-                  row.duration,
-                  row.frequency,
-                  row.flightNumber)
-              case GENERIC_TRANSIT =>
-                GenericTransit(
-                  fromAirport.get,
-                  toAirport.get,
-                  row.distance,
-                  LinkClassValues.getInstance(row.capacityEconomy, row.capacityBusiness, row.capacityFirst),
-                  row.duration
-                )
-              case CARGO_FLIGHT =>
-                CargoLink(
-                  fromAirport.get,
-                  toAirport.get,
-                  airline.get,
-                  row.distance,
-                  row.cargoCapacity,
-                  row.duration,
-                  row.frequency,
-                  row.flightNumber)
-            }
-          }
-          link.id = row.id
-
-          if (link.isInstanceOf[Link]) {
-            assignedAirplaneCache.get(link.id).foreach { airplaneAssignments =>
-              link.asInstanceOf[Link].setAssignedAirplanes(airplaneAssignments)
-            }
-            if (assignedAirplaneCache.isEmpty) {
-              AirplaneModelCache.getModel(row.airplaneModel).foreach {
-                model => link.asInstanceOf[Link].setAssignedModel(model)
-              }
-            }
-          }
-
-          links += link
-        } else {
-          println("Failed loading link [" + row.id + "] as some details cannot be loaded " + fromAirport + toAirport + airline)
-        }
-      }
-      links.toList
     } finally {
       connection.close()
     }
+
+    // Phase 2: enrichment — no connection held from Phase 1.
+    val assignedAirplaneCache : Map[Int, Map[Airplane, LinkAssignment]] = loadDetails.get(DetailType.AIRPLANE) match {
+      case Some(fullLoad) => loadAssignedAirplanesByLinks(linkIds.toList)
+      case None => Map.empty
+    }
+
+    val airportCache : Map[Int, Airport] = loadDetails.get(DetailType.AIRPORT) match {
+      case Some(fullLoad) => AirportCache.getAirports(airportIds.toList, fullLoad)
+      case None => airportIds.map(id => (id, Airport.fromId(id))).toMap
+    }
+
+    val links = new ListBuffer[Transport]()
+    rows.foreach { row =>
+      val fromAirport = airportCache.get(row.fromAirportId) //Do not use AirportCache as fullLoad will be slow
+      val toAirport = airportCache.get(row.toAirportId) //Do not use AirportCache as fullLoad will be slow
+      val airline = loadDetails.get(DetailType.AIRLINE) match {
+        case Some(fullLoad) => AirlineCache.getAirline(row.airlineId, fullLoad).orElse(Some(Airline.fromId(row.airlineId)))
+        case None => Some(Airline.fromId(row.airlineId))
+      }
+
+      if (fromAirport.isDefined && toAirport.isDefined && airline.isDefined) {
+        val transportType = TransportType(row.transportType)
+        val link = {
+          import TransportType._
+          transportType match {
+            case FLIGHT =>
+              Link(
+                fromAirport.get,
+                toAirport.get,
+                airline.get,
+                LinkClassValues.getInstance(row.priceEconomy, row.priceBusiness, row.priceFirst),
+                row.distance,
+                LinkClassValues.getInstance(row.capacityEconomy, row.capacityBusiness, row.capacityFirst),
+                row.quality,
+                row.duration,
+                row.frequency,
+                row.flightNumber)
+            case GENERIC_TRANSIT =>
+              GenericTransit(
+                fromAirport.get,
+                toAirport.get,
+                row.distance,
+                LinkClassValues.getInstance(row.capacityEconomy, row.capacityBusiness, row.capacityFirst),
+                row.duration
+              )
+            case CARGO_FLIGHT =>
+              CargoLink(
+                fromAirport.get,
+                toAirport.get,
+                airline.get,
+                row.distance,
+                row.cargoCapacity,
+                row.duration,
+                row.frequency,
+                row.flightNumber)
+          }
+        }
+        link.id = row.id
+
+        if (link.isInstanceOf[Link]) {
+          assignedAirplaneCache.get(link.id).foreach { airplaneAssignments =>
+            link.asInstanceOf[Link].setAssignedAirplanes(airplaneAssignments)
+          }
+          if (assignedAirplaneCache.isEmpty) {
+            AirplaneModelCache.getModel(row.airplaneModel).foreach {
+              model => link.asInstanceOf[Link].setAssignedModel(model)
+            }
+          }
+        }
+
+        links += link
+      } else {
+        println("Failed loading link [" + row.id + "] as some details cannot be loaded " + fromAirport + toAirport + airline)
+      }
+    }
+    links.toList
   }
 
   /**
@@ -297,7 +297,7 @@ object LinkSource {
     }
   }
   
-  def loadAssignedAirplanesByLinks(connection : Connection, linkIds : List[Int]) : Map[Int, Map[Airplane, LinkAssignment]] = {
+  def loadAssignedAirplanesByLinks(linkIds : List[Int]) : Map[Int, Map[Airplane, LinkAssignment]] = {
     if (linkIds.isEmpty) {
       Map.empty
     } else {
@@ -309,16 +309,18 @@ object LinkSource {
       queryString.append("?)")
 
       case class AssignmentRow(link: Int, airplane: Int, frequency: Int, flightMinutes: Int)
-      val rows = Using.resource(connection.prepareStatement(queryString.toString)) { linkAssignmentStatement =>
-        for (i <- 0 until linkIds.size) {
-          linkAssignmentStatement.setInt(i + 1, linkIds(i))
-        }
-        Using.resource(linkAssignmentStatement.executeQuery()) { assignmentResultSet =>
-          val rows = new ListBuffer[AssignmentRow]()
-          while (assignmentResultSet.next()) {
-            rows += AssignmentRow(assignmentResultSet.getInt("link"), assignmentResultSet.getInt("airplane"), assignmentResultSet.getInt("frequency"), assignmentResultSet.getInt("flight_minutes"))
+      val rows = Using.resource(Meta.getConnection()) { conn =>
+        Using.resource(conn.prepareStatement(queryString.toString)) { linkAssignmentStatement =>
+          for (i <- 0 until linkIds.size) {
+            linkAssignmentStatement.setInt(i + 1, linkIds(i))
           }
-          rows.toList
+          Using.resource(linkAssignmentStatement.executeQuery()) { assignmentResultSet =>
+            val rows = new ListBuffer[AssignmentRow]()
+            while (assignmentResultSet.next()) {
+              rows += AssignmentRow(assignmentResultSet.getInt("link"), assignmentResultSet.getInt("airplane"), assignmentResultSet.getInt("frequency"), assignmentResultSet.getInt("flight_minutes"))
+            }
+            rows.toList
+          }
         }
       }
 
@@ -1022,80 +1024,128 @@ object LinkSource {
   
   def loadLinkConsumptionsByQuery(queryString: String, parameters : List[Any], cycleCount : Int) = {
     ensureCargoSchema()
-    Using.resource(Meta.getConnection()) { connection =>
-      val latestCycle = getLatestCycle(connection, LINK_CONSUMPTION_TABLE)
 
+    case class ConsumptionRow(
+      linkId: Int, frequency: Int,
+      priceEconomy: Int, priceBusiness: Int, priceFirst: Int, quality: Int,
+      capacityEconomy: Int, capacityBusiness: Int, capacityFirst: Int,
+      fromAirportId: Int, toAirportId: Int, airlineId: Int,
+      distance: Int, duration: Int, flightNumber: Int, modelId: Int, cargoCapacity: Int,
+      soldEconomy: Int, soldBusiness: Int, soldFirst: Int,
+      minorDelayCount: Int, majorDelayCount: Int, cancellationCount: Int,
+      fuelCost: Int, fuelTax: Int, crewCost: Int, airportFees: Int, inflightCost: Int,
+      delayCompensation: Int, maintenanceCost: Int, loungeCost: Int, depreciation: Int,
+      revenue: Int, profit: Int, satisfaction: Double, cycle: Int,
+      cargoCarried: Int, cargoRevenue: Int)
+
+    // Phase 1: read all raw rows then release the connection.
+    // AirportCache/AirlineCache lookups may open their own connections on a cache miss;
+    // doing them inside an active ResultSet iteration risks pool exhaustion under load.
+    val rawRows = Using.resource(Meta.getConnection()) { connection =>
+      val latestCycle = getLatestCycle(connection, LINK_CONSUMPTION_TABLE)
       Using.resource(connection.prepareStatement(queryString)) { preparedStatement =>
         preparedStatement.setInt(1, latestCycle - cycleCount)
         for (i <- 0 until parameters.size) {
           preparedStatement.setObject(i + 2, parameters(i))
         }
         Using.resource(preparedStatement.executeQuery()) { resultSet =>
-          val linkConsumptions = new ListBuffer[LinkConsumptionDetails]()
+          val rows = new ListBuffer[ConsumptionRow]()
           while (resultSet.next()) {
-        val linkId = resultSet.getInt("link")
-        //need to update current link with history link data
-        val frequency = resultSet.getInt("frequency")
-        val price = LinkClassValues.getInstance(resultSet.getInt("price_economy"), resultSet.getInt("price_business"), resultSet.getInt("price_first"))
-        val quality = resultSet.getInt("quality")
-        val capacity =  LinkClassValues.getInstance(resultSet.getInt("capacity_economy"), resultSet.getInt("capacity_business"),resultSet.getInt("capacity_first"))
-
-        val fromAirport = AirportCache.getAirport(resultSet.getInt("from_airport")).getOrElse(Airport.fromId(resultSet.getInt("from_airport")))
-        val toAirport =  AirportCache.getAirport(resultSet.getInt("to_airport")).getOrElse(Airport.fromId(resultSet.getInt("to_airport")))
-        val airline = AirlineCache.getAirline(resultSet.getInt("airline")).getOrElse(Airline.fromId(resultSet.getInt("airline")))
-        val distance = resultSet.getInt("distance")
-        val duration = resultSet.getInt("duration")
-        val flightNumber = resultSet.getInt("flight_number")
-        val modelId = resultSet.getInt("airplane_model")
-        val cargoCapacity = resultSet.getInt("cargo_capacity")
-        val transportType = resultSet.getInt("cargo_capacity") match {
-          case cap if cap > 0 && capacity.total == 0 => TransportType.CARGO_FLIGHT
-          case _ => TransportType.FLIGHT
-        }
-        val link : Transport =
-          if (transportType == TransportType.CARGO_FLIGHT) {
-            CargoLink(fromAirport, toAirport, airline, distance, cargoCapacity, duration, frequency, flightNumber, linkId)
-          } else {
-            val flight = Link(fromAirport, toAirport, airline, price, distance, capacity, 0, duration, frequency, flightNumber, linkId)
-            flight.setQuality(quality)
-            flight.setAssignedModel(AirplaneModelCache.getModel(modelId).getOrElse(Model.fromId(modelId)))
-            flight
-          }
-
-        link.addSoldSeats(LinkClassValues.getInstance(resultSet.getInt("sold_seats_economy"), resultSet.getInt("sold_seats_business"), resultSet.getInt("sold_seats_first")))
-        link.minorDelayCount = resultSet.getInt("minor_delay_count")
-        link.majorDelayCount = resultSet.getInt("major_delay_count")
-        link.cancellationCount = resultSet.getInt("cancellation_count")
-
-        if (link.cancellationCount > 0 && link.frequency > 0) {
-          link.addCancelledSeats(capacity * link.cancellationCount / frequency)
-        }
-
-
-
-            linkConsumptions.append(LinkConsumptionDetails(
-              link = link,
-              fuelCost = resultSet.getInt("fuel_cost"),
-              fuelTax = resultSet.getInt("fuel_tax"),
-              crewCost = resultSet.getInt("crew_cost"),
-              airportFees = resultSet.getInt("airport_fees"),
-              inflightCost = resultSet.getInt("inflight_cost"),
+            rows += ConsumptionRow(
+              linkId            = resultSet.getInt("link"),
+              frequency         = resultSet.getInt("frequency"),
+              priceEconomy      = resultSet.getInt("price_economy"),
+              priceBusiness     = resultSet.getInt("price_business"),
+              priceFirst        = resultSet.getInt("price_first"),
+              quality           = resultSet.getInt("quality"),
+              capacityEconomy   = resultSet.getInt("capacity_economy"),
+              capacityBusiness  = resultSet.getInt("capacity_business"),
+              capacityFirst     = resultSet.getInt("capacity_first"),
+              fromAirportId     = resultSet.getInt("from_airport"),
+              toAirportId       = resultSet.getInt("to_airport"),
+              airlineId         = resultSet.getInt("airline"),
+              distance          = resultSet.getInt("distance"),
+              duration          = resultSet.getInt("duration"),
+              flightNumber      = resultSet.getInt("flight_number"),
+              modelId           = resultSet.getInt("airplane_model"),
+              cargoCapacity     = resultSet.getInt("cargo_capacity"),
+              soldEconomy       = resultSet.getInt("sold_seats_economy"),
+              soldBusiness      = resultSet.getInt("sold_seats_business"),
+              soldFirst         = resultSet.getInt("sold_seats_first"),
+              minorDelayCount   = resultSet.getInt("minor_delay_count"),
+              majorDelayCount   = resultSet.getInt("major_delay_count"),
+              cancellationCount = resultSet.getInt("cancellation_count"),
+              fuelCost          = resultSet.getInt("fuel_cost"),
+              fuelTax           = resultSet.getInt("fuel_tax"),
+              crewCost          = resultSet.getInt("crew_cost"),
+              airportFees       = resultSet.getInt("airport_fees"),
+              inflightCost      = resultSet.getInt("inflight_cost"),
               delayCompensation = resultSet.getInt("delay_compensation"),
-              maintenanceCost = resultSet.getInt("maintenance_cost"),
-              loungeCost = resultSet.getInt("lounge_cost"),
-              depreciation = resultSet.getInt("depreciation"),
-              revenue = resultSet.getInt("revenue"),
-              profit = resultSet.getInt("profit"),
-              satisfaction = resultSet.getDouble("satisfaction"),
-              cycle = resultSet.getInt("cycle"),
-              cargoCapacity = cargoCapacity,
-              cargoCarried = resultSet.getInt("cargo_carried"),
-              cargoRevenue = resultSet.getInt("cargo_revenue")))
+              maintenanceCost   = resultSet.getInt("maintenance_cost"),
+              loungeCost        = resultSet.getInt("lounge_cost"),
+              depreciation      = resultSet.getInt("depreciation"),
+              revenue           = resultSet.getInt("revenue"),
+              profit            = resultSet.getInt("profit"),
+              satisfaction      = resultSet.getDouble("satisfaction"),
+              cycle             = resultSet.getInt("cycle"),
+              cargoCarried      = resultSet.getInt("cargo_carried"),
+              cargoRevenue      = resultSet.getInt("cargo_revenue"))
           }
-          linkConsumptions.toList
+          rows.toList
         }
       }
     }
+
+    // Phase 2: enrich with no connection held.
+    val linkConsumptions = new ListBuffer[LinkConsumptionDetails]()
+    rawRows.foreach { row =>
+      val price    = LinkClassValues.getInstance(row.priceEconomy, row.priceBusiness, row.priceFirst)
+      val capacity = LinkClassValues.getInstance(row.capacityEconomy, row.capacityBusiness, row.capacityFirst)
+
+      val fromAirport = AirportCache.getAirport(row.fromAirportId).getOrElse(Airport.fromId(row.fromAirportId))
+      val toAirport   = AirportCache.getAirport(row.toAirportId).getOrElse(Airport.fromId(row.toAirportId))
+      val airline     = AirlineCache.getAirline(row.airlineId).getOrElse(Airline.fromId(row.airlineId))
+
+      val transportType = if (row.cargoCapacity > 0 && capacity.total == 0) TransportType.CARGO_FLIGHT else TransportType.FLIGHT
+      val link : Transport =
+        if (transportType == TransportType.CARGO_FLIGHT) {
+          CargoLink(fromAirport, toAirport, airline, row.distance, row.cargoCapacity, row.duration, row.frequency, row.flightNumber, row.linkId)
+        } else {
+          val flight = Link(fromAirport, toAirport, airline, price, row.distance, capacity, 0, row.duration, row.frequency, row.flightNumber, row.linkId)
+          flight.setQuality(row.quality)
+          flight.setAssignedModel(AirplaneModelCache.getModel(row.modelId).getOrElse(Model.fromId(row.modelId)))
+          flight
+        }
+
+      link.addSoldSeats(LinkClassValues.getInstance(row.soldEconomy, row.soldBusiness, row.soldFirst))
+      link.minorDelayCount   = row.minorDelayCount
+      link.majorDelayCount   = row.majorDelayCount
+      link.cancellationCount = row.cancellationCount
+
+      if (link.cancellationCount > 0 && link.frequency > 0) {
+        link.addCancelledSeats(capacity * link.cancellationCount / row.frequency)
+      }
+
+      linkConsumptions.append(LinkConsumptionDetails(
+        link              = link,
+        fuelCost          = row.fuelCost,
+        fuelTax           = row.fuelTax,
+        crewCost          = row.crewCost,
+        airportFees       = row.airportFees,
+        inflightCost      = row.inflightCost,
+        delayCompensation = row.delayCompensation,
+        maintenanceCost   = row.maintenanceCost,
+        loungeCost        = row.loungeCost,
+        depreciation      = row.depreciation,
+        revenue           = row.revenue,
+        profit            = row.profit,
+        satisfaction      = row.satisfaction,
+        cycle             = row.cycle,
+        cargoCapacity     = row.cargoCapacity,
+        cargoCarried      = row.cargoCarried,
+        cargoRevenue      = row.cargoRevenue))
+    }
+    linkConsumptions.toList
   }
 
   def saveNegotiationCoolDown(airline : Airline, fromAirport : Airport, toAirport : Airport, expirationCycle : Int) = {

@@ -1,6 +1,35 @@
 # Current Development State
 
-Last updated: 2026-06-20
+Last updated: 2026-06-27
+
+## What Is Shipped Right Now (as of 2026-06-27)
+
+All items below are on `master`, deployed to OptiPlex (`airline.ashhome.org`), CI green
+unless noted otherwise.
+
+| Feature | Flag | Status |
+|---------|------|--------|
+| Web push notifications | always-on | Deployed, live-validated |
+| World News redesign (global broadcast table) | always-on | Deployed, live-validated |
+| AI growth H-1..H-5 (NPC growth + bases) | `solo.ai.*` | Deployed |
+| Airport Assets (build/upgrade/sell) | `solo.airportAssets.enabled` | Deployed |
+| Asset Decision Support (ROI tooltips, modal) | `solo.airportAssets.enabled` | Deployed |
+| Traffic Analytics (per-route demographics) | always-on | Deployed |
+| Air Cargo C-1..C-4 (belly + freighters + terminal + ledger) | `solo.cargo.enabled` | Deployed |
+| Airport Cargo Demand panel | `solo.cargo.enabled` | Deployed, wired in `airport.js` |
+| Executive Team phases 0-2 | (existing flag) | Deployed |
+| DB pool hardening (pool=16, nested-connection fix) | always-on | Deployed |
+| Schema migrations (`SchemaPatchRunner`) | always-on | Deployed |
+| Route Forecast backend | `solo.routeForecast.enabled` (default off) | Deployed but **flag not enabled in deploy config** |
+| Airport Cargo Opportunities backend | `solo.cargo.enabled` | Deployed but **no frontend wiring** |
+| `RouteForecastServiceSpec` added to CI | — | In `ci.yml` as of 2026-06-27, not yet run in CI |
+
+## Do Not Build
+
+- **Pause-when-idle / skip-cycle-when-idle / idle detection**: abandoned by product decision
+  (2026-06). The game world must advance continuously. `simulation.pauseWhenIdle` code exists
+  but must never be enabled. Do not build any feature that delays or pauses simulation cycles
+  because the player is inactive.
 
 ## Repository / Environment
 
@@ -240,7 +269,12 @@ on the OptiPlex via Playwright (logged in as Lash Air at LAX; screenshots review
   high-transfer hub feeders; the per-leg join (driven off `idx_link_history`) fixed it. No schema
   changes; demographics reflect the ~30-week history retention.
 
-## Air Cargo C-1 (cargo demand layer) — shipped 2026-06-20 (local commit, not yet deployed)
+## Air Cargo C-1 — HISTORICAL NOTE (superseded; see "2026-06-21" section below)
+
+> **All of C-1..C-4 are now deployed. The original C-1 status notes below are preserved
+> for historical context only — ignore the "local commit, not yet deployed" language.**
+
+## Air Cargo C-1 (cargo demand layer) — originally shipped 2026-06-20
 
 First slice of the Air Cargo feature. Release scope was decided as **C-1 + C-2 only, read-only
 UI** (no Cargo Terminal asset / no freighters this release). Full executable plan lives at
@@ -272,7 +306,10 @@ First time `-Dsolo.cargo.enabled=true` runs on real data, read the `[cargo] dema
 and tune `CARGO_BASE_DIVISOR` (constant) / `solo.cargo.demandAmplitude` (knob) so totals are sane
 before C-2 turns demand into revenue.
 
-### Next session: pick up at Air Cargo C-2 (belly cargo revenue — the playable increment)
+### ~~Next session: pick up at Air Cargo C-2~~ — STALE (C-2 through C-4 are all shipped; see 2026-06-21 section)
+
+<details>
+<summary>Historical C-2 through C-4 implementation notes (for reference only)</summary>
 
 Follow phase C-2 in `glittery-finding-zebra.md`. Summary of what's left:
 1. **Belly capacity (C-2.1):** add a *derived* `bellyCargoCapacity` helper on `Model`
@@ -304,6 +341,8 @@ Reminders for the next session: run `airline-data` `sbt publishLocal` before com
 this checkout is the Desktop one (`C:\Users\logan\Desktop\Airline\airline`), git repo lives in the
 `airline/` subdir; C-1 commit `f9144132` is local on `master` and still needs pushing/deploying
 (can be folded into the C-2 deploy).
+
+</details>
 
 ## 2026-06-21 — Cargo data surfacing, airport mobile UX, DB pool fix (shipped + deployed)
 
@@ -384,14 +423,12 @@ deployed to OptiPlex, CI green. Live-verified: `/airports/3599/cargo-demand` →
   no-base/size/cash in BOTH label and reason so they stay aligned.
 
 ### Remaining follow-ups (lower priority)
-- **Other nested-connection spots** (cache-fault risk, not yet fixed): `LinkSource.loadLinksByQueryString`
-  / `loadLinkConsumptionsByQuery`, `AirlineSource.loadAirlineBasesByQueryString`,
-  `AirportAssetSource.loadByCriteria` call in-memory caches mid-iteration that open a connection only
-  on a cold-cache miss. Apply the "read rows, release connection, resolve cache refs after" pattern if
-  pool pressure recurs.
-- **`_demandEtag` (passenger) has the same cycle-only-etag bug** the cargo one was fixed for — switching
-  airports in one cycle can 304 to stale passenger demand cards. Key it by airportId like
-  `_cargoDemandEtag` (airport.js).
+- **Nested-connection spots** — FIXED 2026-06-27. `LinkSource.loadLinksByQueryString`,
+  `loadLinkConsumptionsByQuery`, `AirlineSource.loadAirlineBasesByQueryString`, and
+  `AirportAssetSource.loadByCriteria` all restructured: read raw rows first, release connection,
+  resolve cache refs after.
+- **Passenger demand ETag bug** — FIXED 2026-06-27. `_demandEtagAirportId` added to `airport.js`;
+  304 now gated on same airportId (matching cargo demand pattern).
 - **`topCargoDestinations` perf:** recomputes per-pair each cache-miss instead of reusing the module's
   per-cycle memoized matrix (`demandFor`/`prepareCargoCache`); bounded by `ResponseCache` (one sweep
   per airport per cycle) so low priority.

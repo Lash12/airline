@@ -62,7 +62,8 @@ jobs:
           com.patson.model.UserSpec
           com.patson.model.StockModelSpec
           com.patson.ModelDiscountSpec
-          com.patson.AirportSimulationSpec"
+          com.patson.AirportSimulationSpec
+          com.patson.RouteForecastServiceSpec"
           publishLocal
 
       - name: Compile airline-web

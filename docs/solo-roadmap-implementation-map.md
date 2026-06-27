@@ -310,78 +310,19 @@ cargo aggregation code.
 
 ---
 
-## 5. Pause-when-idle simulation and cycle phase profiler
+## 5. ~~Pause-when-idle simulation~~ — ABANDONED BY PRODUCT DECISION
 
-### Current relevant code
-**Both pieces are already fully implemented in code** — they are just not enabled in the
-deploy:
-- `airline-data/.../MainSimulation.scala:17` — `CYCLE_DURATION = 60 * 29`.
-- `MainSimulation.scala:25-26` — `pauseWhenIdle` (`simulation.pauseWhenIdle`, default false)
-  and `idleGraceMinutes` (`simulation.idleGraceMinutes`, default 60), read via
-  `Constants.configFactory`.
-- `MainSimulation.scala:64` — `isIdle()`: compares `System.currentTimeMillis()` against last
-  activity.
-- `MainSimulation.scala:272-274` — the scheduler's `ExecuteProcessing` handler: when
-  `pauseWhenIdle && isIdle() && !fastForwardPending()`, it skips the cycle and logs
-  `"Simulation paused: no player activity..."`.
-- `airline-data/.../data/HeartbeatSource.scala` — `touch()` / `lastActiveMillis()`, backed by
-  a self-creating `activity_heartbeat` table (id=1 singleton row) — this is the **cross-JVM**
-  mechanism (web JVM writes, sim JVM reads) that Phase 2 of
-  `docs/single-player-performance-roadmap.md` called for, already built.
-- `airline-data/.../MainSimulation.scala:97-192` — `startCycle`: `phaseTimings` /
-  `timed(phaseName)(block)` wraps each phase (LinkSimulation, AirportSimulation,
-  AirlineSimulation, ...) and logs `>>>>> cycle N phase timings: ...` — this **is** the Phase 3
-  cycle profiler called for by the roadmap.
-- **Confirmed not wired up**: `grep` of `.github/workflows/optiplex-deploy.yml` shows no
-  `-Dsimulation.pauseWhenIdle` / `-Dsimulation.idleGraceMinutes` anywhere — the feature is
-  dead code in production today. The phase-timing log line is unconditional (always logs),
-  so the "profiler" is effectively always-on already, just not surfaced anywhere besides raw
-  sim logs.
-- **Confirmed wired**: `HeartbeatSource.touch()` is already called from
-  `airline-web/app/websocket/ActorCenter.scala:260` (on websocket activity) and
-  `airline-web/app/controllers/UserApplication.scala:78` (login path, with the comment
-  `//wake the simulation if it is paused-when-idle` — confirming the author already intended
-  this to be wired up for the pause feature, even though the sim-side flag is currently off).
+**Do not implement. Do not enable `-Dsimulation.pauseWhenIdle=true` in any deploy.**
 
-### Proposed implementation approach
-1. Heartbeat wiring is already in place end-to-end — no new code needed for the mechanism
-   itself.
-2. Enable `-Dsimulation.pauseWhenIdle=true` (with a sane `idleGraceMinutes`, e.g. 60–120) in
-   the **single-player (`SIM_SOLO_OPTS`)** deploy profile only — leave multiplayer/default
-   untouched, consistent with every other solo flag.
-3. Add a lightweight ops-visible counter (e.g. cumulative cycles skipped) — `MainSimulation`
-   already has `SimulationEventStream.scala:31` (`cycleDurationAverage`); a parallel
-   skip-counter is a small, low-risk addition for the OBSERVABILITY.md doc.
-4. Promote the existing phase-timing log line into `OBSERVABILITY.md` as a documented,
-   supported diagnostic (it already exists; just needs to be discoverable) rather than new
-   code.
+The game world must advance continuously regardless of player activity. This was decided
+in 2026-06 and applies to all future work in this repo.
 
-### Data model changes
-None — `activity_heartbeat` table already exists and self-creates.
+The code exists (`MainSimulation.scala`, `HeartbeatSource.scala`, `ActorCenter.scala`),
+but enabling it is refused by product decision, not a technical blocker.
 
-### API changes
-None required. Optionally surface "simulation paused due to inactivity" as a tiny web-side
-status indicator (read `HeartbeatSource`/a new lightweight "is sim paused" signal) — nice-to-
-have, not required for the core feature.
-
-### UI changes
-None required for the core mechanic (it's a backend resource optimization). Optional: a small
-"Game paused — no recent activity" banner if the web JVM can cheaply detect the sim hasn't
-advanced (compare last known cycle vs. expected cadence) — defer unless requested.
-
-### Test plan
-- This is mostly **already covered or trivially verifiable** since the code exists:
-  confirm/add a unit test for `isIdle()`'s boundary (`MainSimulation` logic, may need a small
-  refactor to make it unit-testable in isolation if not already — check for an existing spec;
-  none was found under this name, so add one).
-- Live: enable the flag in solo-only, watch sim logs for the "Simulation paused" line during
-  an idle window, confirm cycle resumes promptly on reconnect (per the roadmap's acceptance
-  criteria — idle box near 0% CPU between scheduler wakes).
-
-### Risks and sequencing dependencies
-Very low risk and very high value-to-effort ratio — this is **mostly a deploy-config change**,
-not new code, assuming the heartbeat wiring is confirmed. Should be one of the first roadmap
-items picked up given how little work remains. No dependencies on other objectives.
+**Cycle phase profiler** (the second half of this objective) is already shipped:
+`MainSimulation.startCycle` logs `>>>>> cycle N phase timings:` on every cycle
+unconditionally. No further work needed.
 
 ---
 
@@ -721,7 +662,7 @@ new specs on top of a now-trustworthy baseline.
 | Order | Objective | Why this position |
 |---|---|---|
 | 1 | 9. E2E/regression CI hardening | No dependencies; de-risks everything after it; mostly config, not new code. |
-| 2 | 5. Pause-when-idle + profiler | Already built; just enable + verify; near-zero implementation cost. |
+| 2 | ~~5. Pause-when-idle + profiler~~ | **ABANDONED** — do not implement. Profiler already ships unconditionally. |
 | 3 | 1. Migration/DB hardening | Needed before any objective that adds new tables (7, 8). |
 | 4 | 2. Cargo market visibility | Additive on a stable, shipped feature; pairs with 3's planner work. |
 | 5 | 4. Progression MVP extensions | Additive on a stable, shipped feature; natural cross-link to 2. |

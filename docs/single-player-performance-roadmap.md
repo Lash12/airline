@@ -27,6 +27,8 @@ numbers to this doc as the "before" column.
    `innodb_buffer_pool_size=768M`, `performance_schema=OFF`, `skip-log-bin`,
    `innodb_flush_log_at_trx_commit=2`, `max_connections=60`.
 3. **Hikari pools**: web `hikari.maxPoolSize` 30 → 10, data 15 → 8.
+   _(Update: pool was raised to 16 in the DB pool exhaustion fix 2026-06-21 —
+   keep at 16 unless memory pressure demands lower.)_
 4. **Fix `docker-compose.small.yaml`**: it currently references `build: .` and a
    `./app` volume that don't match the repo layout — rebuild it on the real
    `.docker/` images, drop Elasticsearch, add `mem_limit`s, mount the `my.cnf`.
@@ -36,49 +38,40 @@ numbers to this doc as the "before" column.
    `airline-web/build.sbt` are NOT dead weight — `GooglePhotoUtil` backs the
    banner feature and `javax.mail` backs `EmailService` — they stay.
 
-## Phase 2 — Pause-when-idle simulation (biggest win)
-`MainSimulation` advances the world every 29 minutes of wall-clock time even with
-zero players (`MainSimulation.scala`, `CYCLE_DURATION = 60 * 29`).
+## ~~Phase 2 — Pause-when-idle simulation~~ — ABANDONED
 
-- Track player activity in airline-web (active websocket sessions in
-  `app/websocket/ActorCenter.scala` and/or authenticated HTTP requests) and write
-  a last-active heartbeat to a small DB table — using the DB avoids new
-  pekko-remote message types between the two JVMs.
-- In the simulation scheduler, before each cycle: if
-  `simulation.pauseWhenIdle = true` (new flag, default false) and last activity
-  is older than `simulation.idleGraceMinutes` (default 60), skip the cycle and
-  log it. Game time simply stops while away — no catch-up burst on return.
-- Acceptance: idle box sits near 0% CPU between scheduler wakes; play resumes
-  within one cycle interval of reconnecting.
+**Product decision (2026-06): do not implement pause-when-idle or any feature that
+skips, pauses, or delays simulation cycles because the player is inactive.**
 
-## Phase 3 — Cheaper cycles
-- **Per-phase cycle profiler**: log wall time of each phase in
-  `MainSimulation.startCycle` (LinkSimulation, AirportSimulation,
-  AirlineSimulation, ...) so optimization targets are measured, not guessed.
-- **Targeted cache invalidation — investigated and rejected.** Airports are NOT
-  static from the simulation's point of view: players mutate them (bases,
-  lounges) through the *web JVM*, which has its own cache instances, and the
-  sim's start-of-cycle `invalidateAll()` is what picks those cross-process
-  writes up. Skipping or deferring it would make the sim ignore player actions
-  taken between cycles. A correct fix needs cross-JVM cache invalidation
-  (event-driven over the existing pekko bridge) — deliberately out of scope.
-- **Demand memoization**: `DemandGenerator` recomputes demand from airport
-  population/income data that rarely changes; cache the base demand model
-  between cycles, recompute on data change only.
-- **PassengerSimulation**: profile first (it loops route-finding up to 10
-  consumption retries); bound or early-exit when remaining capacity is zero.
+The mechanism is already fully built in the code (`MainSimulation.scala`,
+`HeartbeatSource.scala`, `ActorCenter.scala`), but enabling it is intentionally
+refused. The game world should advance continuously. Do not wire
+`-Dsimulation.pauseWhenIdle=true` in any deploy config.
 
-## Phase 4 — Real DB index audit
-`INDEXES.md` documents indexes for `bookings`/`seats`/`flights`/`passengers`
-tables that do not exist in this schema — delete it.
+If a future agent sees this code, leave it disabled. Do not treat "the code exists"
+as a reason to enable it.
 
-- Enable the slow query log (`long_query_time=0.5`) during several cycles plus
-  normal UI browsing; `EXPLAIN` the top offenders against the real tables
-  (`link_consumption`, `passenger_route_history`, `passenger_link_history`,
-  ledger/income, notifications, loyalist).
-- Add measured indexes to `Meta.scala` `createSchema` plus an idempotent
-  migration script for existing databases; write a new `INDEXES.md` containing
-  the actual `EXPLAIN` evidence.
+## Phase 3 — Cheaper cycles — SHIPPED
+
+All three items confirmed shipped as of 2026-06-20 review:
+
+- **Per-phase cycle profiler**: `MainSimulation.startCycle` wraps every phase in
+  `timed(phaseName)(block)` and logs `>>>>> cycle N phase timings:` unconditionally
+  on every cycle. Profiler is always-on; no new code needed.
+- **Demand memoization**: `DemandGenerator` caches the base demand model between
+  cycles, controlled by `solo.demand.memoize=true` (live in `optiplex-deploy.yml`).
+- **PassengerSimulation early exit**: `demandChunks.nonEmpty` guard in the
+  consumption loop prevents spinning on zero-capacity routes.
+
+No further work in this phase.
+
+## Phase 4 — Real DB index audit — SHIPPED
+
+- `INDEXES.md` (stale upstream remnant) already deleted.
+- `link_consumption` airport-pair index (`Meta.scala`) confirmed in place.
+- Slow-query audit is available via `.docker/db/small.cnf` if needed.
+
+No further work in this phase.
 
 ## Phase 5 — Frontend lightening (lower priority on LAN)
 - Self-host the CDN dependencies (jQuery, Chart.js, TypeKit fonts in
@@ -88,11 +81,8 @@ tables that do not exist in this schema — delete it.
 - Images (53 MB in `public/images/`) are already lazy-loaded; optionally convert
   the largest backgrounds to WebP. Lowest priority.
 
-## Phase 6 — Validation
-- Extend the Playwright suite beyond the homepage smoke test: login, airport
-  view, create-link flow.
-- Re-run Phase 0 measurements on the box and record before/after in this doc.
-
-## Suggested PR slicing
-One PR per phase (Phase 1 may split config vs compose). Each PR states its
-measured or expected effect against the Phase 0 baseline.
+## Phase 6 — Playwright validation — PARTIALLY DONE
+- Base scaffold (`e2e/`) exists and runs in CI.
+- Login, airport view, asset modal, and mobile UX tests added through 2026-06-21.
+- Remaining: broader link-creation flow tests; re-run Phase 0 measurements on
+  the live box and record before/after in `docs/performance-baseline.md`.

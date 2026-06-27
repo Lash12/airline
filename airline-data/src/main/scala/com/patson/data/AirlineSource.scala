@@ -478,13 +478,17 @@ object AirlineSource {
   }
 
   def loadAirlineBasesByQueryString(queryString : String, parameters : List[Any], airlines : Map[Int, Airline] = Map()) : List[AirlineBase] = {
-    Using.resource(Meta.getConnection()) { connection =>
-      val (rows, airportIds) = Using.resource(connection.prepareStatement(queryString)) { preparedStatement =>
+    case class BaseRow(airlineId: Int, airportId: Int, scale: Int, foundedCycle: Int, headquarter: Boolean, countryCode: String)
+
+    // Phase 1: read raw rows then release the connection.
+    // AirportCache.getAirports and AirlineCache.getAirline may open their own connections
+    // on a cache miss; calling them inside the connection scope risks nested pool usage.
+    val (rows, airportIds) = Using.resource(Meta.getConnection()) { connection =>
+      Using.resource(connection.prepareStatement(queryString)) { preparedStatement =>
         for (i <- 0 until parameters.size) {
           preparedStatement.setObject(i + 1, parameters(i))
         }
         Using.resource(preparedStatement.executeQuery()) { resultSet =>
-          case class BaseRow(airlineId: Int, airportId: Int, scale: Int, foundedCycle: Int, headquarter: Boolean, countryCode: String)
           val rows = new ListBuffer[BaseRow]()
           val airportIds = scala.collection.mutable.Set[Int]()
           while (resultSet.next()) {
@@ -495,18 +499,17 @@ object AirlineSource {
           (rows, airportIds)
         }
       }
-
-      val airports = AirportCache.getAirports(airportIds.toList)
-
-      val bases = new ListBuffer[AirlineBase]()
-      rows.foreach { row =>
-        val airline = airlines.getOrElseUpdate(row.airlineId, AirlineCache.getAirline(row.airlineId, false).getOrElse(Airline.fromId(row.airlineId)))
-        val airport = airports(row.airportId)
-        bases += AirlineBase(airline, airport, row.countryCode, row.scale, row.foundedCycle, row.headquarter)
-      }
-
-      bases.toList
     }
+
+    // Phase 2: resolve airports and airlines with no connection held.
+    val airports = AirportCache.getAirports(airportIds.toList)
+    val bases = new ListBuffer[AirlineBase]()
+    rows.foreach { row =>
+      val airline = airlines.getOrElseUpdate(row.airlineId, AirlineCache.getAirline(row.airlineId, false).getOrElse(Airline.fromId(row.airlineId)))
+      val airport = airports(row.airportId)
+      bases += AirlineBase(airline, airport, row.countryCode, row.scale, row.foundedCycle, row.headquarter)
+    }
+    bases.toList
   }
 
 

@@ -73,6 +73,7 @@ jobs:
             -Dsolo.consultant.enabled=true
             -Dsolo.exec.enabled=true
             -Dsolo.alliance.minMembers=2
+            -Dsolo.routeForecast.enabled=true
           # Web process (sign-up + tooltips): starting capital and the same
           # economy display values so tooltips match the simulation.
           # alliance.minMembers must match the sim so alliance status agrees across JVMs;
@@ -95,6 +96,7 @@ jobs:
             -Dsolo.lounge.allowWithoutAlliance=true
             -Dsolo.alliance.minMembers=2
             -Dsolo.exec.enabled=true
+            -Dsolo.routeForecast.enabled=true
             -Dassets.version=${{ github.sha }}
             -Dsolo.push.enabled=true
             -Dsolo.push.vapidPublicKey=${{ secrets.SOLO_PUSH_VAPID_PUBLIC_KEY }}

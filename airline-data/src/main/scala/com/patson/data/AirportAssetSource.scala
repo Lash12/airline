@@ -89,7 +89,14 @@ object AirportAssetSource {
 
   private def loadByCriteria(criteria : List[(String, Any)]) : List[AirportAsset] = {
     ensureTable()
-    Using.resource(Meta.getConnection()) { connection =>
+
+    case class AssetRow(airportId: Int, airlineId: Int, assetType: String, level: Int,
+                        status: String, completionCycle: Int, id: Int)
+
+    // Phase 1: read raw rows, then release the connection.
+    // AirportCache.getAirport may open its own connection on a cache miss; calling it
+    // inside an active ResultSet risks a nested connection under pool pressure.
+    val rawRows = Using.resource(Meta.getConnection()) { connection =>
       var queryString = "SELECT * FROM " + AIRPORT_ASSET_TABLE
       if (criteria.nonEmpty) {
         queryString += " WHERE " + criteria.map(_._1 + " = ?").mkString(" AND ")
@@ -97,18 +104,25 @@ object AirportAssetSource {
       Using.resource(connection.prepareStatement(queryString)) { statement =>
         criteria.zipWithIndex.foreach { case ((_, value), index) => statement.setObject(index + 1, value) }
         Using.resource(statement.executeQuery()) { rs =>
-          val result = ListBuffer[AirportAsset]()
+          val rows = ListBuffer[AssetRow]()
           while (rs.next()) {
-            val airportId = rs.getInt("airport")
-            AirportCache.getAirport(airportId, false).foreach { airport =>
-              rowToAsset(airport, rs.getInt("airline"), rs.getString("asset_type"), rs.getInt("level"),
-                rs.getString("status"), rs.getInt("completion_cycle"), rs.getInt("id")).foreach(result += _)
-            }
+            rows += AssetRow(rs.getInt("airport"), rs.getInt("airline"), rs.getString("asset_type"),
+              rs.getInt("level"), rs.getString("status"), rs.getInt("completion_cycle"), rs.getInt("id"))
           }
-          result.toList
+          rows.toList
         }
       }
     }
+
+    // Phase 2: resolve airport objects with no connection held.
+    val result = ListBuffer[AirportAsset]()
+    rawRows.foreach { row =>
+      AirportCache.getAirport(row.airportId, false).foreach { airport =>
+        rowToAsset(airport, row.airlineId, row.assetType, row.level,
+          row.status, row.completionCycle, row.id).foreach(result += _)
+      }
+    }
+    result.toList
   }
 
   /** Insert a new asset, returning it with the generated id. */
