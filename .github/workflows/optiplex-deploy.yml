@@ -64,7 +64,7 @@ jobs:
             -Dsolo.airportAssets.enabled=true
             -Dsolo.cargo.enabled=true
             -Dsolo.cargo.captureRatio=0.5
-            -Dsolo.cargo.revenuePerUnitKm=0.0002
+            -Dsolo.cargo.revenuePerUnitKm=0.01
             -Dsolo.cargo.assets.enabled=true
             -Dsolo.cargo.freighters.enabled=true
             -Dsolo.news.enabled=true
@@ -90,7 +90,7 @@ jobs:
             -Dsolo.airportAssets.enabled=true
             -Dsolo.cargo.enabled=true
             -Dsolo.cargo.captureRatio=0.5
-            -Dsolo.cargo.revenuePerUnitKm=0.0002
+            -Dsolo.cargo.revenuePerUnitKm=0.01
             -Dsolo.cargo.assets.enabled=true
             -Dsolo.cargo.freighters.enabled=true
             -Dsolo.lounge.allowWithoutAlliance=true

@@ -255,7 +255,7 @@ object SoloConfig {
   var cargoEnabled : Boolean = boolAt("solo.cargo.enabled", false)
   val cargoDemandAmplitude : Double = doubleAt("solo.cargo.demandAmplitude", 1.0)
   val cargoCaptureRatio : Double = doubleAt("solo.cargo.captureRatio", 0.5)
-  val cargoRevenuePerUnitKm : Double = doubleAt("solo.cargo.revenuePerUnitKm", 0.0002)
+  val cargoRevenuePerUnitKm : Double = doubleAt("solo.cargo.revenuePerUnitKm", 0.01)
   val cargoAssetsEnabled : Boolean = boolAt("solo.cargo.assets.enabled", false)
   val cargoFreightersEnabled : Boolean = boolAt("solo.cargo.freighters.enabled", false)
 
