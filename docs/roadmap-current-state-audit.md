@@ -34,12 +34,14 @@ Java 17 / sbt from standard PATH. No manual JAVA_HOME injection needed on this c
 | Traffic Analytics | always-on | Per-route demographics, no flag |
 | Air Cargo C-1..C-4 | `solo.cargo.enabled` | Belly + freighters + Cargo Terminal + ledger |
 | Airport Cargo Demand panel | `solo.cargo.enabled` | `GET /airports/:id/cargo-demand`, rendered in `airport.js` |
+| Airport Cargo Opportunities panel | `solo.cargo.enabled` | `GET /airports/:id/cargo-opportunities`, fully wired JS + HTML + e2e (2026-06-27) |
+| Route Forecast | `solo.routeForecast.enabled` | Backend + frontend + flag enabled in deploy + e2e (2026-06-27) |
+| Cargo revenue rate balance fix | `solo.cargo.revenuePerUnitKm=0.01` | Raised 50× from 0.0002; see `docs/balance-review-2026-06.md` |
 | Executive Team phases 0-2 | (existing flag) | C-suite buffs + leveling |
-| DB pool hardening | always-on | `hikari.maxPoolSize 16`; nested-connection fix in Airline/Alliance sources |
+| DB pool hardening | always-on | `hikari.maxPoolSize 16`; nested-connection fix in Airline/Alliance/Link/Asset sources |
 | DB schema migrations | always-on | `SchemaPatchRunner` auto-runs at startup |
-| Route Forecast | `solo.routeForecast.enabled` | **See section below** |
 
-### Route Forecast — backend complete, flag disabled by default
+### Route Forecast — fully shipped and enabled
 
 `GET /airlines/:id/route-forecast?originAirportId=X&destinationAirportId=Y`
 
@@ -47,8 +49,10 @@ Java 17 / sbt from standard PATH. No manual JAVA_HOME injection needed on this c
 - `LinkApplication.getRouteForecast` implemented ✓
 - `RouteForecastService.getForecast` implemented ✓
 - `SoloConfig.routeForecastEnabled` flag exists, defaults `false` ✓
-- Frontend call exists in `airline.js` (route planner panel) — needs confirmation
-- **Not yet enabled in `optiplex-deploy.yml`** — add `-Dsolo.routeForecast.enabled=true` to both `SIM_SOLO_OPTS` and `WEB_SOLO_OPTS` when ready to ship
+- `fetchAndShowRouteForecast` in `airline.js:1485`, called from `planLink` at line 939 ✓
+- **`-Dsolo.routeForecast.enabled=true` in both `SIM_SOLO_OPTS` and `WEB_SOLO_OPTS`** (added 2026-06-27) ✓
+- E2E spec: `e2e/tests/route-forecast.spec.ts` ✓
+- `RouteForecastServiceSpec` in CI (`ci.yml`) ✓
 
 Returns structured JSON: `passengerDemandEstimate`, `cargoDemandEstimate`, `expectedRevenue`, `expectedCost`, `expectedProfit`, `confidenceLevel`, `competitionLevel`, `recommendedAircraftModels`, `recommendedFrequency`, `reasons`, plus a `compatible`/`blockingReason` block from the route-rejection check.
 
@@ -58,18 +62,18 @@ HTTP statuses:
 - `400` for other errors
 - `200 Ok` with JSON on success
 
-### Airport Cargo Opportunities — backend complete, NO frontend wiring
+### Airport Cargo Opportunities — fully shipped
 
 `GET /airports/:id/cargo-opportunities`
 
 - Route registered in `conf/routes` ✓
-- `Application.getAirportCargoOpportunities` implemented ✓  
-- `CargoMarketVisibilityService.getCargoOpportunities` implemented ✓
+- `Application.getAirportCargoOpportunities` implemented ✓
+- `CargoMarketVisibilityService.getCargoOpportunities` implemented ✓ (returns model names via `AirplaneModelCache`)
 - `ResponseCache.cargoOpportunitiesCache` wired ✓
-- **No call in `airport.js`** — endpoint returns data but nothing renders it
-- No section placeholder in `airport_canvas.scala.html` for opportunities (the demand section `#airportCargoDemandSection` exists and works; opportunities needs its own section)
-
-This is a deliberate gap: the demand panel (C-1..C-4 scope) shipped; opportunities panel was backend-built but deferred.
+- `loadAirportCargoOpportunities` in `airport.js:1671`, called from `populateAirportDetails` at line 996 ✓
+- `renderCargoOpportunities` in `airport.js:1690` (cards with demand/yield/aircraft/notes/"Plan cargo route" button) ✓
+- `#airportCargoOpportunitiesSection` placeholder in `airport_canvas.scala.html:407` ✓
+- E2E spec: `e2e/tests/cargo-opportunities.spec.ts` (4 tests, uses `page.evaluate` to bypass ancestor visibility) ✓
 
 ## What is stale / abandoned
 
@@ -81,13 +85,16 @@ This is a deliberate gap: the demand panel (C-1..C-4 scope) shipped; opportuniti
 
 ## Known gaps / follow-up items (lower priority)
 
-1. **`cargo-opportunities` frontend:** Add `loadAirportCargoOpportunities` call + `#airportCargoOpportunitiesSection` placeholder in `airport_canvas.scala.html` when ready to surface the panel.
-2. **Route forecast enable in deploy:** Add `-Dsolo.routeForecast.enabled=true` to `optiplex-deploy.yml` when ready.
-3. **Passenger demand ETag bug:** `_demandEtag` in `airport.js` is cycle-keyed only (no airport-id component) — switching airports in one cycle can 304 to stale passenger demand cards. Fix: key by `${airportId}_${cycle}` like `_cargoDemandEtag`.
-4. **Nested-connection spots not yet fixed:** `LinkSource.loadLinksByQueryString`, `AirlineSource.loadAirlineBasesByQueryString`, `AirportAssetSource.loadByCriteria` — apply "release before cache resolve" pattern if pool pressure recurs.
+1. ~~**`cargo-opportunities` frontend**~~ — **DONE 2026-06-27.** Fully wired.
+2. ~~**Route forecast enable in deploy**~~ — **DONE 2026-06-27.** Flag enabled in both SIM + WEB opts.
+3. ~~**Passenger demand ETag bug**~~ — **FIXED 2026-06-27.** `_demandEtagAirportId` added to `airport.js`.
+4. ~~**Nested-connection spots not yet fixed**~~ — **FIXED 2026-06-27.** Four methods restructured.
 5. **`topCargoDestinations` perf:** Recomputes per-pair on cache miss instead of reusing the per-cycle memo matrix — bounded by `ResponseCache` so low priority.
-6. **`RouteForecastServiceSpec`:** Requires live MySQL to run; cannot be exercised locally. Consider extracting a DB-free unit test for the pure computation path (similar to `CargoDemandGeneratorSpec`).
+6. **`RouteForecastServiceSpec`:** Requires live MySQL; cannot run locally. DB-free extraction is optional polish.
+7. **Cargo revenue rate** — raised from `0.0002` → `0.01` (50×) on 2026-06-27 per `docs/balance-review-2026-06.md`. Freighter viability still needs a separate multiplier (tracked as R2 in that doc, deferred).
 
-## Recommended next prompt
+## Recommended next work
 
-Enable route forecast in the deploy config and verify end-to-end in the route planner, OR build the airport cargo opportunities frontend panel. Both are self-contained.
+See `docs/next-development-priorities.md`. Short list: cargo opportunities UX polish, route
+forecast quality improvements, consultant/advisor polish, balance telemetry after the cargo
+rate change, and E2E hardening. Cargo contracts need a design doc before implementation.

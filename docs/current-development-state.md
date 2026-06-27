@@ -20,9 +20,10 @@ unless noted otherwise.
 | Executive Team phases 0-2 | (existing flag) | Deployed |
 | DB pool hardening (pool=16, nested-connection fix) | always-on | Deployed |
 | Schema migrations (`SchemaPatchRunner`) | always-on | Deployed |
-| Route Forecast backend | `solo.routeForecast.enabled` (default off) | Deployed but **flag not enabled in deploy config** |
-| Airport Cargo Opportunities backend | `solo.cargo.enabled` | Deployed but **no frontend wiring** |
-| `RouteForecastServiceSpec` added to CI | — | In `ci.yml` as of 2026-06-27, not yet run in CI |
+| Route Forecast (backend + frontend + e2e) | `solo.routeForecast.enabled` | Deployed; flag **enabled** in `optiplex-deploy.yml` (both SIM + WEB, 2026-06-27) |
+| Airport Cargo Opportunities (full stack) | `solo.cargo.enabled` | Deployed; JS + HTML + e2e all wired (2026-06-27) |
+| `RouteForecastServiceSpec` + cargo-opportunities e2e | — | Both in CI as of 2026-06-27 |
+| Cargo revenue rate raised 50× | `solo.cargo.revenuePerUnitKm=0.01` | Balance fix (2026-06-27); was 0.0002 (economically negligible) |
 
 ## Do Not Build
 
@@ -435,7 +436,12 @@ deployed to OptiPlex, CI green. Live-verified: `/airports/3599/cargo-demand` →
 
 ## Suggested Next Feature Phase
 
-- **Air Cargo C-1..C-4 are all shipped/deployed.** Remaining cargo work is the Airport Cargo Demand
-  panel (see Next steps above) and any economy tuning.
-- Tuning backlog: the `solo.airportAssets.*` cost/upkeep/income multipliers and `solo.ai.bases.*`
-  knobs can be adjusted live once playtest shows how the cadence/economy feel.
+Everything through cargo-rate balance is shipped. See `docs/next-development-priorities.md`
+for the current ordered work list. Short version of next real work:
+
+1. **Cargo opportunities UX polish** — panel renders but could use better sorting, yield explanation, and a "plan cargo route" deeplink.
+2. **Route forecast quality** — forecast shows numbers; add confidence calibration, competition context, and better aircraft suggestions.
+3. **Consultant/advisor polish** — existing advisor UI works; polish tone, add actionable recommendations.
+4. **Balance telemetry** — after `cargoRevenuePerUnitKm=0.01` deploys, validate cargo as 2-8% of airline revenue; tune `cargoDemandAmplitude` if routes feel thin.
+5. **E2E / CI hardening** — expand Playwright coverage beyond smoke; make cargo-opportunities and route-forecast e2e tests more robust.
+6. **Cargo contracts design** — not ready to implement; needs a design doc first.
