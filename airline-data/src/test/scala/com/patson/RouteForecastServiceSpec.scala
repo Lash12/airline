@@ -66,7 +66,7 @@ class RouteForecastServiceSpec extends AnyWordSpecLike with Matchers with Before
       forecast.passengerDemandEstimate should be > 0
       forecast.cargoDemandEstimate shouldBe 0
       forecast.expectedRevenue should be > 0L
-      forecast.expectedProfit should be > 0L
+      forecast.expectedCost should be > 0L
       forecast.recommendedAircraftModels should not be empty
       forecast.recommendedFrequency should not be empty
       forecast.reasons should contain ("Cargo simulation is disabled.")
