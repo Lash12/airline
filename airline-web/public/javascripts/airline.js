@@ -941,9 +941,17 @@ function planLink(fromAirport, toAirport, isRefresh) {
 
 var planLinkState = { fromAirportId: null, toAirportId: null }
 var planTransportType = "FLIGHT"
+var _forceCargoPlanType = false
 
 function isCargoPlan() {
     return planTransportType === "CARGO_FLIGHT"
+}
+
+// Opens the route planner pre-set to cargo (CARGO_FLIGHT) mode.
+// Falls back to normal planLink if freighters are not enabled on this route.
+function planCargoLink(fromAirport, toAirport) {
+    _forceCargoPlanType = true
+    planLink(fromAirport, toAirport)
 }
 
 function setPlanTransportType(transportType) {
@@ -998,7 +1006,8 @@ function updatePlanLinkInfo(linkInfo, isRefresh) {
 
 	if (!linkInfo.existingLink) {
 	    if (!isRefresh) {
-	        var defaultType = "FLIGHT";
+	        var defaultType = (_forceCargoPlanType && linkInfo.cargoFreightersEnabled) ? "CARGO_FLIGHT" : "FLIGHT";
+	        _forceCargoPlanType = false
 	        $('#planLinkTransportType').val(defaultType);
 	        setPlanTransportType(defaultType);
 	    }

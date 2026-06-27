@@ -1699,55 +1699,105 @@ function renderCargoOpportunities(opportunities, airportId) {
     }
     if (section) section.style.display = ''
 
+    // Sort: unserved demand desc; break ties by capturable revenue (unserved × yield) desc
+    const sorted = opportunities.slice().sort(function(a, b) {
+        var byUnserved = b.weeklyCargoUnserved - a.weeklyCargoUnserved
+        if (byUnserved !== 0) return byUnserved
+        return (b.weeklyCargoUnserved * b.estimatedYield) - (a.weeklyCargoUnserved * a.estimatedYield)
+    })
+
+    const allServed = sorted.every(function(o) { return o.weeklyCargoUnserved === 0 })
+    const PAGE_SIZE = 10
+
     const h3 = document.createElement('h3')
     h3.textContent = (activeAirport ? activeAirport.city + ' ' : '') + 'Cargo Opportunities'
     container.appendChild(h3)
 
     const helper = document.createElement('p')
-    helper.textContent = 'Top freight lanes by unserved weekly demand'
+    helper.textContent = allServed
+        ? 'All top cargo lanes from this airport are currently being served.'
+        : 'Top freight lanes — ranked by weekly unserved demand'
     helper.className = 'pb-4'
     container.appendChild(helper)
 
-    opportunities.forEach(function(opp) {
+    if (allServed) return
+
+    const cardsWrap = document.createElement('div')
+    container.appendChild(cardsWrap)
+
+    function buildCard(opp) {
+        const isFullyServed = opp.weeklyCargoUnserved === 0
+        const pctUnserved = opp.weeklyCargoDemand > 0
+            ? Math.round(opp.weeklyCargoUnserved / opp.weeklyCargoDemand * 100)
+            : 0
+        const isHighDemand = pctUnserved >= 50
+        const hasNoAircraft = (!opp.recommendedAircraftModelNames || opp.recommendedAircraftModelNames.length === 0) && !isFullyServed
+        const estRevenue = Math.round(opp.weeklyCargoUnserved * opp.estimatedYield)
+
         const card = document.createElement('div')
         card.className = 'card'
+        if (isFullyServed) card.style.opacity = '0.55'
 
+        // Header: IATA · city name · badge
         const headerRow = document.createElement('div')
         headerRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;'
-        headerRow.innerHTML = '<strong class="iata">' + opp.destinationCode + '</strong><span>' + opp.destinationName + '</span>'
 
+        const left = document.createElement('span')
+        left.innerHTML = '<strong class="iata">' + opp.destinationCode + '</strong>'
+
+        const right = document.createElement('span')
+        right.style.cssText = 'display:flex;align-items:center;gap:6px;'
+        right.textContent = opp.destinationName
+
+        if (isFullyServed) {
+            const badge = document.createElement('span')
+            badge.textContent = '✓ Served'
+            badge.style.cssText = 'font-size:10px;color:#78cd6b;'
+            right.appendChild(badge)
+        } else if (isHighDemand) {
+            const badge = document.createElement('span')
+            badge.textContent = '● ' + pctUnserved + '% open'
+            badge.style.cssText = 'font-size:10px;color:#e07b5a;font-weight:bold;'
+            right.appendChild(badge)
+        }
+        headerRow.appendChild(left)
+        headerRow.appendChild(right)
+
+        // Demand row
         const demandRow = document.createElement('div')
         demandRow.style.cssText = 'font-size:11px;color:#bbb;margin-bottom:3px;'
         demandRow.innerHTML =
             '&#128230; ' + commaSeparateNumber(opp.weeklyCargoDemand) + ' total' +
-            ' &nbsp;&middot;&nbsp; ' +
-            '<span style="color:#78cd6b">&#10003; ' + commaSeparateNumber(opp.weeklyCargoServed) + ' served</span>' +
-            ' &nbsp;&middot;&nbsp; ' +
-            '<span style="color:#d66061">&#10007; ' + commaSeparateNumber(opp.weeklyCargoUnserved) + ' unserved</span>'
+            ' &nbsp;&middot;&nbsp; <span style="color:#78cd6b">&#10003;&nbsp;' + commaSeparateNumber(opp.weeklyCargoServed) + ' served</span>' +
+            ' &nbsp;&middot;&nbsp; <span style="color:' + (opp.weeklyCargoUnserved > 0 ? '#e07b5a' : '#78cd6b') + '">&#10007;&nbsp;' + commaSeparateNumber(opp.weeklyCargoUnserved) + ' unserved</span>'
 
-        const yieldRow = document.createElement('div')
-        yieldRow.style.cssText = 'font-size:11px;color:#ccc;margin-bottom:3px;'
-        yieldRow.textContent = 'Est. yield: $' + opp.estimatedYield.toFixed(4) + '/unit·km'
+        // Revenue estimate (only meaningful when there is unserved demand)
+        const revenueRow = document.createElement('div')
+        revenueRow.style.cssText = 'font-size:11px;color:#ccc;margin-bottom:3px;'
+        revenueRow.className = 'opp-revenue'
+        if (!isFullyServed && estRevenue > 0) {
+            revenueRow.textContent = 'Est. capturable: ' + abbreviateMoney(estRevenue) + '/week'
+        }
 
         card.appendChild(headerRow)
         card.appendChild(demandRow)
-        card.appendChild(yieldRow)
+        if (revenueRow.textContent) card.appendChild(revenueRow)
 
+        // Aircraft recommendation
+        const aircraftRow = document.createElement('div')
+        aircraftRow.style.cssText = 'font-size:11px;color:#aaa;margin-bottom:3px;'
+        aircraftRow.className = 'opp-aircraft'
         if (opp.recommendedAircraftModelNames && opp.recommendedAircraftModelNames.length > 0) {
-            const aircraftRow = document.createElement('div')
-            aircraftRow.style.cssText = 'font-size:11px;color:#aaa;margin-bottom:3px;'
-            aircraftRow.className = 'opp-aircraft'
             aircraftRow.textContent = '✈ ' + opp.recommendedAircraftModelNames.join(', ')
             card.appendChild(aircraftRow)
-        } else if (opp.weeklyCargoUnserved > 0) {
-            const aircraftRow = document.createElement('div')
-            aircraftRow.style.cssText = 'font-size:11px;color:#aaa;margin-bottom:3px;font-style:italic;'
-            aircraftRow.className = 'opp-aircraft'
+        } else if (!isFullyServed) {
+            aircraftRow.style.fontStyle = 'italic'
             aircraftRow.textContent = 'No suitable freighter aircraft for this route.'
             card.appendChild(aircraftRow)
         }
 
-        if (opp.notes) {
+        // Notes (skip for fully-served cards — no action needed)
+        if (opp.notes && !isFullyServed) {
             const notesRow = document.createElement('div')
             notesRow.style.cssText = 'font-size:11px;color:#aaa;font-style:italic;margin-bottom:4px;'
             notesRow.className = 'opp-notes'
@@ -1755,14 +1805,33 @@ function renderCargoOpportunities(opportunities, airportId) {
             card.appendChild(notesRow)
         }
 
-        const planBtn = document.createElement('button')
-        planBtn.textContent = 'Plan cargo route →'
-        planBtn.style.cssText = 'font-size:11px;padding:3px 8px;margin-top:4px;cursor:pointer;'
-        planBtn.onclick = function() { planLink(airportId, opp.destinationAirportId) }
-        card.appendChild(planBtn)
+        // Action button (only when there is demand to capture)
+        if (!isFullyServed) {
+            const planBtn = document.createElement('button')
+            planBtn.textContent = 'Plan cargo route →'
+            planBtn.style.cssText = 'font-size:11px;padding:3px 8px;margin-top:4px;cursor:pointer;'
+            planBtn.className = 'opp-plan-btn'
+            planBtn.onclick = function() { planCargoLink(airportId, opp.destinationAirportId) }
+            card.appendChild(planBtn)
+        }
 
-        container.appendChild(card)
-    })
+        return card
+    }
+
+    sorted.slice(0, PAGE_SIZE).forEach(function(opp) { cardsWrap.appendChild(buildCard(opp)) })
+
+    if (sorted.length > PAGE_SIZE) {
+        const remaining = sorted.length - PAGE_SIZE
+        const showMoreBtn = document.createElement('button')
+        showMoreBtn.textContent = 'Show ' + remaining + ' more lane' + (remaining === 1 ? '' : 's') + ' →'
+        showMoreBtn.style.cssText = 'font-size:11px;padding:4px 10px;margin-top:6px;cursor:pointer;width:100%;'
+        showMoreBtn.className = 'opp-show-more'
+        showMoreBtn.onclick = function() {
+            showMoreBtn.remove()
+            sorted.slice(PAGE_SIZE).forEach(function(opp) { cardsWrap.appendChild(buildCard(opp)) })
+        }
+        container.appendChild(showMoreBtn)
+    }
 }
 
 async function loadAirportDemand(airportId) {

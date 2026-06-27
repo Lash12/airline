@@ -23,7 +23,6 @@ async function bootstrap(page: Page) {
   await page.waitForFunction(()=> (window as any).activeAirline?.headquarterAirport, { timeout:15000 });
 }
 
-// Shared mock opportunity used across tests
 const MOCK_OPP_FULL = {
   originAirportId: 3599,
   destinationAirportId: 3600,
@@ -32,7 +31,7 @@ const MOCK_OPP_FULL = {
   weeklyCargoDemand: 500,
   weeklyCargoServed: 120,
   weeklyCargoUnserved: 380,
-  estimatedYield: 0.0002,
+  estimatedYield: 0.01,
   recommendedAircraftModelIds: [1, 2],
   recommendedAircraftModelNames: ["Boeing 747-8F", "Airbus A330-200F"],
   notes: "Long-haul trade lane; higher yield potential."
@@ -46,13 +45,27 @@ const MOCK_OPP_NO_AIRCRAFT = {
   weeklyCargoDemand: 200,
   weeklyCargoServed: 0,
   weeklyCargoUnserved: 200,
-  estimatedYield: 0.0002,
+  estimatedYield: 0.01,
   recommendedAircraftModelIds: [],
   recommendedAircraftModelNames: [],
   notes: "Untapped market."
 };
 
-test("cargo opportunities panel renders correctly from mock data", async ({ page }) => {
+const MOCK_OPP_SERVED = {
+  originAirportId: 3599,
+  destinationAirportId: 3602,
+  destinationCode: "DFW",
+  destinationName: "Dallas",
+  weeklyCargoDemand: 300,
+  weeklyCargoServed: 300,
+  weeklyCargoUnserved: 0,
+  estimatedYield: 0.008,
+  recommendedAircraftModelIds: [1],
+  recommendedAircraftModelNames: ["Boeing 747-8F"],
+  notes: "Market is fully served."
+};
+
+test("cargo opportunities panel renders cards sorted by unserved demand", async ({ page }) => {
   test.setTimeout(60000);
 
   await page.route("**/cargo-opportunities*", async (route) => {
@@ -61,36 +74,36 @@ test("cargo opportunities panel renders correctly from mock data", async ({ page
 
   await bootstrap(page);
 
-  // Call renderCargoOpportunities directly. The airport details panel may not be
-  // visible (user hasn't clicked an airport), so we check DOM state via evaluate
-  // rather than toBeVisible() which checks the full ancestor chain.
-  const state = await page.evaluate((opp) => {
-    (window as any).renderCargoOpportunities([opp], 3599);
+  // Low-unserved opp before high-unserved opp to verify sort
+  const lowOpp = { ...MOCK_OPP_NO_AIRCRAFT, weeklyCargoUnserved: 50, destinationCode: "SFO" };
+  const highOpp = { ...MOCK_OPP_FULL, weeklyCargoUnserved: 400 };
+
+  const state = await page.evaluate((opps) => {
+    (window as any).renderCargoOpportunities(opps, 3599);
     const section = document.getElementById('airportCargoOpportunitiesSection');
     const cards = document.querySelectorAll('#airportCargoOpportunitiesCards .card');
-    const card = cards[0] as HTMLElement | undefined;
+    const firstCard = cards[0] as HTMLElement | null;
+    const secondCard = cards[1] as HTMLElement | null;
     return {
       sectionDisplay: section?.style.display ?? 'missing',
       cardCount: cards.length,
-      text: card?.textContent ?? '',
-      aircraftText: (card?.querySelector('.opp-aircraft') as HTMLElement | null)?.textContent ?? '',
-      notesText: (card?.querySelector('.opp-notes') as HTMLElement | null)?.textContent ?? '',
-      hasPlanBtn: !!(card?.querySelector('button')),
-      planBtnText: (card?.querySelector('button') as HTMLElement | null)?.textContent ?? '',
+      firstIata: (firstCard?.querySelector('.iata') as HTMLElement | null)?.textContent ?? '',
+      secondIata: (secondCard?.querySelector('.iata') as HTMLElement | null)?.textContent ?? '',
+      firstRevenue: (firstCard?.querySelector('.opp-revenue') as HTMLElement | null)?.textContent ?? '',
+      firstHasPlanBtn: !!(firstCard?.querySelector('.opp-plan-btn')),
     };
-  }, MOCK_OPP_FULL);
+  }, [lowOpp, highOpp]);
 
+  // Section visible
   expect(state.sectionDisplay).not.toBe('none');
-  expect(state.cardCount).toBe(1);
-  expect(state.text).toContain('LAX');
-  expect(state.text).toContain('Los Angeles');
-  expect(state.text).toContain('500');
-  expect(state.text).toContain('120');
-  expect(state.text).toContain('380');
-  expect(state.aircraftText).toContain('Boeing 747-8F');
-  expect(state.notesText).toContain('Long-haul trade lane');
-  expect(state.hasPlanBtn).toBe(true);
-  expect(state.planBtnText).toContain('Plan cargo route');
+  expect(state.cardCount).toBe(2);
+  // High-unserved comes first after sort
+  expect(state.firstIata).toBe('JFK');
+  expect(state.secondIata).toBe('SFO');
+  // Revenue estimate present for first card
+  expect(state.firstRevenue).toContain('capturable');
+  // Plan button present for unserved card
+  expect(state.firstHasPlanBtn).toBe(true);
 });
 
 test("cargo opportunities panel hides when response is empty", async ({ page }) => {
@@ -110,7 +123,7 @@ test("cargo opportunities panel hides when response is empty", async ({ page }) 
   expect(display).toBe('none');
 });
 
-test("cargo opportunities panel shows no-aircraft fallback when model list is empty", async ({ page }) => {
+test("fully-served cards are dimmed and have no plan button", async ({ page }) => {
   test.setTimeout(60000);
 
   await page.route("**/cargo-opportunities*", async (route) => {
@@ -125,15 +138,98 @@ test("cargo opportunities panel shows no-aircraft fallback when model list is em
     const card = document.querySelector('#airportCargoOpportunitiesCards .card') as HTMLElement | null;
     return {
       sectionDisplay: section?.style.display ?? 'missing',
+      cardOpacity: card?.style.opacity ?? '',
+      hasPlanBtn: !!(card?.querySelector('.opp-plan-btn')),
+      badgeText: card?.textContent ?? '',
+    };
+  }, MOCK_OPP_SERVED);
+
+  // Section still visible (has cards)
+  expect(state.sectionDisplay).not.toBe('none');
+  // Card dimmed
+  expect(parseFloat(state.cardOpacity)).toBeLessThan(1);
+  // No plan button for fully-served route
+  expect(state.hasPlanBtn).toBe(false);
+  // Shows served badge
+  expect(state.badgeText).toContain('Served');
+});
+
+test("all-served state shows explanatory message, no cards", async ({ page }) => {
+  test.setTimeout(60000);
+
+  await page.route("**/cargo-opportunities*", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+  });
+
+  await bootstrap(page);
+
+  const state = await page.evaluate((opp) => {
+    (window as any).renderCargoOpportunities([opp], 3599);
+    const section = document.getElementById('airportCargoOpportunitiesSection');
+    const cards = document.querySelectorAll('#airportCargoOpportunitiesCards .card');
+    const helperText = (document.querySelector('#airportCargoOpportunitiesCards p') as HTMLElement | null)?.textContent ?? '';
+    return {
+      sectionDisplay: section?.style.display ?? 'missing',
+      cardCount: cards.length,
+      helperText,
+    };
+  }, MOCK_OPP_SERVED);
+
+  expect(state.sectionDisplay).not.toBe('none');
+  expect(state.cardCount).toBe(0);
+  expect(state.helperText).toContain('currently being served');
+});
+
+test("no-aircraft fallback renders italic warning", async ({ page }) => {
+  test.setTimeout(60000);
+
+  await page.route("**/cargo-opportunities*", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+  });
+
+  await bootstrap(page);
+
+  const state = await page.evaluate((opp) => {
+    (window as any).renderCargoOpportunities([opp], 3599);
+    const card = document.querySelector('#airportCargoOpportunitiesCards .card') as HTMLElement | null;
+    return {
       aircraftText: (card?.querySelector('.opp-aircraft') as HTMLElement | null)?.textContent ?? '',
     };
   }, MOCK_OPP_NO_AIRCRAFT);
 
-  expect(state.sectionDisplay).not.toBe('none');
   expect(state.aircraftText).toContain('No suitable freighter aircraft');
 });
 
-test("cargo opportunities endpoint returns array", async ({ page }) => {
+test("show-more button appears when list exceeds 10", async ({ page }) => {
+  test.setTimeout(60000);
+
+  await page.route("**/cargo-opportunities*", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+  });
+
+  await bootstrap(page);
+
+  const state = await page.evaluate((baseOpp) => {
+    const opps = Array.from({ length: 13 }, (_, i) => ({
+      ...baseOpp,
+      destinationCode: 'A' + String(i).padStart(2, '0'),
+      destinationAirportId: 4000 + i,
+      weeklyCargoUnserved: 300 - i * 5,
+    }));
+    (window as any).renderCargoOpportunities(opps, 3599);
+    const cards = document.querySelectorAll('#airportCargoOpportunitiesCards .card');
+    const showMoreBtn = document.querySelector('#airportCargoOpportunitiesCards .opp-show-more') as HTMLElement | null;
+    return {
+      initialCardCount: cards.length,
+      showMoreText: showMoreBtn?.textContent ?? '',
+    };
+  }, MOCK_OPP_FULL);
+
+  expect(state.initialCardCount).toBe(10);
+  expect(state.showMoreText).toContain('3 more');
+});
+
+test("cargo opportunities endpoint returns expected shape", async ({ page }) => {
   test.setTimeout(60000);
   await bootstrap(page);
   const res = await page.request.get("/airports/3599/cargo-opportunities");
