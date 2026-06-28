@@ -1,7 +1,4 @@
-import { expect, type Page, test } from "@playwright/test";
-import * as path from "path";
-
-const ARTIFACTS_DIR = "C:/Users/logan/.gemini/antigravity-cli/brain/dca8e3ac-743e-4cff-8ad3-643c3098f581";
+import { expect, type Page, test, type TestInfo } from "@playwright/test";
 
 async function createAccount(page: Page) {
   const suffix = Date.now().toString(36).slice(-8);
@@ -37,7 +34,7 @@ async function createAccount(page: Page) {
   await page.goto("/map/", { waitUntil: "load" });
 }
 
-test("Validate Cargo UI and Assets", async ({ page }) => {
+test("Validate Cargo UI and Assets", async ({ page }, testInfo: TestInfo) => {
   test.setTimeout(60000); // 60s timeout
   page.on("console", msg => console.log(`BROWSER LOG: [${msg.type()}] ${msg.text()}`));
   page.on("request", req => {
@@ -129,7 +126,7 @@ test("Validate Cargo UI and Assets", async ({ page }) => {
   await cargoRevenueRow.scrollIntoViewIfNeeded();
   
   // Capture Office Page screenshot
-  await page.screenshot({ path: path.join(ARTIFACTS_DIR, "office_cargo.png") });
+  await page.screenshot({ path: testInfo.outputPath("office_cargo.png") });
   console.log("Office screenshot captured.");
 
   // 3. Navigate to HQ Airport and check Assets
@@ -138,7 +135,7 @@ test("Validate Cargo UI and Assets", async ({ page }) => {
   await page.waitForSelector("#airportCanvas", { state: "visible", timeout: 10000 });
   
   // Capture Airport Info screenshot
-  await page.screenshot({ path: path.join(ARTIFACTS_DIR, "airport_view.png") });
+  await page.screenshot({ path: testInfo.outputPath("airport_view.png") });
   console.log("Airport info screenshot captured.");
 
   // Wait for the asset section to be visible
@@ -147,7 +144,7 @@ test("Validate Cargo UI and Assets", async ({ page }) => {
   // Let's scroll the assets catalog into view and take a screenshot
   const assetsContainer = page.locator("#airportDetailsAssetsSection");
   await assetsContainer.scrollIntoViewIfNeeded();
-  await page.screenshot({ path: path.join(ARTIFACTS_DIR, "cargo_terminal_catalog.png") });
+  await page.screenshot({ path: testInfo.outputPath("cargo_terminal_catalog.png") });
   console.log("Assets catalog screenshot captured.");
 
   // 4. Navigate to Map and open Route Planner
@@ -189,6 +186,6 @@ test("Validate Cargo UI and Assets", async ({ page }) => {
   console.log("Verified: Passenger pricing fields are hidden for cargo flights.");
 
   // Capture Route Planner screen
-  await page.screenshot({ path: path.join(ARTIFACTS_DIR, "route_planner_cargo.png") });
+  await page.screenshot({ path: testInfo.outputPath("route_planner_cargo.png") });
   console.log("Route planner screenshot captured.");
 });

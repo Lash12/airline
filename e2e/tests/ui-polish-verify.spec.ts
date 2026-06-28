@@ -1,8 +1,4 @@
-import { expect, type Page, test } from "@playwright/test";
-import * as path from "path";
-
-// Screenshots land next to the spec under e2e/shots so they are easy to collect.
-const SHOTS_DIR = path.join(__dirname, "..", "shots", "ui-polish");
+import { expect, type Page, test, type TestInfo } from "@playwright/test";
 
 async function createAccount(page: Page) {
   const suffix = Date.now().toString(36).slice(-8);
@@ -27,7 +23,7 @@ async function createAccount(page: Page) {
   await page.goto("/map/", { waitUntil: "load" });
 }
 
-test("UI polish pass - visual verify", async ({ page }) => {
+test("UI polish pass - visual verify", async ({ page }, testInfo: TestInfo) => {
   test.setTimeout(60000);
   page.on("pageerror", err => console.error("PAGE ERROR:", err.stack || err.message));
 
@@ -54,7 +50,7 @@ test("UI polish pass - visual verify", async ({ page }) => {
   await page.goto("/aircraft/", { waitUntil: "load" });
   await page.waitForSelector("#airplaneModelTable .table-row", { timeout: 15000 });
   await expect(page.locator("#airplaneModelSortHeader", { hasText: "Cargo" })).toBeVisible();
-  await page.screenshot({ path: path.join(SHOTS_DIR, "market_cargo_column.png"), fullPage: false });
+  await page.screenshot({ path: testInfo.outputPath("market_cargo_column.png"), fullPage: false });
 
   // 2. Model detail panel - cargo capacity line
   await page.locator("#airplaneModelTable .table-row").first().click();
@@ -62,13 +58,13 @@ test("UI polish pass - visual verify", async ({ page }) => {
   const cargoText = await page.locator("#airplaneCanvas #cargoCapacity").textContent();
   console.log("Model detail cargo line:", cargoText);
   expect(cargoText).toContain("Freighter");
-  await page.screenshot({ path: path.join(SHOTS_DIR, "market_model_detail.png"), fullPage: false });
+  await page.screenshot({ path: testInfo.outputPath("market_model_detail.png"), fullPage: false });
 
   // 3. Office income sheet - colored totals + cargo % + separator rows
   await page.goto("/office/", { waitUntil: "load" });
   await page.waitForSelector("#balNetIncome", { timeout: 10000 });
   await page.locator("#balNetIncome").scrollIntoViewIfNeeded();
-  await page.screenshot({ path: path.join(SHOTS_DIR, "office_income.png"), fullPage: false });
+  await page.screenshot({ path: testInfo.outputPath("office_income.png"), fullPage: false });
 
   console.log("Screenshots written to", SHOTS_DIR);
 });

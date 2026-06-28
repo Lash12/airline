@@ -1,7 +1,4 @@
-import { expect, type Page, test } from "@playwright/test";
-import * as path from "path";
-
-const SHOTS = path.join(__dirname, "..", "shots", "airport-mobile");
+import { expect, type Page, test, type TestInfo } from "@playwright/test";
 
 async function bootstrap(page: Page) {
   const s = Date.now().toString(36).slice(-8);
@@ -28,7 +25,7 @@ async function bootstrap(page: Page) {
 
 test.use({ viewport: { width: 390, height: 844 } });
 
-test("airport page mobile: tables scroll, asset modal opens", async ({ page }) => {
+test("airport page mobile: tables scroll, asset modal opens", async ({ page }, testInfo: TestInfo) => {
   test.setTimeout(60000);
   await bootstrap(page);
   // Open the airport detail SPA view via the in-app entry point (direct /airport/<id>
@@ -44,12 +41,12 @@ test("airport page mobile: tables scroll, asset modal opens", async ({ page }) =
   // Catalog table should overflow horizontally (scrollWidth > clientWidth), not stack.
   const overflow = await page.$eval("#airportDetailsAssetCatalog", el => el.scrollWidth > el.clientWidth + 4);
   expect(overflow).toBeTruthy();
-  await page.screenshot({ path: path.join(SHOTS, "airport_assets_mobile.png") });
+  await page.screenshot({ path: testInfo.outputPath("airport_assets_mobile.png") });
 
   // Tap first catalog row -> modal with image + readable action button.
   await page.locator("#airportDetailsAssetCatalog .table-row").first().click();
   await page.waitForSelector("#airportAssetDetailsModal", { state: "visible", timeout: 5000 });
   await expect(page.locator("#assetModalActionButton")).toBeVisible();
   await expect(page.locator("#assetModalImage")).toBeVisible();
-  await page.screenshot({ path: path.join(SHOTS, "asset_modal_mobile.png") });
+  await page.screenshot({ path: testInfo.outputPath("asset_modal_mobile.png") });
 });
