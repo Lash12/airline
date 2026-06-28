@@ -228,12 +228,13 @@ function updateAirplaneModelTable(sortProperty, sortOrder) {
      //used for pricing calculation
     const {rangeRequirement, airportFromSizeRequirement, airportToSizeRequirement} = airplaneModelCalculator()
 
-    const showForbidden = $('#toggleHideForbiddenPlanes').is(':checked');
+    const hideLocked = $('#toggleHideForbiddenPlanes').is(':checked');
     const rowsHtml = [];
     let selectedModel = null;
 
 	$.each(loadedModelsOwnerInfo, function(index, modelOwnerInfo) {
-        if (!showForbidden && modelOwnerInfo.rejection && modelOwnerInfo.rejection.length > 0) {
+        const isLocked = !!(modelOwnerInfo.rejection && modelOwnerInfo.rejection.length > 0);
+        if (hideLocked && isLocked) {
             return;
         }
 
@@ -258,10 +259,14 @@ function updateAirplaneModelTable(sortProperty, sortOrder) {
             selectedModel = modelOwnerInfo;
         }
 
-        const nameCell = `<div class='cell'>${modelOwnerInfo.name}</div>`;
+        const lockIcon = isLocked
+            ? `<img src='/assets/images/icons/prohibition.png' title='${modelOwnerInfo.rejection}' style='width:12px;height:12px;margin-left:4px;vertical-align:middle;'>`
+            : '';
+        const nameCell = `<div class='cell'>${modelOwnerInfo.name}${lockIcon}</div>`;
+        const lockedStyle = isLocked ? ' style="opacity:0.5"' : '';
 
         rowsHtml.push(
-            `<div class='table-row clickable${selectedClass}' data-model-id='${modelOwnerInfo.id}'>` +
+            `<div class='table-row clickable${selectedClass}'${lockedStyle} data-model-id='${modelOwnerInfo.id}'>` +
             nameCell +
             `<div class='cell'>${modelOwnerInfo.family}</div>` +
             `<div class='cell'>${modelOwnerInfo.airplaneType}</div>` +
