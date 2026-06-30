@@ -24,6 +24,12 @@ async function bootstrap(page: Page) {
   return await page.evaluate(()=> (window as any).activeAirline.id);
 }
 
+// ── Helper: open the route planner between two airports and wait for the forecast card ──────────
+async function openForecastFor(page: Page, originId: number, destId: number) {
+  await page.evaluate(([o, d]) => { (window as any).planLink(o, d); }, [originId, destId]);
+  await expect(page.locator("#routeForecastContainer")).toBeVisible({ timeout: 10000 });
+}
+
 test("route forecast panel is visible and displays forecast details", async ({ page }) => {
   test.setTimeout(60000);
   
@@ -82,4 +88,82 @@ test("route forecast panel is visible and displays forecast details", async ({ p
   const reasons = page.locator("#forecastReasons li");
   await expect(reasons).toHaveCount(3);
   await expect(reasons.nth(0)).toHaveText("Strong passenger demand on this route.");
+});
+
+test("route forecast reasons include competitor airline count and frequency", async ({ page }) => {
+  test.setTimeout(60000);
+
+  await page.route("**/route-forecast*", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        originAirportId: 3599,
+        destinationAirportId: 3600,
+        passengerDemandEstimate: 500,
+        cargoDemandEstimate: 0,
+        expectedRevenue: 120000,
+        expectedCost: 80000,
+        expectedProfit: 40000,
+        confidenceLevel: "MEDIUM",
+        competitionLevel: "MEDIUM",
+        recommendedAircraftModels: ["Airbus A320-200"],
+        recommendedFrequency: 7,
+        reasons: [
+          "Moderate passenger demand. Plan schedule and capacity carefully.",
+          "Moderate competition: 3 airline(s), 28 flights/wk.",
+          "Healthy profit margins projected under typical load factors."
+        ]
+      })
+    });
+  });
+
+  await bootstrap(page);
+  await openForecastFor(page, 3599, 3600);
+
+  // Competitor detail is in the reasons list
+  const reasons = page.locator("#forecastReasons li");
+  await expect(reasons).toHaveCount(3);
+  const competitionReason = reasons.nth(1);
+  await expect(competitionReason).toContainText("3 airline(s)");
+  await expect(competitionReason).toContainText("28 flights/wk");
+});
+
+test("route forecast thin-market reason appears for low-demand routes", async ({ page }) => {
+  test.setTimeout(60000);
+
+  await page.route("**/route-forecast*", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        originAirportId: 3599,
+        destinationAirportId: 3600,
+        passengerDemandEstimate: 120,
+        cargoDemandEstimate: 0,
+        expectedRevenue: 30000,
+        expectedCost: 25000,
+        expectedProfit: 5000,
+        confidenceLevel: "MEDIUM",
+        competitionLevel: "NONE",
+        recommendedAircraftModels: ["ATR 72-600"],
+        recommendedFrequency: 3,
+        reasons: [
+          "Moderate passenger demand. Plan schedule and capacity carefully.",
+          "No direct competition on this route — a monopoly opportunity.",
+          "Thin market (~120 pax/wk). Start with one frame, watch load factors before adding frequency.",
+          "Healthy profit margins projected under typical load factors."
+        ]
+      })
+    });
+  });
+
+  await bootstrap(page);
+  await openForecastFor(page, 3599, 3600);
+
+  // Thin-market advisory is visible in reasons
+  const reasons = page.locator("#forecastReasons li");
+  await expect(reasons).toHaveCount(4);
+  await expect(reasons.nth(2)).toContainText("Thin market");
+  await expect(reasons.nth(2)).toContainText("one frame");
 });

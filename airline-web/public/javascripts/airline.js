@@ -949,8 +949,13 @@ function isCargoPlan() {
 
 // Opens the route planner pre-set to cargo (CARGO_FLIGHT) mode.
 // Falls back to normal planLink if freighters are not enabled on this route.
-function planCargoLink(fromAirport, toAirport) {
+// prefillModelId (optional): preselect a recommended freighter so the form isn't blank.
+// Reuses the same explicitId hook the "buy new plane" flow uses (see airplane.js / updatePlanLinkInfo).
+function planCargoLink(fromAirport, toAirport, prefillModelId) {
     _forceCargoPlanType = true
+    if (prefillModelId) {
+        $("#planLinkModelSelect").data('explicitId', prefillModelId)
+    }
     planLink(fromAirport, toAirport)
 }
 

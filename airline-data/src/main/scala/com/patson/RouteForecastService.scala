@@ -91,6 +91,8 @@ object RouteForecastService {
     val competitorLinks = LinkSource.loadFlightLinksByAirports(fromAirport.id, toAirport.id) ++
       LinkSource.loadFlightLinksByAirports(toAirport.id, fromAirport.id)
     val totalCompetitorCapacity = competitorLinks.map(_.capacity.total).sum
+    val competitorCount = competitorLinks.map(_.airline.id).distinct.size
+    val competitorWeeklyFrequency = competitorLinks.map(_.frequency).sum
     val competitionLevel = if (totalCompetitorCapacity == 0) "NONE"
       else if (totalCompetitorCapacity < paxDemandEst * 0.2) "LOW"
       else if (totalCompetitorCapacity < paxDemandEst * 0.8) "MEDIUM"
@@ -245,11 +247,21 @@ object RouteForecastService {
       .sortBy(effScore)
       .headOption
 
-    val candidateAircraft: List[AircraftCandidate] = List(
+    val rawCandidates: List[AircraftCandidate] = List(
       simulateCandidate(primaryModel, "Best size and efficiency for this market."),
       smallerModel.flatMap(m => simulateCandidate(m, "Smaller option; lower seat count reduces risk on thin demand.")),
       largerModel.flatMap(m => simulateCandidate(m, "Larger option; handles high-demand growth or busy corridors."))
     ).flatten
+
+    // On thin markets, prefer the smaller candidate as primary so the form pre-selects
+    // the lower-risk aircraft rather than an over-sized one.
+    val thinMarket = paxDemandEst < 150
+    val candidateAircraft: List[AircraftCandidate] = if (thinMarket && rawCandidates.size >= 2 && smallerModel.isDefined) {
+      val smallerName = smallerModel.get.name
+      val smallerCand = rawCandidates.find(_.modelName == smallerName)
+      val rest = rawCandidates.filterNot(_.modelName == smallerName)
+      smallerCand.toList ++ rest
+    } else rawCandidates
 
     // Primary candidate drives the top-level summary figures (backward compat)
     val primary = candidateAircraft.headOption
@@ -277,8 +289,10 @@ object RouteForecastService {
     val expectedCost     = primaryCandidate.estimatedCost
     val expectedProfit   = primaryCandidate.estimatedProfit
 
+    // Confidence: thin markets (100–199 pax/wk) cap at MEDIUM even without competition,
+    // since small absolute demand swings heavily affect viability.
     val confidenceLevel = if (competitionLevel == "HIGH" || paxDemandEst < 100 || expectedProfit < 0) "LOW"
-      else if (competitionLevel == "MEDIUM" || primaryModel.range * 0.9 <= distance || fromAirport.runwayLength < primaryModel.runwayRequirement + 200) "MEDIUM"
+      else if (paxDemandEst < 200 || competitionLevel == "MEDIUM" || primaryModel.range * 0.9 <= distance || fromAirport.runwayLength < primaryModel.runwayRequirement + 200) "MEDIUM"
       else "HIGH"
 
     val reasons = ListBuffer[String]()
@@ -296,10 +310,14 @@ object RouteForecastService {
     }
 
     competitionLevel match {
-      case "HIGH"   => reasons += "High competition. Multiple airlines already fly this route with large capacity."
-      case "MEDIUM" => reasons += "Moderate competition from existing carriers."
-      case "LOW"    => reasons += "Low competition. Market is mostly open."
-      case "NONE"   => reasons += "No direct competition. A perfect opportunity for monopoly."
+      case "HIGH"   => reasons += s"High competition: $competitorCount airline(s) with $competitorWeeklyFrequency flights/wk — expect strong market resistance."
+      case "MEDIUM" => reasons += s"Moderate competition: $competitorCount airline(s), $competitorWeeklyFrequency flights/wk."
+      case "LOW"    => reasons += s"Low competition: $competitorCount airline(s), $competitorWeeklyFrequency flights/wk. Market is mostly open."
+      case "NONE"   => reasons += "No direct competition on this route — a monopoly opportunity."
+    }
+
+    if (thinMarket && paxDemandEst >= 100) {
+      reasons += s"Thin market (~$paxDemandEst pax/wk). Start with one frame, watch load factors before adding frequency."
     }
 
     if (distance > primaryModel.range * 0.9) {
