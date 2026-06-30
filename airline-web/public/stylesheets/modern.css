@@ -503,3 +503,622 @@ html.ui-modern #topBar > div,
 html.ui-modern #navPrimary {
     transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
+
+/* ── Tab Navigation (sheetOptions / detailsSelection) ── */
+
+html.ui-modern .sheetOptions {
+    gap: 3px;
+    padding-bottom: 0;
+}
+
+html.ui-modern .sheetOptions .cell {
+    border-radius: 8px 8px 0 0;
+    border: 1px solid var(--m-card-border);
+    border-bottom-color: transparent;
+    background: var(--background-2);
+    color: var(--text-color);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 6px 14px;
+    transition: background 0.15s, color 0.15s;
+    box-shadow: none;
+}
+
+html.ui-modern .sheetOptions .cell.selected {
+    background: var(--accent-color);
+    color: #fff;
+    border-color: var(--accent-color);
+    box-shadow: none;
+    text-shadow: none;
+}
+
+html.ui-modern .sheetOptions .cell:hover:not(.selected) {
+    background: var(--m-accent-subtle);
+    color: var(--accent-color);
+}
+
+html.ui-modern .sheetOptions .cell:hover:not(.selected) a {
+    color: var(--accent-color);
+}
+
+html.ui-modern .sheet-frame {
+    border-color: var(--m-card-border);
+    border-radius: 0 8px 8px 8px;
+    background: var(--section-background-image);
+}
+
+html.ui-modern .sheet-tab-row {
+    gap: 3px;
+}
+
+html.ui-modern .sheet-nav {
+    border-color: var(--m-card-border);
+    background: var(--background-2);
+    font-size: 11.5px;
+    padding: 6px 14px;
+    border-radius: 0;
+}
+
+/* ── Table header — within tabs / section ── */
+
+html.ui-modern .table-header {
+    background: var(--table-header-background);
+}
+
+html.ui-modern .table-header .cell {
+    color: var(--table-header-color);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    border-color: var(--m-card-border);
+}
+
+/* ── Side Panel (airport detail, link detail) ── */
+
+html.ui-modern .sidePanel {
+    border-radius: var(--m-card-radius);
+    overflow: hidden;
+    box-shadow: var(--m-card-shadow);
+}
+
+html.ui-modern .sidePanel > .section,
+html.ui-modern .sidePanel > div > .section {
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+    border-bottom: 1px solid var(--m-card-border);
+}
+
+/* ── Details panel (link details, etc.) ── */
+
+html.ui-modern #detailsPanel,
+html.ui-modern #extendedPanel {
+    border-radius: var(--m-card-radius);
+    border: 1px solid var(--m-card-border);
+    box-shadow: var(--m-card-shadow);
+    overflow: hidden;
+}
+
+/* ── Vertical groups ── */
+
+html.ui-modern .vertical-group {
+    gap: 12px;
+}
+
+/* ── Search canvas ── */
+
+html.ui-modern #searchCanvas {
+    align-items: flex-start;
+}
+
+html.ui-modern #searchCanvas .section {
+    min-width: 300px;
+}
+
+/* ── Log & News canvas ── */
+
+html.ui-modern #logCanvas .section,
+html.ui-modern #newsCanvas .section {
+    padding: 16px;
+}
+
+html.ui-modern #logCanvas li,
+html.ui-modern #newsCanvas li {
+    padding: 6px 0;
+    border-bottom: 1px solid var(--m-card-border);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+html.ui-modern #logCanvas li:last-child,
+html.ui-modern #newsCanvas li:last-child {
+    border-bottom: none;
+}
+
+/* ── Bank & Oil canvas charts ── */
+
+html.ui-modern #loanInterestRateChart,
+html.ui-modern #oilPriceChart {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+html.ui-modern .bankCanvasLeftGroup .section,
+html.ui-modern .oilCanvasLeftGroup .section {
+    padding: 20px 18px;
+}
+
+/* ── Ranking canvas ── */
+
+html.ui-modern #rankingCanvas .section {
+    padding: 0;
+    overflow: hidden;
+}
+
+html.ui-modern .rankingTable {
+    border-radius: 0 !important;
+}
+
+/* ── Alliance canvas ── */
+
+html.ui-modern #allianceCanvas .section {
+    padding: 16px;
+}
+
+html.ui-modern #allianceChartContainer {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* ── Hangar / Airplane canvas ── */
+
+html.ui-modern .airplaneCanvasLeftGroup .section.tight {
+    border-radius: var(--m-card-radius);
+    overflow: hidden;
+}
+
+html.ui-modern .airplaneCanvasRightGroup .section {
+    padding: 16px;
+}
+
+/* ── Office canvas layout ── */
+
+html.ui-modern .officeCanvasLeftGroup .section,
+html.ui-modern .officeCanvasRightGroup .section {
+    border-radius: var(--m-card-radius);
+}
+
+html.ui-modern #consultantIdleCallout > div {
+    border-radius: 8px;
+    border-left-width: 3px;
+}
+
+/* ── Config rows (office settings) ── */
+
+html.ui-modern .config {
+    padding: 10px 0;
+}
+
+html.ui-modern .config + .config,
+html.ui-modern .config:first-child {
+    border-top: 1px solid var(--m-card-border);
+}
+
+/* ── Progress bars ── */
+
+html.ui-modern .progressbar-container,
+html.ui-modern progress {
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+/* ── Nav link float labels (sidebar tooltips) ── */
+
+html.ui-modern #navPrimary .label.floatLabel {
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    background: var(--background-1);
+    border: 1px solid var(--m-card-border);
+    box-shadow: var(--m-card-shadow);
+    left: 48px;
+}
+
+/* ── Clickable table rows — pill shape in modern ── */
+
+html.ui-modern .table.data .table-row.clickable {
+    border-radius: 4px;
+    transition: background 0.1s;
+}
+
+/* ── Status/reputation stars ── */
+
+html.ui-modern .reputationStars img {
+    width: 14px;
+    height: 14px;
+}
+
+/* ── Notification items ── */
+
+html.ui-modern .notification-item {
+    border-radius: 8px;
+    margin: 4px 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--m-card-border);
+    transition: background 0.1s;
+}
+
+html.ui-modern .notification-item:hover {
+    background: var(--m-accent-subtle);
+}
+
+html.ui-modern .notification-item.unread {
+    border-left: 3px solid var(--accent-color);
+}
+
+/* ── Login / signup page ── */
+
+html.ui-modern #loginDiv,
+html.ui-modern #signupDiv {
+    border-radius: 16px;
+    box-shadow: var(--shadow-2);
+    padding: 32px;
+    background: var(--section-background-image);
+    border: 1px solid var(--m-card-border);
+}
+
+/* ── Country canvas ── */
+
+html.ui-modern #countryCanvas .section {
+    padding: 16px;
+}
+
+/* ── Event / Olympics canvas ── */
+
+html.ui-modern #eventCanvas .section {
+    padding: 16px;
+}
+
+/* ── Rivals canvas ── */
+
+html.ui-modern #rivalsCanvas .section {
+    padding: 16px;
+}
+
+/* ── Mobile: panel-specific tweaks ── */
+
+@media screen and (max-width: 640px) {
+    html.ui-modern .sheetOptions .cell {
+        padding: 5px 10px;
+        font-size: 11px;
+    }
+
+    html.ui-modern .sidePanel {
+        border-radius: 12px 12px 0 0;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+    }
+
+    html.ui-modern .sheet-nav {
+        padding: 5px 10px;
+    }
+
+    html.ui-modern #loginDiv,
+    html.ui-modern #signupDiv {
+        border-radius: 12px;
+        padding: 20px;
+    }
+}
+
+/* ── Dropdown menus (smDropdown — alliance, oil, bank) ── */
+
+html.ui-modern .smDropdownMenu {
+    border-radius: 10px;
+    border: 1px solid var(--m-card-border);
+    box-shadow: var(--shadow-2);
+    background: var(--section-background-image);
+    padding: 6px 4px;
+    overflow: hidden;
+}
+
+html.ui-modern .smDropdownItem,
+html.ui-modern .smDropdownCheckItem {
+    border-radius: 6px;
+    margin: 1px 4px;
+    padding: 6px 10px;
+    font-size: 12.5px;
+    transition: background 0.1s, color 0.1s;
+}
+
+html.ui-modern .smDropdownItem:hover,
+html.ui-modern .smDropdownCheckItem:hover {
+    background: var(--m-accent-subtle);
+    color: var(--accent-color);
+}
+
+html.ui-modern .smDropdownItem.active {
+    color: var(--accent-color);
+    font-weight: 700;
+}
+
+html.ui-modern .smDropdownToggle {
+    border-radius: 6px;
+    transition: background 0.15s;
+}
+
+html.ui-modern .smDropdownOnly {
+    opacity: 0.5;
+    font-size: 10px;
+}
+
+/* ── Select CSS ── */
+
+html.ui-modern .select-css,
+html.ui-modern select.select-menu {
+    border-radius: 8px;
+    border: 1px solid var(--input-border-color);
+    background: var(--input-background-color);
+    padding: 5px 10px;
+    font-size: 12.5px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+html.ui-modern .select-css:focus,
+html.ui-modern select.select-menu:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px var(--m-accent-subtle);
+    outline: none;
+}
+
+/* ── Item grid (airport / office details) ── */
+
+html.ui-modern .item-grid {
+    gap: 12px;
+}
+
+html.ui-modern .item {
+    padding-bottom: 6px;
+}
+
+html.ui-modern .i-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.6;
+    font-weight: 600;
+    margin-bottom: 3px;
+}
+
+html.ui-modern .i-value {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+/* ── Section grid / two-up grid / three-up grid ── */
+
+html.ui-modern .section-grid {
+    gap: 12px;
+}
+
+html.ui-modern .two-up-grid,
+html.ui-modern .three-up-grid {
+    gap: 12px;
+    margin-top: 8px;
+}
+
+html.ui-modern .two-up-grid > .section,
+html.ui-modern .three-up-grid > .section {
+    margin: 0;
+}
+
+/* ── Threshold bars (reputation progress) ── */
+
+html.ui-modern .threshold-bar-container {
+    padding: 10px 4px;
+}
+
+html.ui-modern .threshold-bar {
+    border-color: var(--m-card-border);
+    height: 5px;
+    border-radius: 99px;
+}
+
+html.ui-modern .threshold-bar.short-fat {
+    border-radius: 8px;
+    height: 22px;
+}
+
+html.ui-modern .threshold-bar-bg {
+    background: linear-gradient(to right, var(--zing-color), #4a9e4a);
+    border-radius: 99px;
+}
+
+html.ui-modern .threshold-bar.short-fat .threshold-bar-bg {
+    border-radius: 6px;
+}
+
+/* ── Vertical divider ── */
+
+html.ui-modern .divider-v {
+    background-color: var(--m-card-border);
+    width: 1px;
+    height: 20px;
+    margin: 0 6px;
+}
+
+/* ── Links action bar ── */
+
+html.ui-modern #linksActionBar {
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: var(--background-2);
+    border: 1px solid var(--m-card-border);
+    margin: 6px 0;
+}
+
+html.ui-modern .color-dot {
+    border-radius: 50%;
+    width: 14px;
+    height: 14px;
+    border: 2px solid transparent;
+    transition: border-color 0.15s, transform 0.1s;
+}
+
+html.ui-modern .color-dot:hover {
+    transform: scale(1.2);
+    border-color: var(--accent-color);
+}
+
+/* ── Notification drawer list (news canvas) ── */
+
+html.ui-modern .notification-drawer-list {
+    padding: 4px 0;
+}
+
+html.ui-modern #newsList > div,
+html.ui-modern .notification-drawer-list > div {
+    border-radius: 8px;
+    margin: 4px 8px;
+    padding: 8px 10px;
+    transition: background 0.1s;
+    border-left: 3px solid transparent;
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+
+html.ui-modern #newsList > div:hover,
+html.ui-modern .notification-drawer-list > div:hover {
+    background: var(--m-accent-subtle);
+    border-left-color: var(--accent-color);
+}
+
+/* ── Empty states ── */
+
+html.ui-modern .noLinkTips,
+html.ui-modern [id$="Empty"],
+html.ui-modern .loading-placeholder {
+    opacity: 0.65;
+    font-size: 13px;
+    padding: 24px;
+    text-align: center;
+}
+
+/* ── Airline type / grade badges ── */
+
+html.ui-modern .airlineType {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: var(--m-accent-subtle);
+    color: var(--accent-color);
+    border: 1px solid var(--m-accent-border);
+}
+
+html.ui-modern .airlineTypeDescription {
+    font-size: 12px;
+    opacity: 0.75;
+    margin-top: 4px;
+    line-height: 1.5;
+}
+
+/* ── Canvas-level padding refinements ── */
+
+html.ui-modern #airportCanvas {
+    padding-top: 16px;
+}
+
+html.ui-modern #rankingCanvas {
+    padding: 16px 12px 16px 56px;
+}
+
+html.ui-modern #logCanvas > .section {
+    padding: 16px;
+    height: 100%;
+}
+
+html.ui-modern #newsCanvas > .section {
+    padding: 16px;
+    height: 100%;
+}
+
+/* ── Aircraft market tab-style selection (detailsSelection) ── */
+
+html.ui-modern .sheetOptions .cell.detailsSelection {
+    border-radius: 8px 8px 0 0;
+    font-weight: 600;
+}
+
+html.ui-modern .table .cell.detailsSelection {
+    transition: background 0.15s, color 0.15s;
+}
+
+/* ── Oil/Bank chart area ── */
+
+html.ui-modern .bankCanvasRightGroup,
+html.ui-modern .oilCanvasRightGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* ── Sidebar grid (airport, alliance) ── */
+
+html.ui-modern .sidebar-grid {
+    gap: 12px;
+}
+
+/* ── Airline notes / slogan / remarks ── */
+
+html.ui-modern .slogan,
+html.ui-modern .livery,
+html.ui-modern #airlineNotes,
+html.ui-modern .remarks {
+    border-radius: 8px;
+    border: 1px solid var(--m-card-border);
+    padding: 8px 10px;
+    font-size: 13px;
+    line-height: 1.55;
+    background: var(--background-2);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* ── Mobile grid override: 1-col on small screens ── */
+
+@media screen and (max-width: 640px) {
+    html.ui-modern .item-grid {
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 8px;
+    }
+
+    html.ui-modern .i-label {
+        font-size: 10px;
+    }
+
+    html.ui-modern .i-value {
+        font-size: 13px;
+    }
+
+    html.ui-modern #linksActionBar {
+        flex-wrap: wrap;
+        gap: 4px;
+        padding: 8px;
+    }
+
+    html.ui-modern .smDropdownMenu {
+        border-radius: 8px;
+    }
+
+    html.ui-modern .two-up-grid {
+        grid-template-columns: 1fr;
+    }
+}
