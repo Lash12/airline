@@ -116,7 +116,7 @@ jobs:
         run: npm test --prefix e2e
 
       - name: Upload test results
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-results
