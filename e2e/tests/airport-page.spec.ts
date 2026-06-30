@@ -134,6 +134,12 @@ test("airport page: asset catalog visible and modal opens on desktop", async ({ 
   await page.waitForSelector("#airportDetailsAssetCatalog .table-row", { timeout: 15000 });
   await expect(page.locator("#airportDetailsAssetCatalog .table-row").first()).toBeVisible();
 
+  // Dismiss any tutorial modals that may intercept pointer events
+  await page.evaluate(() => {
+    document.querySelectorAll<HTMLElement>(".tutorial.modal").forEach(el => { el.style.display = "none"; });
+    document.querySelectorAll<HTMLElement>("#tutorialHtml .modal").forEach(el => { el.style.display = "none"; });
+  });
+
   // Click first row: detail modal appears
   await page.locator("#airportDetailsAssetCatalog .table-row").first().click();
   await expect(page.locator("#airportAssetDetailsModal")).toBeVisible({ timeout: 5000 });

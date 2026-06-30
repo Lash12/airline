@@ -66,5 +66,5 @@ test("UI polish pass - visual verify", async ({ page }, testInfo: TestInfo) => {
   await page.locator("#balNetIncome").scrollIntoViewIfNeeded();
   await page.screenshot({ path: testInfo.outputPath("office_income.png"), fullPage: false });
 
-  console.log("Screenshots written to", SHOTS_DIR);
+  console.log("Screenshots written to", testInfo.outputDir);
 });
