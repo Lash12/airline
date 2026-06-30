@@ -39,6 +39,8 @@ function createTestContext() {
         change: jest.fn().mockReturnThis(),
         click: jest.fn().mockReturnThis(),
         submit: jest.fn().mockReturnThis(),
+        data: jest.fn().mockReturnThis(),
+        removeData: jest.fn().mockReturnThis(),
       }
     }
     return elements[selector]
@@ -298,6 +300,29 @@ describe('planCargoLink', () => {
 
     expect(flagAtCallTime).toBe(true)
     expect(ctx.planLink).toHaveBeenCalledWith(10, 20)
+  })
+
+  test('prefills the recommended freighter via explicitId when a model id is given', () => {
+    const { ctx } = createTestContext()
+    ctx.planLink = jest.fn()
+
+    ctx.planCargoLink(10, 20, 42)
+
+    // explicitId is set on the model select so updatePlanLinkInfo preselects it
+    const modelSelect = ctx.$('#planLinkModelSelect')
+    expect(modelSelect.data).toHaveBeenCalledWith('explicitId', 42)
+    expect(ctx._forceCargoPlanType).toBe(true)
+    expect(ctx.planLink).toHaveBeenCalledWith(10, 20)
+  })
+
+  test('does not set explicitId when no model id is given (blank-form fallback)', () => {
+    const { ctx } = createTestContext()
+    ctx.planLink = jest.fn()
+
+    ctx.planCargoLink(10, 20)
+
+    const modelSelect = ctx.$('#planLinkModelSelect')
+    expect(modelSelect.data).not.toHaveBeenCalledWith('explicitId', expect.anything())
   })
 
   test('flag resets to false when cargoFreightersEnabled (simulates updatePlanLinkInfo path)', () => {

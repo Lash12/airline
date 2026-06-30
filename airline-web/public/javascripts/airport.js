@@ -1811,7 +1811,8 @@ function renderCargoOpportunities(opportunities, airportId) {
             planBtn.textContent = 'Plan cargo route →'
             planBtn.style.cssText = 'font-size:11px;padding:3px 8px;margin-top:4px;cursor:pointer;'
             planBtn.className = 'opp-plan-btn'
-            planBtn.onclick = function() { planCargoLink(airportId, opp.destinationAirportId) }
+            var prefillModelId = (opp.recommendedAircraftModelIds && opp.recommendedAircraftModelIds.length > 0) ? opp.recommendedAircraftModelIds[0] : null
+            planBtn.onclick = function() { planCargoLink(airportId, opp.destinationAirportId, prefillModelId) }
             card.appendChild(planBtn)
         }
 
