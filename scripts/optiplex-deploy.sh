@@ -131,10 +131,21 @@ DB_USER=$(docker exec airline-db printenv MYSQL_USER)
 DB_PASS=$(docker exec airline-db printenv MYSQL_PASSWORD)
 DB_NAME=$(docker exec airline-db printenv MYSQL_DATABASE)
 
-cycle_table=$(docker exec airline-db mysql -u"$DB_USER" -p"$DB_PASS" -N \
-  -e "SHOW TABLES LIKE 'cycle'" "$DB_NAME" 2>/dev/null || true)
+# mysqladmin ping succeeds before Bitnami MySQL finishes creating user accounts.
+# Retry the user-auth check a few times so a slow user-creation doesn't trigger
+# a false "not initialized" and an unnecessary (and memory-exhausting) MainInit.
+cycle_table=""
+for _ in $(seq 1 10); do
+  result=$(docker exec airline-db mysql -u"$DB_USER" -p"$DB_PASS" -N \
+    -e "SHOW TABLES LIKE 'cycle'" "$DB_NAME" 2>/dev/null || true)
+  if [ -n "$result" ]; then
+    cycle_table="$result"
+    break
+  fi
+  sleep 3
+done
 if [ -z "$cycle_table" ]; then
-  echo "==> Database not initialized; running init (publishLocal + MainInit)"
+  echo "==> Database not initialized; running init (MainInit only — publishLocal runs in start-small.sh)"
   docker exec airline-app sh /home/airline/init-data.sh
 else
   echo "==> Database already initialized; supervisor will refresh airline-data artifact"
