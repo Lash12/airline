@@ -16,6 +16,8 @@
 	<link rel="stylesheet" type="text/css" href='@views.AssetUrl("stylesheets/switch.css")'>
 	<link rel="stylesheet" type="text/css" href='@views.AssetUrl("stylesheets/prompt.css")'>
 	<link rel="stylesheet" type="text/css" href='@views.AssetUrl("stylesheets/mobile.css")'>
+	<link rel="stylesheet" type="text/css" href='@views.AssetUrl("stylesheets/modern.css")'>
+	<script>/* Apply stored UI mode before first paint to avoid flash */try{if(localStorage.getItem('uiMode')==='modern'){document.documentElement.classList.add('ui-modern');}}catch(e){}</script>
 	<link rel="manifest" href="/manifest.json">
 	<script>var API_PREFIX = '/api/@controllers.currentApiVersion';</script>
 	<script src='@views.AssetUrl("javascripts/libs/jquery-4.0.0.min.js")'></script>

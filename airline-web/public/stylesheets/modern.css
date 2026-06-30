@@ -1,0 +1,505 @@
+/* =====================================================
+   MODERN UI THEME  —  html.ui-modern
+   Scoped to .ui-modern so the classic UI is untouched.
+   Works alongside [data-theme='dark'].
+   ===================================================== */
+
+/* ── UI Toggle Button ─────────────────────────────── */
+
+#uiModeToggle {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid rgba(0,0,0,0.18);
+    background: rgba(0,0,0,0.04);
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-color);
+    letter-spacing: 0.02em;
+    transition: background 0.15s, border-color 0.15s;
+    white-space: nowrap;
+}
+#uiModeToggle:hover {
+    background: rgba(59,111,232,0.10);
+    border-color: rgba(59,111,232,0.4);
+    color: #3b6fe8;
+}
+html[data-theme='dark'] #uiModeToggle {
+    border-color: rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.04);
+    color: var(--text-color);
+}
+html[data-theme='dark'] #uiModeToggle:hover {
+    background: rgba(96,165,250,0.12);
+    border-color: rgba(96,165,250,0.4);
+    color: #60a5fa;
+}
+html.ui-modern #uiModeToggle {
+    background: rgba(59,111,232,0.10);
+    border-color: rgba(59,111,232,0.5);
+    color: #3b6fe8;
+}
+html.ui-modern[data-theme='dark'] #uiModeToggle {
+    background: rgba(96,165,250,0.15);
+    border-color: rgba(96,165,250,0.5);
+    color: #60a5fa;
+}
+
+/* ── CSS Variable Overrides — Light Modern ─────────── */
+
+html.ui-modern {
+    /* Typography */
+    --m-font: 'Inter', system-ui, -apple-system, sans-serif;
+    --m-base-size: 13.5px;
+    --m-line-height: 1.55;
+
+    /* Palette */
+    --accent-color: #3b6fe8;
+    --m-accent-subtle: rgba(59,111,232,0.08);
+    --m-accent-border: rgba(59,111,232,0.25);
+
+    /* Surfaces */
+    --background-1: #f7f8fc;
+    --background-2: #eef0f6;
+    --background-3: rgba(0,0,0,0.06);
+    --section-background-image: #ffffff;
+    --fallback-background: #f0f2f8;
+
+    /* Cards */
+    --m-card-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.05);
+    --m-card-border: rgba(0,0,0,0.07);
+    --m-card-radius: 12px;
+
+    /* Buttons */
+    --button-background: rgba(0,0,0,0.03);
+    --button-border: 1px solid rgba(0,0,0,0.14);
+    --button-hover-background: rgba(59,111,232,0.08);
+    --button-hover-border: rgba(59,111,232,0.35);
+    --button-hover-color: #3b6fe8;
+
+    /* Tables */
+    --table-header-background: linear-gradient(180deg, #e8f0fd 0%, #dce8fa 100%);
+    --table-header-color: rgba(20,40,80,0.7);
+    --table-even-row-background-color: rgba(59,111,232,0.03);
+    --table-selected-row-background: linear-gradient(180deg, #3b6fe8 0%, #2d5fd4 100%);
+
+    /* Menubar */
+    --menubar-background-image: #ffffff;
+    --menubar-shadow: 0 1px 0 rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04);
+
+    /* Inputs */
+    --input-border-color: rgba(59,111,232,0.3);
+    --input-background-color: #ffffff;
+
+    /* Shadows */
+    --shadow-1: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.05);
+    --shadow-2: 0 2px 8px rgba(0,0,0,0.08), 0 12px 32px rgba(0,0,0,0.08);
+
+    /* Modal */
+    --modal-background-color: rgba(0,0,0,0.5);
+    --modal-content-background-image: #ffffff;
+    --tooltip-background-color: #1a1d27;
+}
+
+/* ── CSS Variable Overrides — Dark Modern ──────────── */
+
+html.ui-modern[data-theme='dark'] {
+    --accent-color: #60a5fa;
+    --m-accent-subtle: rgba(96,165,250,0.1);
+    --m-accent-border: rgba(96,165,250,0.25);
+
+    /* Surfaces — neutral charcoal instead of purple */
+    --background-1: #111318;
+    --background-2: #1a1d26;
+    --background-3: rgba(255,255,255,0.06);
+    --section-background-image: #181b24;
+    --fallback-background: #0d0f14;
+
+    --m-card-shadow: 0 1px 3px rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.3);
+    --m-card-border: rgba(255,255,255,0.07);
+
+    --button-background: rgba(255,255,255,0.04);
+    --button-border: 1px solid rgba(255,255,255,0.1);
+    --button-hover-background: rgba(96,165,250,0.12);
+    --button-hover-border: rgba(96,165,250,0.4);
+    --button-hover-color: #60a5fa;
+
+    --table-header-background: linear-gradient(180deg, #1e2130 0%, #181b24 100%);
+    --table-header-color: rgba(255,255,255,0.55);
+    --table-even-row-background-color: rgba(255,255,255,0.025);
+    --table-selected-row-background: rgba(96,165,250,0.15);
+    --table-selected-row-shadow: inset 0 0 0 1px rgba(96,165,250,0.3);
+
+    --menubar-background-image: #111318;
+    --menubar-shadow: 0 1px 0 rgba(255,255,255,0.06);
+
+    --input-border-color: rgba(255,255,255,0.12);
+    --input-background-color: #1e2130;
+
+    --shadow-1: 0 2px 8px rgba(0,0,0,0.4);
+    --shadow-2: 0 4px 20px rgba(0,0,0,0.5);
+
+    --modal-background-color: rgba(0,0,0,0.7);
+    --modal-content-background-image: #181b24;
+    --tooltip-background-color: #0d0f14;
+
+    --text-color: #c8cdd8;
+    --text-color-heading: #e2e5ef;
+    --link-decoration-color: #4a4e60;
+}
+
+/* ── Typography ────────────────────────────────────── */
+
+html.ui-modern body {
+    font-size: var(--m-base-size);
+    font-family: var(--m-font);
+    line-height: var(--m-line-height);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+html.ui-modern h1,
+html.ui-modern h2,
+html.ui-modern h3,
+html.ui-modern h4,
+html.ui-modern h5,
+html.ui-modern h6,
+html.ui-modern .font-display {
+    font-family: var(--m-font);
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+}
+
+html.ui-modern h2 { font-size: 1.15rem; }
+html.ui-modern h3 { font-size: 1.0rem; }
+html.ui-modern h4 { font-size: 0.9rem; letter-spacing: -0.01em; }
+html.ui-modern h5 { font-size: 0.82rem; }
+
+html.ui-modern p {
+    font-size: inherit;
+    line-height: var(--m-line-height);
+}
+
+html.ui-modern .label {
+    font-size: 12.5px;
+    opacity: 0.9;
+}
+
+/* ── Cards & Sections ──────────────────────────────── */
+
+html.ui-modern .section,
+html.ui-modern .modal-content {
+    background: var(--section-background-image);
+    border-radius: var(--m-card-radius);
+    border: 1px solid var(--m-card-border);
+    box-shadow: var(--m-card-shadow);
+    padding: 18px 16px 22px;
+}
+
+html.ui-modern .section .section {
+    margin: 6px;
+    border-radius: 8px;
+    background: var(--background-2);
+    box-shadow: none;
+    border-color: transparent;
+}
+
+html.ui-modern .section-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    opacity: 0.55;
+    margin-bottom: 8px;
+}
+
+html.ui-modern .section h2 {
+    font-size: 1.1rem;
+    padding-bottom: 4px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--m-card-border);
+}
+
+html.ui-modern .section h4 {
+    padding-top: 12px;
+    margin-bottom: 4px;
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: var(--text-color-heading);
+}
+
+/* ── Top Bar / Menubar ─────────────────────────────── */
+
+html.ui-modern .menubar {
+    background: var(--menubar-background-image);
+    box-shadow: var(--menubar-shadow);
+    backdrop-filter: none;
+}
+
+html.ui-modern #topBar > div {
+    background: var(--background-1);
+    box-shadow: var(--shadow-1);
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+html.ui-modern #topBar .topBarDetails {
+    gap: 0 1.25rem;
+    padding: 6px 12px;
+}
+
+/* ── Buttons ───────────────────────────────────────── */
+
+html.ui-modern .button {
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    padding: 4px 14px;
+    transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+
+html.ui-modern .button:hover {
+    box-shadow: 0 2px 8px rgba(59,111,232,0.18);
+    transform: translateY(-0.5px);
+}
+
+html.ui-modern .button:active {
+    transform: none;
+    box-shadow: none;
+}
+
+/* Primary / accent buttons */
+html.ui-modern .button.main-button,
+html.ui-modern .button[onclick*="confirm"],
+html.ui-modern .button.primary {
+    background: var(--accent-color);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 2px 8px rgba(59,111,232,0.3);
+}
+html.ui-modern .button.main-button:hover {
+    background: #2d5fd4;
+    box-shadow: 0 4px 12px rgba(59,111,232,0.4);
+}
+html.ui-modern[data-theme='dark'] .button.main-button:hover {
+    background: #3b8ef5;
+}
+
+/* ── Tables ────────────────────────────────────────── */
+
+html.ui-modern .table-header {
+    border-radius: 6px 6px 0 0;
+    overflow: hidden;
+}
+
+html.ui-modern .table:not(.rounded-none) .table-row:first-child .cell:first-child,
+html.ui-modern .table:not(.rounded-none) .table-row:first-child .cell:last-child {
+    border-radius: 0;
+}
+
+html.ui-modern .data .table-row.selected:nth-child(even),
+html.ui-modern .data .table-row.selected:nth-child(odd) {
+    border-radius: 4px;
+}
+
+html.ui-modern .data .table-row.clickable:hover {
+    border-radius: 4px;
+}
+
+/* ── Navigation Sidebar ────────────────────────────── */
+
+html.ui-modern #navPrimary {
+    border-radius: 0 16px 16px 0;
+    background: var(--section-background-image);
+    border: 1px solid var(--m-card-border);
+    border-left: none;
+    box-shadow: var(--m-card-shadow);
+    gap: 6px;
+    padding: 10px 4px;
+}
+
+html.ui-modern .nav-link {
+    border-radius: 10px;
+    width: 38px;
+    height: 38px;
+    transition: background 0.15s, box-shadow 0.15s;
+}
+
+html.ui-modern .nav-link.selected,
+html.ui-modern .nav-link:hover {
+    background: var(--m-accent-subtle);
+    box-shadow: none;
+}
+
+html.ui-modern .nav-link.selected img,
+html.ui-modern .nav-link:hover img {
+    filter: none;
+}
+
+/* ── Canvas / Panel Layout ─────────────────────────── */
+
+html.ui-modern .canvas {
+    gap: 12px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+@media screen and (min-width: 800px) {
+    html.ui-modern .canvas {
+        padding-left: 56px;
+        padding-right: 12px;
+    }
+}
+
+/* ── Inputs & Selects ──────────────────────────────── */
+
+html.ui-modern input,
+html.ui-modern textarea,
+html.ui-modern select {
+    border-radius: 8px;
+    border: 1px solid var(--input-border-color);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    padding: 6px 10px;
+}
+
+html.ui-modern input:focus,
+html.ui-modern textarea:focus,
+html.ui-modern select:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px var(--m-accent-subtle);
+    outline: none;
+}
+
+/* ── Modals ────────────────────────────────────────── */
+
+html.ui-modern .modal-content {
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08);
+}
+
+html.ui-modern[data-theme='dark'] .modal-content {
+    box-shadow: 0 8px 48px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4);
+}
+
+html.ui-modern .modal .button-area {
+    padding-top: 16px;
+    gap: 8px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* ── Tooltips ──────────────────────────────────────── */
+
+html.ui-modern .tooltip {
+    border-radius: 8px;
+    font-size: 12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+
+html.ui-modern[data-theme='dark'] .tooltip {
+    background: #0d0f14;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* ── Scrollbars ────────────────────────────────────── */
+
+html.ui-modern ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+html.ui-modern ::-webkit-scrollbar-track {
+    background: transparent;
+}
+html.ui-modern ::-webkit-scrollbar-thumb {
+    border-radius: 99px;
+    background: rgba(0,0,0,0.18);
+}
+html.ui-modern[data-theme='dark'] ::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.12);
+}
+
+/* ── Notification Drawer ───────────────────────────── */
+
+html.ui-modern .notification-drawer {
+    border-radius: 12px;
+    border: 1px solid var(--m-card-border);
+    box-shadow: var(--shadow-2);
+}
+
+html.ui-modern .drawer-header {
+    border-radius: 12px 12px 0 0;
+    background: var(--background-2);
+    font-weight: 600;
+    font-size: 13px;
+}
+
+/* ── Mobile ────────────────────────────────────────── */
+
+@media screen and (max-width: 640px) {
+    html.ui-modern .canvas {
+        padding: 12px 8px;
+        gap: 10px;
+    }
+
+    html.ui-modern .section {
+        border-radius: 10px;
+        padding: 14px 12px 18px;
+    }
+
+    html.ui-modern .canvas > div,
+    html.ui-modern .canvas > .section {
+        min-width: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: 1 1 100%;
+    }
+
+    html.ui-modern #navPrimary {
+        border-radius: 0 12px 12px 0;
+        padding: 8px 3px;
+    }
+
+    html.ui-modern #navPrimaryToggle {
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        background: var(--section-background-image);
+        border: 1px solid var(--m-card-border);
+    }
+}
+
+@media screen and (max-width: 800px) {
+    html.ui-modern .extendedTopBarDetails {
+        background: var(--background-1);
+        border-bottom: 1px solid var(--m-card-border);
+        padding: 6px 12px;
+    }
+}
+
+/* ── Misc Polish ───────────────────────────────────── */
+
+html.ui-modern .config + .config,
+html.ui-modern .config:first-child {
+    border-top-color: var(--m-card-border);
+}
+
+html.ui-modern .section.clickable:hover {
+    background: var(--m-accent-subtle);
+    box-shadow: var(--m-card-shadow), inset 0 0 0 1px var(--m-accent-border);
+}
+
+/* Smooth transitions for theme toggle */
+html.ui-modern .section,
+html.ui-modern body,
+html.ui-modern .menubar,
+html.ui-modern #topBar > div,
+html.ui-modern #navPrimary {
+    transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
