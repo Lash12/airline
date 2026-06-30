@@ -99,23 +99,35 @@ const ChartUtils = {
     },
 
     applyTheme(chart) {
-        if (document.documentElement.getAttribute("data-theme") === "dark") {
-            const darkColor = '#DDDDDD';
-            if (chart.options.plugins?.legend?.labels) {
-                chart.options.plugins.legend.labels.color = darkColor;
-            }
-            ['x', 'y', 'y1'].forEach(axis => {
-                if (chart.options.scales?.[axis]) {
-                    if (chart.options.scales[axis].title) {
-                        chart.options.scales[axis].title.color = darkColor;
-                    }
-                    if (chart.options.scales[axis].ticks) {
-                        chart.options.scales[axis].ticks.color = darkColor;
-                    }
+        const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+        const isModern = document.documentElement.classList.contains('ui-modern');
+        if (!isDark && !isModern) return;
+
+        const textColor = isDark ? '#DDDDDD' : '#374151';
+        const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
+        const interFont = { family: "'Inter', system-ui, sans-serif", size: 12 };
+
+        ['x', 'y', 'y1'].forEach(axis => {
+            if (chart.options.scales?.[axis]) {
+                const scale = chart.options.scales[axis];
+                if (scale.title) scale.title.color = textColor;
+                if (scale.ticks) {
+                    scale.ticks.color = textColor;
+                    if (isModern) scale.ticks.font = interFont;
                 }
-            });
-            chart.update();
+                if (isModern && scale.grid) {
+                    scale.grid.color = gridColor;
+                    scale.grid.borderColor = gridColor;
+                }
+            }
+        });
+
+        if (chart.options.plugins?.legend?.labels) {
+            chart.options.plugins.legend.labels.color = textColor;
+            if (isModern) chart.options.plugins.legend.labels.font = interFont;
         }
+
+        chart.update();
     }
     ,
     // Apply common point style and a Week/Year tooltip to a chart config.
@@ -150,6 +162,16 @@ const ChartUtils = {
             return prettyLabel(propLabel, value, { currency: true });
         });
     }
+};
+
+// Re-apply theme to every active Chart.js instance (called on UI mode toggle)
+window.reapplyChartThemes = function() {
+    document.querySelectorAll('canvas').forEach(function(canvas) {
+        const container = canvas.parentElement;
+        if (container && container._chart) {
+            ChartUtils.applyTheme(container._chart);
+        }
+    });
 };
 
 // Utility functions
