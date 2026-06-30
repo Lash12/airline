@@ -1122,3 +1122,245 @@ html.ui-modern .remarks {
         grid-template-columns: 1fr;
     }
 }
+
+/* ── Map Control Panels (passenger map, heatmap, top destinations) ── */
+
+html.ui-modern .mapControlPanel {
+    border-radius: var(--m-card-radius) !important;
+    border: 1px solid var(--m-card-border) !important;
+    box-shadow: var(--shadow-2) !important;
+    background: var(--section-background-image) !important;
+}
+
+/* ── Glow buttons — accent pulse in modern instead of blue cornflower ── */
+
+html.ui-modern div.glow,
+html.ui-modern span.glow,
+html.ui-modern .button.glow {
+    animation: modern-glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes modern-glow {
+    from { box-shadow: 0 0 4px -2px var(--accent-color); }
+    to   { box-shadow: 0 0 10px 3px var(--accent-color); }
+}
+
+/* ── Route Forecast Card — override hardcoded dark inline styles ── */
+
+html.ui-modern #routeForecastContainer {
+    background: var(--background-2) !important;
+    border-color: var(--m-card-border) !important;
+    box-shadow: var(--m-card-shadow) !important;
+    border-radius: 10px !important;
+}
+
+html.ui-modern #routeForecastContainer h4 {
+    border-bottom-color: var(--m-card-border) !important;
+    padding-bottom: 6px;
+}
+
+html.ui-modern[data-theme='dark'] #routeForecastContainer {
+    background: rgba(255,255,255,0.03) !important;
+}
+
+/* Market Assessment sub-box */
+html.ui-modern #forecastReasons {
+    color: var(--text-color);
+    opacity: 0.8;
+}
+
+/* ── Campaign Overlay Panel ── */
+
+html.ui-modern #campaignOverlayPanel {
+    border: 1px solid var(--m-card-border) !important;
+    box-shadow: var(--shadow-2) !important;
+    background: var(--section-background-image) !important;
+    border-radius: 14px !important;
+}
+
+/* ── Map popup (maplibregl) ── */
+
+html.ui-modern .maplibregl-popup-content {
+    border: 1px solid var(--m-card-border) !important;
+    box-shadow: var(--shadow-2) !important;
+    background: var(--section-background-image) !important;
+}
+
+/* ── Map Filters Overlay (show passenger/cargo checkboxes) ── */
+
+html.ui-modern #mapFilters {
+    background: var(--section-background-image) !important;
+    border: 1px solid var(--m-card-border) !important;
+    box-shadow: var(--m-card-shadow) !important;
+    color: var(--text-color) !important;
+    border-radius: 8px !important;
+    backdrop-filter: none !important;
+}
+
+html.ui-modern[data-theme='dark'] #mapFilters {
+    background: rgba(24,27,36,0.92) !important;
+    backdrop-filter: blur(4px) !important;
+}
+
+/* ── Departures Board ── */
+
+html.ui-modern #departuresCanvas .section {
+    border-radius: var(--m-card-radius);
+    overflow: hidden;
+    padding: 16px;
+}
+
+html.ui-modern .table.departures {
+    font-size: 12.5px;
+}
+
+html.ui-modern .table.departures .cell {
+    padding: 5px 8px;
+    border-bottom: 1px solid var(--m-card-border);
+}
+
+html.ui-modern #weather {
+    font-size: 12.5px;
+    opacity: 0.85;
+}
+
+html.ui-modern #weatherDescription {
+    font-size: 12px;
+    font-weight: 600;
+    text-align: right;
+}
+
+html.ui-modern #temperature {
+    font-size: 13px;
+    font-weight: 700;
+    text-align: right;
+    color: var(--accent-color);
+}
+
+/* ── Search Canvas: title tabs ── */
+
+html.ui-modern .titlesContainer {
+    display: flex;
+    gap: 3px;
+    padding: 0 4px;
+}
+
+html.ui-modern .titleSelection {
+    border-radius: 8px 8px 0 0;
+    border: 1px solid var(--m-card-border);
+    border-bottom: none;
+    padding: 6px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--background-2);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+html.ui-modern .titleSelection.selected {
+    background: var(--accent-color);
+    color: #fff;
+    border-color: var(--accent-color);
+}
+
+html.ui-modern .titleSelection:hover:not(.selected) {
+    background: var(--m-accent-subtle);
+    color: var(--accent-color);
+}
+
+/* ── Search inputs & results ── */
+
+html.ui-modern .searchInput {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+html.ui-modern .searchResult {
+    border-radius: 0 0 8px 8px;
+    border: 1px solid var(--m-card-border);
+    border-top: none;
+    background: var(--section-background-image);
+    box-shadow: var(--shadow-1);
+}
+
+/* ── Link notes textarea ── */
+
+html.ui-modern #linkNotes {
+    border-radius: 8px !important;
+    border: 1px solid var(--input-border-color);
+    background: var(--input-background-color);
+    font-size: 12.5px;
+    line-height: 1.55;
+    padding: 8px 10px;
+    width: calc(100% - 2rem) !important;
+}
+
+/* ── Price inputs ── */
+
+html.ui-modern .quick-price-input,
+html.ui-modern .price-input {
+    border-radius: 6px;
+    border: 1px solid var(--input-border-color);
+    background: var(--input-background-color);
+    text-align: center;
+    font-size: 13px;
+    padding: 4px 6px;
+    font-family: var(--m-font);
+}
+
+/* ── Round airport images (research panel) ── */
+
+html.ui-modern .roundImage {
+    border-radius: 50%;
+    border: 2px solid var(--m-card-border);
+    box-shadow: var(--m-card-shadow);
+    object-fit: cover;
+}
+
+/* ── Link decoration (route from-to line) ── */
+
+html.ui-modern .link-decoration-circle {
+    border-color: var(--accent-color);
+    background: var(--section-background-image);
+}
+
+html.ui-modern .link-decoration-line {
+    background-color: var(--accent-color);
+    opacity: 0.4;
+}
+
+/* ── Warning / rejection notices ── */
+
+html.ui-modern .linkRejection.warning,
+html.ui-modern .overtimeCompensation.warning {
+    border-radius: 8px;
+    border-left-width: 3px;
+    padding: 10px 12px;
+    font-size: 12.5px;
+}
+
+/* ── Frequency detail tables (route planner) ── */
+
+html.ui-modern .frequencyDetail,
+html.ui-modern .frequencyDetailTotal {
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+/* ── Mobile map controls ── */
+
+@media screen and (max-width: 640px) {
+    html.ui-modern .mapControlPanel {
+        width: 95vw !important;
+        max-width: 95vw !important;
+    }
+
+    html.ui-modern #departuresCanvas .section {
+        border-radius: 10px;
+    }
+
+    html.ui-modern .titleSelection {
+        padding: 5px 10px;
+        font-size: 11px;
+    }
+}
