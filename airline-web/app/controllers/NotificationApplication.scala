@@ -131,6 +131,23 @@ class NotificationApplication @Inject()(cc: ControllerComponents) extends Abstra
     Ok(Json.toJson(NotificationSource.loadByCategory(airlineId, NotificationCategory.MARKET_OVERVIEW, 50)))
   }
 
+  // Idle aircraft — frames owned by this airline with no link assignments.
+  // Live query (not stored); gated by the same consultant flag so it only
+  // appears when the consultant panel is unlocked. Returns [{modelName, homeIata, count}].
+  def getIdleAircraft(airlineId: Int) = AuthenticatedAirline(airlineId) { _ =>
+    if (!SoloConfig.consultantEnabled) {
+      Ok(Json.arr())
+    } else {
+      val owned = AirplaneSource.loadAirplanesByOwner(airlineId).filterNot(_.isSold)
+      val assignments = AirplaneSource.loadAirplaneLinkAssignmentsByOwner(airlineId)
+      val idle = owned.filter(a => assignments.get(a.id).forall(_.isEmpty))
+      val grouped = idle.groupBy(a => (a.model.name, a.home.iata)).map { case ((modelName, homeIata), planes) =>
+        Json.obj("modelName" -> modelName, "homeIata" -> homeIata, "count" -> planes.size)
+      }.toList.sortBy(j => (-(j \ "count").as[Int], (j \ "homeIata").as[String]))
+      Ok(Json.toJson(grouped))
+    }
+  }
+
   def markNewsRead(airlineId: Int) = AuthenticatedAirline(airlineId) { _ =>
     WorldNewsSource.markSeen(airlineId, WorldNewsSource.latestId())
     Ok(Json.obj())

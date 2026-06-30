@@ -136,6 +136,7 @@ GET		 /airlines/:airlineId/news  controllers.NotificationApplication.getNews(air
 POST	 /airlines/:airlineId/news/read  controllers.NotificationApplication.markNewsRead(airlineId : Int)
 GET		 /airlines/:airlineId/consultant-advice  controllers.NotificationApplication.getConsultantAdvice(airlineId : Int)
 GET		 /airlines/:airlineId/consultant-market  controllers.NotificationApplication.getMarketOverview(airlineId : Int)
+GET		 /airlines/:airlineId/idle-aircraft  controllers.NotificationApplication.getIdleAircraft(airlineId : Int)
 POST	 /airlines/:airlineId/consultant-advice/refresh  controllers.NotificationApplication.refreshConsultantAdvice(airlineId : Int)
 GET		 /airlines/:airlineId/notifications  controllers.NotificationApplication.getNotifications(airlineId : Int)
 GET		 /airlines/:airlineId/notifications/unread  controllers.NotificationApplication.getUnreadCount(airlineId : Int)

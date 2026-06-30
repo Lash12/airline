@@ -1629,6 +1629,11 @@ function loadConsultantAdvice() {
         url: "/airlines/" + activeAirline.id + "/consultant-market",
         success: function(list) { renderMarketOverview(list) }
     })
+    $.ajax({
+        type: 'GET',
+        url: "/airlines/" + activeAirline.id + "/idle-aircraft",
+        success: function(list) { renderIdleAircraftCallout(list) }
+    })
 }
 
 function _parseSidecar(message) {
@@ -1655,6 +1660,22 @@ function _planBtn(fromId, toId) {
 
 function consultantPlanRoute(fromId, toId) {
     planLink(parseInt(fromId), parseInt(toId))
+}
+
+function renderIdleAircraftCallout(list) {
+    var $c = $('#consultantIdleCallout')
+    $c.empty().hide()
+    if (!list || list.length === 0) return
+    var items = list.map(function(g) {
+        return g.count + '× ' + g.modelName + ' at ' + g.homeIata
+    })
+    $c.html(
+        '<div style="padding:5px 8px;margin-bottom:6px;background:rgba(224,160,48,0.12);border-radius:4px;border-left:3px solid #e0a030;">' +
+        '<strong style="font-size:11px;color:#e0a030;">&#9201; Idle aircraft</strong>' +
+        '<div class="text-sm" style="opacity:0.85;margin-top:2px;">' + items.join(' &nbsp;&middot;&nbsp; ') + '</div>' +
+        '<div class="text-sm" style="opacity:0.6;margin-top:1px;">These frames are sitting unused — route recommendations below may fit them.</div>' +
+        '</div>'
+    ).show()
 }
 
 function renderConsultantAdvice(list) {
