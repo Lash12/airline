@@ -180,3 +180,147 @@ test("renderMarketOverview empty state shows level-up hint", async ({ page }) =>
 
   expect(text).toContain('higher level');
 });
+
+test("renderAdvisorRecommendations shows grouped advisor panel", async ({ page }) => {
+  test.setTimeout(60000);
+  await bootstrap(page);
+
+  const state = await page.evaluate(() => {
+    (window as any).renderAdvisorRecommendations({
+      advisorTier: 4,
+      recommendations: [
+        {
+          type: 'IDLE_AIRCRAFT',
+          tier: 2,
+          priority: 'HIGH',
+          title: 'Idle aircraft available',
+          summary: 'Use idle capacity on JFK to LAX.',
+          details: 'Idle frames earn nothing.',
+          estimatedImpact: '~$40,000/wk',
+          risk: 'Confirm aircraft fit.',
+          action: { label: 'Plan route', target: 'planRoute:3599-3600' },
+        },
+        {
+          type: 'CARGO_OPPORTUNITY',
+          tier: 2,
+          priority: 'MEDIUM',
+          title: 'Cargo lane to LHR',
+          summary: '900 unserved cargo units.',
+          details: 'Estimated yield $0.0100 per cargo unit per km.',
+          estimatedImpact: 'High cargo potential',
+          risk: 'Watch utilization.',
+          action: { label: 'Plan cargo route', target: 'cargoRoute:3599-3601' },
+        },
+      ],
+    });
+    const cards = Array.from(document.querySelectorAll('#advisorRecommendationsList .advisor-rec-card')) as HTMLElement[];
+    return {
+      heading: (document.getElementById('advisorRecommendationsHeading') as HTMLElement | null)?.style.display ?? '',
+      cardCount: cards.length,
+      text: document.getElementById('advisorRecommendationsList')?.textContent ?? '',
+      buttonCount: document.querySelectorAll('#advisorRecommendationsList .advisor-action-btn').length,
+    };
+  });
+
+  expect(state.heading).not.toBe('none');
+  expect(state.cardCount).toBe(2);
+  expect(state.text).toContain('Idle aircraft available');
+  expect(state.text).toContain('Cargo lane to LHR');
+  expect(state.buttonCount).toBe(2);
+});
+
+test("advisor recommendations endpoint returns stable shape", async ({ page }) => {
+  test.setTimeout(60000);
+  await bootstrap(page);
+  const airlineId = await page.evaluate(() => (window as any).activeAirline.id);
+  const res = await page.request.get(`/airlines/${airlineId}/advisor/recommendations`);
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+  expect(body).toHaveProperty('advisorLevel');
+  expect(body).toHaveProperty('advisorProficiency');
+  expect(body).toHaveProperty('advisorTier');
+  expect(Array.isArray(body.recommendations)).toBeTruthy();
+});
+
+test("renderCargoMarketOverview shows network-wide cargo lanes", async ({ page }) => {
+  test.setTimeout(60000);
+  await bootstrap(page);
+
+  const state = await page.evaluate(() => {
+    (window as any).renderCargoMarketOverview({
+      lanes: [
+        {
+          originAirportId: 3599,
+          originIata: 'JFK',
+          destinationAirportId: 3600,
+          destinationIata: 'LHR',
+          cargoDemand: 1200,
+          estimatedProfit: 450000,
+          recommendedAircraft: ['Boeing 777F'],
+          servedByPlayer: false,
+          reason: 'Potential freighter lane.',
+        },
+      ],
+    });
+    return {
+      sectionDisplay: (document.getElementById('cargoMarketOverviewStatus') as HTMLElement | null)?.style.display ?? '',
+      text: document.getElementById('cargoMarketOverviewList')?.textContent ?? '',
+      hasPlanButton: !!document.querySelector('#cargoMarketOverviewList .cargo-market-plan-btn'),
+    };
+  });
+
+  expect(state.sectionDisplay).not.toBe('none');
+  expect(state.text).toContain('JFK');
+  expect(state.text).toContain('LHR');
+  expect(state.text).toContain('Boeing 777F');
+  expect(state.hasPlanButton).toBe(true);
+});
+
+test("advisor and cargo overview panels render on mobile width", async ({ page }) => {
+  test.setTimeout(60000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await bootstrap(page);
+
+  const state = await page.evaluate(() => {
+    (window as any).renderAdvisorRecommendations({
+      advisorTier: 4,
+      recommendations: [{
+        type: 'IDLE_AIRCRAFT',
+        tier: 2,
+        priority: 'HIGH',
+        title: 'Idle aircraft available',
+        summary: 'Use idle capacity on JFK to LAX.',
+        details: 'Idle frames earn nothing.',
+        estimatedImpact: '~$40,000/wk',
+        risk: 'Confirm aircraft fit.',
+        action: { label: 'Plan route', target: 'planRoute:3599-3600' },
+      }],
+    });
+    (window as any).renderCargoMarketOverview({
+      lanes: [{
+        originAirportId: 3599,
+        originIata: 'JFK',
+        destinationAirportId: 3600,
+        destinationIata: 'LHR',
+        cargoDemand: 1200,
+        estimatedProfit: 450000,
+        recommendedAircraft: ['Boeing 777F'],
+        servedByPlayer: false,
+        reason: 'Potential freighter lane.',
+      }],
+    });
+    const advisor = document.getElementById('advisorRecommendationsList') as HTMLElement | null;
+    const cargo = document.getElementById('cargoMarketOverviewList') as HTMLElement | null;
+    return {
+      advisorText: advisor?.textContent ?? '',
+      cargoText: cargo?.textContent ?? '',
+      advisorWidth: advisor ? advisor.scrollWidth <= advisor.clientWidth + 24 : false,
+      cargoWidth: cargo ? cargo.scrollWidth <= cargo.clientWidth + 24 : false,
+    };
+  });
+
+  expect(state.advisorText).toContain('Idle aircraft');
+  expect(state.cargoText).toContain('Boeing 777F');
+  expect(state.advisorWidth).toBe(true);
+  expect(state.cargoWidth).toBe(true);
+});

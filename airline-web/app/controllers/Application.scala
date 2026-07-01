@@ -856,6 +856,44 @@ class Application @Inject()(cc: ControllerComponents, val configuration: play.ap
     }
   }
 
+  def getCargoMarketOverview(airlineId: Int) = AuthenticatedAirline(airlineId) { request =>
+    request.headers.get(IF_NONE_MATCH) match {
+      case Some(etag) if etag == s""""$currentCycle"""" =>
+        NotModified
+      case _ =>
+        val json = Option(ResponseCache.cargoMarketOverviewCache.getIfPresent(airlineId)).filter(_._1 == currentCycle).map(_._2).getOrElse {
+          val result = computeCargoMarketOverviewJson(airlineId)
+          ResponseCache.cargoMarketOverviewCache.put(airlineId, (currentCycle, result))
+          result
+        }
+        Ok(json).withHeaders(CACHE_CONTROL -> CYCLE_CACHE_CONTROL, ETAG -> s""""$currentCycle"""")
+    }
+  }
+
+  private def computeCargoMarketOverviewJson(airlineId: Int): JsValue = {
+    if (!SoloConfig.cargoEnabled) {
+      Json.obj("lanes" -> Json.arr())
+    } else {
+      val lanes = com.patson.CargoMarketVisibilityService.getCargoMarketOverview(airlineId)
+      Json.obj("lanes" -> Json.toJson(lanes.map { lane =>
+        Json.obj(
+          "originAirportId" -> lane.originAirportId,
+          "originIata" -> lane.originIata,
+          "originName" -> lane.originName,
+          "destinationAirportId" -> lane.destinationAirportId,
+          "destinationIata" -> lane.destinationIata,
+          "destinationName" -> lane.destinationName,
+          "cargoDemand" -> lane.cargoDemand,
+          "estimatedYield" -> lane.estimatedYield,
+          "estimatedProfit" -> lane.estimatedProfit,
+          "recommendedAircraft" -> lane.recommendedAircraft,
+          "servedByPlayer" -> lane.servedByPlayer,
+          "reason" -> lane.reason
+        )
+      }))
+    }
+  }
+
   private def computeAirportCargoOpportunitiesJson(airportId: Int): JsValue = {
     if (!SoloConfig.cargoEnabled) {
       Json.arr()
@@ -871,6 +909,14 @@ class Application @Inject()(cc: ControllerComponents, val configuration: play.ap
           "weeklyCargoServed" -> opt.weeklyCargoServed,
           "weeklyCargoUnserved" -> opt.weeklyCargoUnserved,
           "estimatedYield" -> opt.estimatedYield,
+          "estimatedYieldPerUnitKm" -> opt.estimatedYieldPerUnitKm,
+          "estimatedProfit" -> opt.estimatedProfit,
+          "profitBand" -> opt.profitBand,
+          "bestAircraft" -> opt.bestAircraft,
+          "bestFreighterCandidate" -> opt.bestFreighterCandidate,
+          "reasonText" -> opt.reasonText,
+          "riskText" -> opt.riskText,
+          "score" -> opt.score,
           "recommendedAircraftModelIds" -> Json.toJson(opt.recommendedAircraftModelIds),
           "recommendedAircraftModelNames" -> Json.toJson(opt.recommendedAircraftModelIds.flatMap(id => AirplaneModelCache.allModels.get(id).map(_.name))),
           "notes" -> opt.notes

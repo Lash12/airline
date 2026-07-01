@@ -1,6 +1,7 @@
 package com.patson
 
 import com.patson.model._
+import com.patson.data.SoloConfig
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
@@ -9,8 +10,31 @@ class CargoAllocationSpec extends AnyWordSpecLike with Matchers {
   private val to = Airport("BBB", "KBBB", "BBB", 0, 20, "ZZ", "BBB", "North America", 5, 35000, 4_000_000, id = 2)
   private val airline = Airline("Cargo Test", id = 1)
 
+  private case class TestCargoTransport(from: Airport,
+                                        to: Airport,
+                                        airline: Airline,
+                                        distance: Int,
+                                        var capacity: LinkClassValues,
+                                        duration: Int,
+                                        var frequency: Int,
+                                        price: LinkClassValues,
+                                        var id: Int) extends Transport {
+    override val transportType = TransportType.CARGO_FLIGHT
+    override val cost = price
+    override val frequencyByClass = (_: LinkClass) => 0
+    override var minorDelayCount = 0
+    override var majorDelayCount = 0
+    override var cancellationCount = 0
+    override def computedQuality(): Int = 0
+  }
+
   private def details(id: Int, cargoCapacity: Int, distance: Int = 1000): LinkConsumptionDetails = {
     val link = Link(from, to, airline, LinkClassValues.empty, distance, LinkClassValues.empty, 0, 0, 1, id = id)
+    LinkConsumptionDetails(link, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, cargoCapacity = cargoCapacity)
+  }
+
+  private def cargoDetails(id: Int, cargoCapacity: Int, distance: Int = 1000): LinkConsumptionDetails = {
+    val link = TestCargoTransport(from, to, airline, distance, LinkClassValues.empty, 0, 1, LinkClassValues.empty, id)
     LinkConsumptionDetails(link, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, cargoCapacity = cargoCapacity)
   }
 
@@ -49,6 +73,27 @@ class CargoAllocationSpec extends AnyWordSpecLike with Matchers {
 
       result.find(_.linkId == 1).get.carried shouldBe 1
       result.find(_.linkId == 2).get.carried shouldBe 0
+    }
+
+    "leave belly cargo revenue on passenger links at the base cargo rate".in {
+      val result = CargoAllocation.allocateGroup(Seq(details(1, 100, distance = 1000)), 100).head
+
+      result.carried shouldBe 100
+      result.revenue shouldBe Math.round(100 * 1000 * SoloConfig.cargoRevenuePerUnitKm).toInt
+    }
+
+    "apply the freighter-only revenue multiplier to cargo links".in {
+      val result = CargoAllocation.allocateGroup(Seq(cargoDetails(1, 100, distance = 1000)), 100).head
+
+      result.carried shouldBe 100
+      result.revenue shouldBe Math.round(100 * 1000 * SoloConfig.cargoRevenuePerUnitKm * SoloConfig.cargoFreighterRevenueMultiplier).toInt
+    }
+
+    "apply the multiplier only to the freighter share in mixed cargo allocation".in {
+      val resultById = CargoAllocation.allocateGroup(Seq(details(1, 50, distance = 1000), cargoDetails(2, 50, distance = 1000)), 100).map(r => r.linkId -> r).toMap
+
+      resultById(1).revenue shouldBe Math.round(50 * 1000 * SoloConfig.cargoRevenuePerUnitKm).toInt
+      resultById(2).revenue shouldBe Math.round(50 * 1000 * SoloConfig.cargoRevenuePerUnitKm * SoloConfig.cargoFreighterRevenueMultiplier).toInt
     }
   }
 }

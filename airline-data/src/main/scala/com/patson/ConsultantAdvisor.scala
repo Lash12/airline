@@ -34,6 +34,16 @@ object ConsultantAdvisor {
     else SoloConfig.consultantMarketCount + Math.max(0, levels.max - SoloConfig.consultantMarketLevel)
   }
 
+  /** Existing leveling-manager levels are 0..4; expose them as player-facing advisor tiers 1..5. */
+  def advisorTier(levels : Seq[Int]) : Int =
+    if (levels.isEmpty) 0 else Math.max(1, Math.min(5, levels.max + 1))
+
+  def advisorProficiency(levels : Seq[Int]) : Double =
+    if (levels.isEmpty) 0.0 else Math.min(1.0, Math.max(0.0, levels.max.toDouble / 4.0))
+
+  def advisorAllows(levels : Seq[Int], tier : Int) : Boolean =
+    advisorTier(levels) >= tier
+
   /** Target seats per flight for a market's both-way demand assuming ~daily service capturing the
     * usual share — used to right-size the suggested aircraft. Pure; tested. */
   def targetSeatsPerFlight(demandBothWays : Int) : Int =

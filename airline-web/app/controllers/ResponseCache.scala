@@ -55,6 +55,13 @@ object ResponseCache {
       .expireAfterWrite(CYCLE_DURATION_SECONDS, TimeUnit.SECONDS)
       .build[Int, (Int, JsValue)]()
 
+  /** Per-airline cargo market overview — keyed by airlineId */
+  val cargoMarketOverviewCache: Cache[Int, (Int, JsValue)] =
+    Caffeine.newBuilder()
+      .maximumSize(1000)
+      .expireAfterWrite(CYCLE_DURATION_SECONDS, TimeUnit.SECONDS)
+      .build[Int, (Int, JsValue)]()
+
   /** Per-Olympics event detail data — keyed by eventId */
   val olympicsDetailsCache: Cache[Int, (Int, JsValue)] =
     Caffeine.newBuilder()
@@ -86,6 +93,7 @@ object ResponseCache {
     demandCache.invalidateAll()
     cargoDemandCache.invalidateAll()
     cargoOpportunitiesCache.invalidateAll()
+    cargoMarketOverviewCache.invalidateAll()
     olympicsDetailsCache.invalidateAll()
     searchRouteCache.invalidateAll()
     researchLinkCache.invalidateAll()

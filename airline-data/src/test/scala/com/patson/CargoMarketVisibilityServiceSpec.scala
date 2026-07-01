@@ -84,5 +84,19 @@ class CargoMarketVisibilityServiceSpec extends AnyWordSpecLike with Matchers {
       noteSmall should include("Short hop")
       noteSmall should include("Existing flights do not fully satisfy demand")
     }
+
+    "score cargo opportunities by profit, demand, aircraft fit, and distance practicality" in {
+      val high = CargoMarketVisibilityService.opportunityScore(estimatedProfit = 900_000, unservedDemand = 600, distance = 2500, hasAircraft = true)
+      val low = CargoMarketVisibilityService.opportunityScore(estimatedProfit = 100_000, unservedDemand = 100, distance = 200, hasAircraft = false)
+
+      high should be > low
+    }
+
+    "labels estimated profit bands for cargo cards" in {
+      CargoMarketVisibilityService.profitBand(1_200_000) shouldBe "High"
+      CargoMarketVisibilityService.profitBand(500_000) shouldBe "Medium"
+      CargoMarketVisibilityService.profitBand(50_000) shouldBe "Low"
+      CargoMarketVisibilityService.profitBand(0) shouldBe "None"
+    }
   }
 }

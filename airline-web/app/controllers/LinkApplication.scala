@@ -73,6 +73,7 @@ class LinkApplication @Inject()(cc: ControllerComponents) extends AbstractContro
       "cargoCapacity" -> JsNumber(linkConsumption.cargoCapacity),
       "cargoCarried" -> JsNumber(linkConsumption.cargoCarried),
       "cargoRevenue" -> JsNumber(linkConsumption.cargoRevenue),
+      "isCargo" -> JsBoolean(linkConsumption.link.isInstanceOf[CargoLink]),
       "fuelCost" -> JsNumber(linkConsumption.fuelCost),
       "fuelTax" -> JsNumber(linkConsumption.fuelTax),
       "crewCost" -> JsNumber(linkConsumption.crewCost),
@@ -1759,13 +1760,21 @@ class LinkApplication @Inject()(cc: ControllerComponents) extends AbstractContro
         "expectedCost"            -> result.expectedCost,
         "expectedProfit"          -> result.expectedProfit,
         "confidenceLevel"         -> result.confidenceLevel,
-        "competitionLevel"        -> result.competitionLevel,
-        "recommendedAircraftModels" -> result.recommendedAircraftModels,
-        "recommendedFrequency"    -> result.recommendedFrequency,
-        "reasons"                 -> result.reasons,
-        "candidateAircraft"       -> Json.toJson(result.candidateAircraft)
-      )
-    }
+          "competitionLevel"        -> result.competitionLevel,
+          "recommendedAircraftModels" -> result.recommendedAircraftModels,
+          "recommendedFrequency"    -> result.recommendedFrequency,
+          "reasons"                 -> result.reasons,
+          "candidateAircraft"       -> Json.toJson(result.candidateAircraft),
+          "competitorCount"         -> result.competitorCount,
+          "competitorTotalFrequency" -> result.competitorTotalFrequency,
+          "competitionSummary"      -> result.competitionSummary,
+          "confidenceExplanation"   -> result.confidenceExplanation,
+          "recommendation"          -> result.recommendation,
+          "recommendationSeverity"  -> result.recommendationSeverity,
+          "cargoShareEstimate"      -> result.cargoShareEstimate,
+          "aircraftRecommendationReason" -> result.aircraftRecommendationReason
+        )
+      }
 
     RouteForecastService.getForecast(airlineId, originAirportId, destinationAirportId) match {
       case Left(error) =>
@@ -1784,11 +1793,13 @@ class LinkApplication @Inject()(cc: ControllerComponents) extends AbstractContro
           val existingLink = LinkSource.loadFlightLinkByAirportsAndAirline(originAirportId, destinationAirportId, airlineId)
           getRejectionReason(request.user, fromAirport, toAirport, existingLink) match {
             case Some((description, rejectionType)) =>
-              Json.obj(
-                "compatible" -> false,
-                "blockingReason" -> description,
-                "blockingReasonCode" -> rejectionType.toString
-              )
+                Json.obj(
+                  "compatible" -> false,
+                  "blockingReason" -> description,
+                  "blockingReasonCode" -> rejectionType.toString,
+                  "recommendation" -> "BLOCKED",
+                  "recommendationSeverity" -> "blocked"
+                )
             case None =>
               Json.obj(
                 "compatible" -> true,

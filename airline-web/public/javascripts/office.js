@@ -228,6 +228,7 @@ function showOfficeCanvas() {
 	}
 	updateLiveryInfo()
 	updateManagerStatus()
+	loadCargoMarketOverview()
 	loadSlogan(function(slogan) { $('#officeCanvas .slogan').val(slogan)})
 }
 
@@ -1634,6 +1635,51 @@ function loadConsultantAdvice() {
         url: "/airlines/" + activeAirline.id + "/idle-aircraft",
         success: function(list) { renderIdleAircraftCallout(list) }
     })
+    $.ajax({
+        type: 'GET',
+        url: "/airlines/" + activeAirline.id + "/advisor/recommendations",
+        success: function(data) { renderAdvisorRecommendations(data) }
+    })
+}
+
+function loadCargoMarketOverview() {
+    if (typeof activeAirline === 'undefined' || !activeAirline) return
+    $.ajax({
+        type: 'GET',
+        url: "/airlines/" + activeAirline.id + "/cargo-market-overview",
+        success: function(data) { renderCargoMarketOverview(data) },
+        error: function() { $('#cargoMarketOverviewStatus').hide() }
+    })
+}
+
+function renderCargoMarketOverview(data) {
+    var lanes = data && data.lanes ? data.lanes : (Array.isArray(data) ? data : [])
+    var $section = $('#cargoMarketOverviewStatus')
+    var $c = $('#cargoMarketOverviewList')
+    $c.empty()
+    if (!lanes || lanes.length === 0) {
+        $section.hide()
+        return
+    }
+    $section.show()
+    lanes.slice(0, 8).forEach(function(lane) {
+        var aircraft = lane.recommendedAircraft && lane.recommendedAircraft.length ? lane.recommendedAircraft.join(', ') : 'No suitable freighter'
+        var servedBadge = lane.servedByPlayer
+            ? '<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:rgba(120,205,107,0.2);color:#78cd6b;margin-left:5px;">Served</span>'
+            : ''
+        var profit = typeof abbreviateMoney === 'function' ? abbreviateMoney(lane.estimatedProfit || 0) : ('$' + commaSeparateNumber(lane.estimatedProfit || 0))
+        $c.append(
+            '<div class="py-1 cargo-market-card" style="border-bottom:1px solid rgba(255,255,255,0.1);">' +
+            '<div><strong class="cargo-market-route">' + lane.originIata + ' → ' + lane.destinationIata + '</strong>' + servedBadge + '</div>' +
+            '<div class="text-sm" style="opacity:0.8;">' + commaSeparateNumber(lane.cargoDemand || 0) + ' cargo units · ' + profit + '/wk · ' + aircraft + '</div>' +
+            '<div class="text-sm cargo-market-reason" style="opacity:0.7;">' + (lane.reason || '') + '</div>' +
+            (lane.servedByPlayer ? '' : '<button class="button cargo-market-plan-btn" style="font-size:10px;padding:2px 8px;margin-top:5px;" data-from="' + lane.originAirportId + '" data-to="' + lane.destinationAirportId + '">Plan cargo route &#9658;</button>') +
+            '</div>'
+        )
+    })
+    $c.off('click', '.cargo-market-plan-btn').on('click', '.cargo-market-plan-btn', function() {
+        planCargoLink($(this).data('from'), $(this).data('to'))
+    })
 }
 
 function _parseSidecar(message) {
@@ -1675,7 +1721,61 @@ function renderIdleAircraftCallout(list) {
         '<div class="text-sm" style="opacity:0.85;margin-top:2px;">' + items.join(' &nbsp;&middot;&nbsp; ') + '</div>' +
         '<div class="text-sm" style="opacity:0.6;margin-top:1px;">These frames are sitting unused — route recommendations below may fit them.</div>' +
         '</div>'
-    ).show()
+      ).show()
+  }
+
+function renderAdvisorRecommendations(data) {
+    var recs = data && data.recommendations ? data.recommendations : []
+    var $c = $('#advisorRecommendationsList')
+    $c.empty()
+    if (!recs || recs.length === 0) {
+        $('#advisorRecommendationsHeading').hide()
+        return
+    }
+    $('#advisorRecommendationsHeading').show()
+    var labels = {
+        IDLE_AIRCRAFT: 'Fleet',
+        LOSING_ROUTE: 'Routes',
+        CARGO_OPPORTUNITY: 'Cargo',
+        AIRPORT_ASSET: 'Airport assets'
+    }
+    var order = ['IDLE_AIRCRAFT', 'LOSING_ROUTE', 'CARGO_OPPORTUNITY', 'AIRPORT_ASSET']
+    order.forEach(function(type) {
+        var group = recs.filter(function(r) { return r.type === type })
+        if (!group.length) return
+        $c.append('<div class="advisor-rec-group" data-type="' + type + '" style="margin-top:4px;"><strong style="font-size:11px;color:#ccc;">' + (labels[type] || type) + '</strong></div>')
+        group.forEach(function(r) {
+            var color = r.priority === 'HIGH' ? '#e0a030' : (r.priority === 'MEDIUM' ? '#e3b80d' : '#aaa')
+            var action = r.action && r.action.target
+                ? '<button class="button advisor-action-btn" style="font-size:10px;padding:2px 8px;margin-top:5px;" data-target="' + r.action.target + '">' + r.action.label + ' &#9658;</button>'
+                : ''
+            $c.append(
+                '<div class="py-1 advisor-rec-card" data-type="' + r.type + '" style="border-bottom:1px solid rgba(255,255,255,0.1);">' +
+                '<div><strong class="advisor-rec-title">' + r.title + '</strong>' +
+                '<span class="advisor-priority" style="font-size:10px;color:' + color + ';margin-left:5px;">' + r.priority + '</span></div>' +
+                '<div class="text-sm advisor-summary" style="opacity:0.85;">' + (r.summary || '') + '</div>' +
+                (r.details ? '<div class="text-sm advisor-details" style="opacity:0.7;">' + r.details + '</div>' : '') +
+                (r.estimatedImpact ? '<div class="text-sm advisor-impact" style="color:#78cd6b;">Impact: ' + r.estimatedImpact + '</div>' : '') +
+                (r.risk ? '<div class="text-sm advisor-risk" style="color:#e0a030;">Risk: ' + r.risk + '</div>' : '') +
+                '<div class="text-sm advisor-tier" style="opacity:0.55;">Advisor tier ' + r.tier + '</div>' +
+                action +
+                '</div>'
+            )
+        })
+    })
+    $c.off('click', '.advisor-action-btn').on('click', '.advisor-action-btn', function() {
+        var target = String($(this).data('target') || '')
+        var pair
+        if (target.indexOf('planRoute:') === 0) {
+            pair = target.replace('planRoute:', '').split('-')
+            planLink(parseInt(pair[0]), parseInt(pair[1]))
+        } else if (target.indexOf('cargoRoute:') === 0) {
+            pair = target.replace('cargoRoute:', '').split('-')
+            planCargoLink(parseInt(pair[0]), parseInt(pair[1]))
+        } else if (target.indexOf('airport:') === 0 && typeof showAirportDetails === 'function') {
+            showAirportDetails(parseInt(target.replace('airport:', '')))
+        }
+    })
 }
 
 function renderConsultantAdvice(list) {

@@ -258,6 +258,7 @@ object SoloConfig {
   val cargoRevenuePerUnitKm : Double = doubleAt("solo.cargo.revenuePerUnitKm", 0.01)
   val cargoAssetsEnabled : Boolean = boolAt("solo.cargo.assets.enabled", false)
   val cargoFreightersEnabled : Boolean = boolAt("solo.cargo.freighters.enabled", false)
+  val cargoFreighterRevenueMultiplier : Double = doubleAt("solo.cargo.freighterRevenueMultiplier", 10.0)
 
   // Route forecast backend
   var routeForecastEnabled : Boolean = boolAt("solo.routeForecast.enabled", false)

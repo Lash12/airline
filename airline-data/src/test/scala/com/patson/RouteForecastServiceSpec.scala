@@ -69,6 +69,10 @@ class RouteForecastServiceSpec extends AnyWordSpecLike with Matchers with Before
       forecast.expectedCost should be > 0L
       forecast.recommendedAircraftModels should not be empty
       forecast.recommendedFrequency should not be empty
+      forecast.recommendation should (equal("OPEN") or equal("OPEN_CAUTIOUSLY") or equal("WAIT"))
+      forecast.competitionSummary should not be empty
+      forecast.confidenceExplanation should include("confidence")
+      forecast.aircraftRecommendationReason should not be empty
       forecast.reasons should contain ("Cargo simulation is disabled.")
     }
 
@@ -85,6 +89,7 @@ class RouteForecastServiceSpec extends AnyWordSpecLike with Matchers with Before
       forecast.passengerDemandEstimate should be > 0
       forecast.cargoDemandEstimate should be > 0
       forecast.expectedRevenue should be > 0L
+      forecast.cargoShareEstimate should be >= 0.0
       forecast.reasons.exists(r => r.contains("cargo demand") && r.contains(" belly cargo revenue")) shouldBe true
     }
 
@@ -139,6 +144,9 @@ class RouteForecastServiceSpec extends AnyWordSpecLike with Matchers with Before
         result.isRight shouldBe true
         val forecast = result.toOption.get
         forecast.competitionLevel should (equal("HIGH") or equal("MEDIUM"))
+        forecast.competitorCount shouldBe 1
+        forecast.competitorTotalFrequency shouldBe 20
+        forecast.competitionSummary should include("1 competitor")
         forecast.reasons.exists(r => r.contains("competition") || r.contains("existing carriers")) shouldBe true
       } finally {
         LinkSource.deleteLinksByAirlineId(savedCompetitor.id)
@@ -160,10 +168,31 @@ class RouteForecastServiceSpec extends AnyWordSpecLike with Matchers with Before
         val forecast = result.toOption.get
         forecast.recommendedAircraftModels shouldBe empty
         forecast.recommendedFrequency shouldBe empty
+        forecast.recommendation shouldBe "BLOCKED"
         forecast.reasons.head should startWith("UNSUITABLE_AIRCRAFT")
       } finally {
         AirportSource.deleteAirports(List(originDummy.id, destDummy.id))
       }
+    }
+
+    "summarize competition details in plain English" in {
+      RouteForecastService.competitionSummary(0, 0) shouldBe "No direct competitors."
+      RouteForecastService.competitionSummary(1, 7) should include("1 competitor with light frequency")
+      RouteForecastService.competitionSummary(3, 42) should include("heavy frequency")
+    }
+
+    "map forecast economics into actionable recommendation labels" in {
+      RouteForecastService.recommendationFor(10_000, "HIGH", "LOW", 500, blocked = false) shouldBe (("OPEN", "positive"))
+      RouteForecastService.recommendationFor(10_000, "LOW", "LOW", 500, blocked = false) shouldBe (("OPEN_CAUTIOUSLY", "warning"))
+      RouteForecastService.recommendationFor(-1, "LOW", "HIGH", 500, blocked = false) shouldBe (("AVOID", "negative"))
+      RouteForecastService.recommendationFor(10_000, "HIGH", "LOW", 500, blocked = true) shouldBe (("BLOCKED", "blocked"))
+    }
+
+    "explain confidence and cargo revenue share" in {
+      RouteForecastService.confidenceExplanation("LOW", 50, 0, "NONE") should include("passenger demand is thin")
+      RouteForecastService.confidenceExplanation("MEDIUM", 180, 20, "LOW") should include("Medium confidence")
+      RouteForecastService.cargoShareEstimate(25, 100) shouldBe 0.25
+      RouteForecastService.cargoShareEstimate(25, 0) shouldBe 0.0
     }
   }
 }

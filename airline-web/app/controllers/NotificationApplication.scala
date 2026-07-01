@@ -1,8 +1,8 @@
 package controllers
 
-import com.patson.data.{AirplaneSource, AirportSource, CountrySource, CycleSource, LinkSource, NotificationSource, SoloConfig, WorldNewsSource}
-import com.patson.model.{ManagerTaskType, LevelingManagerTask, Notification, NotificationCategory}
-import com.patson.ConsultantAdvisor
+import com.patson.data.{AirlineSource, AirplaneSource, AirportAssetSource, AirportSource, CountrySource, CycleSource, LinkSource, NotificationSource, SoloConfig, WorldNewsSource}
+import com.patson.model.{AirportAssetCategory, AirportAssetStatus, AirportAssetType, LevelingManagerTask, ManagerTaskType, Notification, NotificationCategory}
+import com.patson.{CargoMarketVisibilityService, ConsultantAdvisor}
 import controllers.AuthenticationObject.AuthenticatedAirline
 import javax.inject.Inject
 import play.api.libs.json._
@@ -129,6 +129,160 @@ class NotificationApplication @Inject()(cc: ControllerComponents) extends Abstra
   // Market overview list (pull-based, separate from the bell).
   def getMarketOverview(airlineId: Int) = AuthenticatedAirline(airlineId) { _ =>
     Ok(Json.toJson(NotificationSource.loadByCategory(airlineId, NotificationCategory.MARKET_OVERVIEW, 50)))
+  }
+
+  def getAdvisorRecommendations(airlineId: Int) = AuthenticatedAirline(airlineId) { request =>
+    val currentCycle = CycleSource.loadCycle()
+    val consultants = request.user.getManagerInfo().busyManagers.filter(_.assignedTask.getTaskType == ManagerTaskType.CONSULTANT)
+    val levels = consultants.map(_.assignedTask.asInstanceOf[LevelingManagerTask].level(currentCycle))
+    val bestLevel = if (levels.isEmpty) 0 else levels.max
+    val tier = if (!SoloConfig.consultantEnabled) 0 else ConsultantAdvisor.advisorTier(levels)
+    val proficiency = if (!SoloConfig.consultantEnabled) 0.0 else ConsultantAdvisor.advisorProficiency(levels)
+    val recs =
+      if (!SoloConfig.consultantEnabled || levels.isEmpty) Nil
+      else buildAdvisorRecommendations(request.user, levels, currentCycle)
+
+    Ok(Json.obj(
+      "advisorLevel" -> bestLevel,
+      "advisorProficiency" -> proficiency,
+      "advisorTier" -> tier,
+      "recommendations" -> recs
+    ))
+  }
+
+  private def advisorRec(recType: String,
+                         tier: Int,
+                         priority: String,
+                         title: String,
+                         summary: String,
+                         details: String,
+                         estimatedImpact: String,
+                         risk: String,
+                         action: Option[(String, String)]): JsObject = {
+    val base = Json.obj(
+      "type" -> recType,
+      "tier" -> tier,
+      "priority" -> priority,
+      "title" -> title,
+      "summary" -> summary,
+      "details" -> details,
+      "estimatedImpact" -> estimatedImpact,
+      "risk" -> risk
+    )
+    action match {
+      case Some((label, target)) => base + ("action" -> Json.obj("label" -> label, "target" -> target))
+      case None => base + ("action" -> JsNull)
+    }
+  }
+
+  private def priorityRank(priority: String): Int = priority match {
+    case "HIGH" => 0
+    case "MEDIUM" => 1
+    case _ => 2
+  }
+
+  private def buildAdvisorRecommendations(airline: com.patson.model.Airline,
+                                          levels: Seq[Int],
+                                          currentCycle: Int): List[JsObject] = {
+    val tier = ConsultantAdvisor.advisorTier(levels)
+    val recs = scala.collection.mutable.ListBuffer[JsObject]()
+    val guidedActions = tier >= 4
+    val advanced = tier >= 5
+
+    val ownedAirplanes = AirplaneSource.loadAirplanesByOwner(airline.id).filterNot(_.isSold)
+    val assignments = AirplaneSource.loadAirplaneLinkAssignmentsByOwner(airline.id)
+    val idle = ownedAirplanes.filter(a => assignments.get(a.id).forall(_.isEmpty))
+
+    val allAirports = AirportSource.loadAllAirports(true)
+    val countryRelationships = CountrySource.getCountryMutualRelationships()
+    val ownedModels = ownedAirplanes.map(_.model).distinct
+    val fleetByFamily = ownedAirplanes.groupBy(a => ConsultantAdvisor.familyKeyOf(a.model)).map { case (k, v) => (k, v.size) }
+    val routeRecs =
+      if (tier >= 2) ConsultantAdvisor.recommendations(airline, levels, allAirports, countryRelationships, ownedModels, fleetByFamily, currentCycle)
+      else Nil
+
+    if (idle.nonEmpty) {
+      val grouped = idle.groupBy(a => (a.model.name, a.home.iata)).toList.sortBy { case (_, planes) => -planes.size }
+      val idleSummary = grouped.take(3).map { case ((model, iata), planes) => s"${planes.size} ${model} at $iata" }.mkString(", ")
+      val bestRoute = routeRecs.headOption
+      val summary =
+        if (tier >= 2 && bestRoute.nonEmpty) {
+          val r = bestRoute.get
+          s"Use idle capacity on ${r.from.iata} to ${r.to.iata} with ${r.model.name} around 7x weekly."
+        } else s"You have ${idle.size} idle aircraft: $idleSummary."
+      val details =
+        if (advanced && bestRoute.nonEmpty) {
+          val r = bestRoute.get
+          s"Forecast route profit about $$${f"${r.estWeeklyProfit}%,d"}/wk; demand ${f"${r.totalDemand}%,d"} pax/wk; distance ${f"${r.distance}%,d"} km."
+        } else "Idle frames earn nothing and still tie up capital."
+      val action = bestRoute.filter(_ => guidedActions).map(r => ("Plan route", s"planRoute:${r.from.id}-${r.to.id}"))
+      recs += advisorRec("IDLE_AIRCRAFT", Math.min(tier, 2), "HIGH", "Idle aircraft available", summary, details,
+        bestRoute.map(r => s"~$$${f"${r.estWeeklyProfit}%,d"}/wk").getOrElse("Utilization upside"),
+        bestRoute.map(_ => "Confirm aircraft fit and cash before opening.").getOrElse("No specific route yet; refresh after adding fleet or bases."),
+        action)
+    }
+
+    val links = LinkSource.loadFlightLinksByAirlineId(airline.id)
+    val consumptions = LinkSource.loadLinkConsumptionsByLinksId(links.map(_.id), 4)
+    val losing = consumptions.groupBy(_.link.id).flatMap { case (_, rows) =>
+      val profit = rows.map(_.profit.toLong).sum
+      val revenue = rows.map(_.revenue.toLong).sum
+      val latest = rows.maxBy(_.cycle).link
+      if (profit < 0 || (revenue > 0 && profit.toDouble / revenue < 0.08)) Some((latest, profit, revenue)) else None
+    }.toList.sortBy(_._2).headOption
+
+    losing.foreach { case (link, profit, revenue) =>
+      val priority = if (profit < 0) "HIGH" else "MEDIUM"
+      val margin = if (revenue > 0) f"${profit.toDouble / revenue * 100}%.1f%%" else "negative"
+      recs += advisorRec("LOSING_ROUTE", Math.min(tier, 2), priority, s"${link.from.iata} to ${link.to.iata} underperforming",
+        "Review frequency, prices, and aircraft size before adding more capacity.",
+        if (advanced) s"Recent profit $$${f"${profit}%,d"} on $$${f"${revenue}%,d"} revenue; margin $margin." else s"Recent margin is $margin.",
+        s"Stop ongoing losses of $$${f"${Math.abs(profit)}%,d"} over the recent sample.",
+        "Close the route only if lower frequency, smaller aircraft, and price tuning cannot recover it.",
+        None)
+    }
+
+    val baseAirports = AirlineSource.loadAirlineBasesByAirline(airline.id).map(_.airport)
+    if (SoloConfig.cargoEnabled && baseAirports.nonEmpty) {
+      val cargoOpp = baseAirports.flatMap(a => CargoMarketVisibilityService.getCargoOpportunities(a.id).take(3)).sortBy(o => (-o.score, -o.estimatedProfit)).headOption
+      cargoOpp.foreach { opp =>
+        recs += advisorRec("CARGO_OPPORTUNITY", Math.min(tier, 2), if (opp.weeklyCargoUnserved >= 300) "HIGH" else "MEDIUM",
+          s"Cargo lane to ${opp.destinationCode}",
+          s"${f"${opp.weeklyCargoUnserved}%,d"} unserved cargo units; ${opp.reasonText}",
+          if (advanced) s"Estimated yield $$${f"${opp.estimatedYieldPerUnitKm}%.4f"} per cargo unit per km; ranked score ${f"${opp.score}%.0f"}." else opp.riskText,
+          s"${opp.profitBand} cargo potential",
+          opp.riskText,
+          if (guidedActions) Some(("Plan cargo route", s"cargoRoute:${opp.originAirportId}-${opp.destinationAirportId}")) else None)
+      }
+    }
+
+    if (SoloConfig.assetsEnabled && baseAirports.nonEmpty) {
+      val ownedAssets = AirportAssetSource.loadAirportAssetsByAirline(airline.id)
+      val byAirportType = ownedAssets.groupBy(a => (a.airport.id, a.assetType.id)).map { case (k, v) => k -> v.maxBy(_.level) }
+      val candidates = baseAirports.flatMap { airport =>
+        AirportAssetType.values.filter(_.category == AirportAssetCategory.REVENUE).flatMap { assetType =>
+          val current = byAirportType.get((airport.id, assetType.id))
+          val currentLevel = current.map(_.level).getOrElse(0)
+          val targetLevel = currentLevel + 1
+          val cost = assetType.constructionCost(airport, targetLevel)
+          val activeOrEmpty = current.forall(_.status == AirportAssetStatus.ACTIVE)
+          if (targetLevel <= assetType.maxLevel && activeOrEmpty && airport.size >= assetType.sizeRequirement && cost <= airline.getBalance()) {
+            Some((airport, assetType, targetLevel, cost, assetType.paybackCycles(airport, targetLevel)))
+          } else None
+        }
+      }
+      candidates.sortBy { case (_, _, _, cost, payback) => (payback.getOrElse(Int.MaxValue), cost) }.headOption.foreach {
+        case (airport, assetType, targetLevel, cost, payback) =>
+          recs += advisorRec("AIRPORT_ASSET", Math.min(tier, 2), "MEDIUM", s"Upgrade ${airport.iata} assets",
+            s"Consider ${assetType.label} level $targetLevel at ${airport.iata}.",
+            payback.map(p => s"Estimated payback is about $p cycles.").getOrElse("This is mainly a demand-building investment."),
+            s"Cost $$${f"${cost}%,d"}",
+            "Keep cash reserves; avoid upgrades if route losses are consuming cash.",
+            if (guidedActions) Some(("Open airport assets", s"airport:${airport.id}")) else None)
+      }
+    }
+
+    recs.toList.sortBy(r => (priorityRank((r \ "priority").as[String]), (r \ "tier").as[Int])).take(12)
   }
 
   // Idle aircraft — frames owned by this airline with no link assignments.

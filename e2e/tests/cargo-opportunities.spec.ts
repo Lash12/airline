@@ -32,6 +32,14 @@ const MOCK_OPP_FULL = {
   weeklyCargoServed: 120,
   weeklyCargoUnserved: 380,
   estimatedYield: 0.01,
+  estimatedYieldPerUnitKm: 0.01,
+  estimatedProfit: 450000,
+  profitBand: "Medium",
+  bestAircraft: "Boeing 777F",
+  bestFreighterCandidate: "Boeing 777F",
+  reasonText: "Potential freighter lane if freighter multiplier is enabled.",
+  riskText: "Moderate risk; confirm passenger demand or freighter utilization before opening.",
+  score: 2100,
   recommendedAircraftModelIds: [1, 2],
   recommendedAircraftModelNames: ["Boeing 747-8F", "Airbus A330-200F"],
   notes: "Long-haul trade lane; higher yield potential."
@@ -46,6 +54,14 @@ const MOCK_OPP_NO_AIRCRAFT = {
   weeklyCargoServed: 0,
   weeklyCargoUnserved: 200,
   estimatedYield: 0.01,
+  estimatedYieldPerUnitKm: 0.01,
+  estimatedProfit: 60000,
+  profitBand: "Low",
+  bestAircraft: "No suitable aircraft",
+  bestFreighterCandidate: null,
+  reasonText: "Useful cargo filler if you already plan service nearby.",
+  riskText: "No suitable freighter candidate; treat as belly cargo only.",
+  score: 300,
   recommendedAircraftModelIds: [],
   recommendedAircraftModelNames: [],
   notes: "Untapped market."
@@ -60,6 +76,14 @@ const MOCK_OPP_SERVED = {
   weeklyCargoServed: 300,
   weeklyCargoUnserved: 0,
   estimatedYield: 0.008,
+  estimatedYieldPerUnitKm: 0.008,
+  estimatedProfit: 0,
+  profitBand: "None",
+  bestAircraft: "Boeing 747-8F",
+  bestFreighterCandidate: "Boeing 747-8F",
+  reasonText: "You already serve this lane.",
+  riskText: "",
+  score: 0,
   recommendedAircraftModelIds: [1],
   recommendedAircraftModelNames: ["Boeing 747-8F"],
   notes: "Market is fully served."
@@ -90,6 +114,10 @@ test("cargo opportunities panel renders cards sorted by unserved demand", async 
       firstIata: (firstCard?.querySelector('.iata') as HTMLElement | null)?.textContent ?? '',
       secondIata: (secondCard?.querySelector('.iata') as HTMLElement | null)?.textContent ?? '',
       firstRevenue: (firstCard?.querySelector('.opp-revenue') as HTMLElement | null)?.textContent ?? '',
+      firstYield: (firstCard?.querySelector('.opp-yield') as HTMLElement | null)?.textContent ?? '',
+      firstProfit: (firstCard?.querySelector('.opp-profit') as HTMLElement | null)?.textContent ?? '',
+      firstReason: (firstCard?.querySelector('.opp-reason') as HTMLElement | null)?.textContent ?? '',
+      firstRisk: (firstCard?.querySelector('.opp-risk') as HTMLElement | null)?.textContent ?? '',
       firstHasPlanBtn: !!(firstCard?.querySelector('.opp-plan-btn')),
     };
   }, [lowOpp, highOpp]);
@@ -102,6 +130,10 @@ test("cargo opportunities panel renders cards sorted by unserved demand", async 
   expect(state.secondIata).toBe('SFO');
   // Revenue estimate present for first card
   expect(state.firstRevenue).toContain('capturable');
+  expect(state.firstYield).toContain('per cargo unit per km');
+  expect(state.firstProfit).toContain('Estimated profit');
+  expect(state.firstReason).toContain('freighter lane');
+  expect(state.firstRisk).toContain('Moderate risk');
   // Plan button present for unserved card
   expect(state.firstHasPlanBtn).toBe(true);
 });
@@ -203,6 +235,27 @@ test("no-aircraft fallback renders italic warning", async ({ page }) => {
   expect(state.aircraftText).toContain('No suitable freighter aircraft');
 });
 
+test("plan cargo route button passes origin, destination, and recommended model", async ({ page }) => {
+  test.setTimeout(60000);
+
+  await page.route("**/cargo-opportunities*", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+  });
+  await bootstrap(page);
+
+  await page.evaluate((opp) => {
+    (window as any).__cargoPlanArgs = null;
+    (window as any).planCargoLink = (fromId: number, toId: number, modelId: number | null) => {
+      (window as any).__cargoPlanArgs = { fromId, toId, modelId };
+    };
+    (window as any).renderCargoOpportunities([opp], 3599);
+  }, MOCK_OPP_FULL);
+
+  await page.locator('#airportCargoOpportunitiesCards .opp-plan-btn').first().click();
+  const args = await page.evaluate(() => (window as any).__cargoPlanArgs);
+  expect(args).toEqual({ fromId: 3599, toId: 3600, modelId: 1 });
+});
+
 test("show-more button appears when list exceeds 10", async ({ page }) => {
   test.setTimeout(60000);
 
@@ -245,7 +298,35 @@ test("cargo opportunities endpoint returns expected shape", async ({ page }) => 
     expect(rows[0]).toHaveProperty("weeklyCargoServed");
     expect(rows[0]).toHaveProperty("weeklyCargoUnserved");
     expect(rows[0]).toHaveProperty("estimatedYield");
+    expect(rows[0]).toHaveProperty("estimatedYieldPerUnitKm");
+    expect(rows[0]).toHaveProperty("estimatedProfit");
+    expect(rows[0]).toHaveProperty("profitBand");
+    expect(rows[0]).toHaveProperty("bestAircraft");
+    expect(rows[0]).toHaveProperty("reasonText");
+    expect(rows[0]).toHaveProperty("riskText");
     expect(rows[0]).toHaveProperty("recommendedAircraftModelNames");
     expect(rows[0]).toHaveProperty("notes");
+  }
+});
+
+test("cargo market overview endpoint returns lane array shape", async ({ page }) => {
+  test.setTimeout(60000);
+  await bootstrap(page);
+  const airlineId = await page.evaluate(() => (window as any).activeAirline.id);
+  const res = await page.request.get(`/airlines/${airlineId}/cargo-market-overview`);
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+  expect(Array.isArray(body.lanes)).toBeTruthy();
+  if (body.lanes.length > 0) {
+    expect(body.lanes[0]).toHaveProperty("originAirportId");
+    expect(body.lanes[0]).toHaveProperty("originIata");
+    expect(body.lanes[0]).toHaveProperty("destinationAirportId");
+    expect(body.lanes[0]).toHaveProperty("destinationIata");
+    expect(body.lanes[0]).toHaveProperty("cargoDemand");
+    expect(body.lanes[0]).toHaveProperty("estimatedYield");
+    expect(body.lanes[0]).toHaveProperty("estimatedProfit");
+    expect(body.lanes[0]).toHaveProperty("recommendedAircraft");
+    expect(body.lanes[0]).toHaveProperty("servedByPlayer");
+    expect(body.lanes[0]).toHaveProperty("reason");
   }
 });

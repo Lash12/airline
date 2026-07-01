@@ -44,6 +44,20 @@ class ConsultantAdvisorSpec extends AnyWordSpecLike with Matchers {
     }
   }
 
+  "advisor tier helpers".must {
+    "map current consultant levels to advisor tiers without changing progression".in {
+      ConsultantAdvisor.advisorTier(Nil) shouldBe 0
+      ConsultantAdvisor.advisorTier(Seq(0)) shouldBe 1
+      ConsultantAdvisor.advisorTier(Seq(2)) shouldBe 3
+      ConsultantAdvisor.advisorTier(Seq(4)) shouldBe 5
+    }
+    "report bounded proficiency and tier gates".in {
+      ConsultantAdvisor.advisorProficiency(Seq(2)) shouldBe 0.5
+      ConsultantAdvisor.advisorAllows(Seq(1), 3) shouldBe false
+      ConsultantAdvisor.advisorAllows(Seq(2), 3) shouldBe true
+    }
+  }
+
   "targetSeatsPerFlight".must {
     "right-size to ~daily capture of both-way demand".in {
       ConsultantAdvisor.targetSeatsPerFlight(1291) shouldBe 129 // 1291*0.7/7

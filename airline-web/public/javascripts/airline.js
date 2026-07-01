@@ -798,8 +798,14 @@ function updateLinkHistory() {
   if ((data.cargoRevenue || 0) > 0) {
     $("#linkCargoRevenueRow").show();
     $("#linkCargoRevenue").text("$" + commaSeparateNumber(data.cargoRevenue));
+    if (data.isCargo || (selectedLink && selectedLink.isCargo)) {
+      $("#linkCargoRevenueNoteRow").show();
+    } else {
+      $("#linkCargoRevenueNoteRow").hide();
+    }
   } else {
     $("#linkCargoRevenueRow").hide();
+    $("#linkCargoRevenueNoteRow").hide();
     $("#linkCargoRevenue").text("-");
   }
   if ((data.cargoCapacity || 0) > 0) {
@@ -1398,13 +1404,33 @@ function updatePlanLinkInfo(linkInfo, isRefresh) {
 }
 
 function showRouteForecast(forecast) {
-    if (!forecast) {
-        $('#routeForecastContainer').hide();
-        return;
-    }
-    
-    // Confidence Level
-    var confidence = forecast.confidenceLevel || 'LOW';
+      if (!forecast) {
+          $('#routeForecastContainer').hide();
+          return;
+      }
+
+      var recommendation = forecast.recommendation || (forecast.compatible === false ? 'BLOCKED' : 'WAIT');
+      var recommendationLabels = {
+          OPEN: 'Open',
+          OPEN_CAUTIOUSLY: 'Open cautiously',
+          WAIT: 'Wait',
+          AVOID: 'Avoid',
+          BLOCKED: 'Blocked'
+      };
+      var severity = forecast.recommendationSeverity || 'neutral';
+      var severityColors = {
+          positive: '#78cd6b',
+          neutral: '#ccc',
+          warning: '#e3b80d',
+          negative: '#d66061',
+          blocked: '#d66061'
+      };
+      $('#forecastRecommendation')
+          .text('Recommendation: ' + (recommendationLabels[recommendation] || recommendation))
+          .css('color', severityColors[severity] || '#ccc');
+
+      // Confidence Level
+      var confidence = forecast.confidenceLevel || 'LOW';
     var confidenceColor = '#aaa';
     if (confidence === 'HIGH') confidenceColor = '#78cd6b';
     else if (confidence === 'MEDIUM') confidenceColor = '#e3b80d';
@@ -1414,20 +1440,28 @@ function showRouteForecast(forecast) {
     // Competition Level
     var competition = forecast.competitionLevel || 'NONE';
     var competitionColor = '#aaa';
-    if (competition === 'NONE' || competition === 'LOW') competitionColor = '#78cd6b';
-    else if (competition === 'MEDIUM') competitionColor = '#e3b80d';
-    else if (competition === 'HIGH') competitionColor = '#d66061';
-    $('#forecastCompetition').text(competition).css('color', competitionColor);
+      if (competition === 'NONE' || competition === 'LOW') competitionColor = '#78cd6b';
+      else if (competition === 'MEDIUM') competitionColor = '#e3b80d';
+      else if (competition === 'HIGH') competitionColor = '#d66061';
+      $('#forecastCompetition').text(competition).css('color', competitionColor);
+      $('#forecastCompetitionSummary').text(forecast.competitionSummary || 'No direct competitors.');
 
-    // Demand
-    $('#forecastPaxDemand').text(commaSeparateNumber(forecast.passengerDemandEstimate));
+      // Demand
+      $('#forecastPaxDemand').text(commaSeparateNumber(forecast.passengerDemandEstimate));
     
     if (forecast.cargoDemandEstimate > 0) {
         $('#forecastCargoDemand').text(commaSeparateNumber(forecast.cargoDemandEstimate));
         $('#forecastCargoDemandRow').show();
-    } else {
-        $('#forecastCargoDemandRow').hide();
-    }
+      } else {
+          $('#forecastCargoDemandRow').hide();
+      }
+
+      if (forecast.cargoShareEstimate && forecast.cargoShareEstimate > 0) {
+          $('#forecastCargoShare').text(Math.round(forecast.cargoShareEstimate * 100) + '% of revenue');
+          $('#forecastCargoShareRow').show();
+      } else {
+          $('#forecastCargoShareRow').hide();
+      }
 
     if (forecast.compatible === false && forecast.blockingReason) {
         $('#forecastCompatibilityWarning').text(forecast.blockingReason).show();
@@ -1485,10 +1519,11 @@ function showRouteForecast(forecast) {
         });
     } else {
         aircraftHtml = '<div style="font-style: italic; opacity: 0.6; font-size: 11px;">No recommended aircraft models</div>';
-    }
-    $('#forecastAircraftRecommendations').html(aircraftHtml);
+      }
+      $('#forecastAircraftRecommendations').html(aircraftHtml);
+      $('#forecastAircraftReason').text(forecast.aircraftRecommendationReason || '');
 
-    // Reasons/analysis — Warning: prefixed reasons shown in amber
+      // Reasons/analysis: prefixed warnings are shown in amber.
     var reasonsHtml = '';
     if (forecast.reasons && forecast.reasons.length > 0) {
         var warnings = forecast.reasons.filter(function(r) { return r.indexOf('Warning:') === 0; });
@@ -1501,11 +1536,12 @@ function showRouteForecast(forecast) {
         });
     } else {
         reasonsHtml = '<li>No specific market analysis available.</li>';
-    }
-    $('#forecastReasons').html(reasonsHtml);
+      }
+      $('#forecastReasons').html(reasonsHtml);
+      $('#forecastConfidenceExplanation').text(forecast.confidenceExplanation || '');
 
-    $('#routeForecastContainer').show();
-}
+      $('#routeForecastContainer').show();
+  }
 
 function resetRouteForecast() {
     $('#routeForecastContainer').hide();

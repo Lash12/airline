@@ -1,8 +1,8 @@
 # Current Development State
 
-Last updated: 2026-06-27
+Last updated: 2026-07-01
 
-## What Is Shipped Right Now (as of 2026-06-27)
+## What Is Shipped Right Now (as of 2026-07-01)
 
 All items below are on `master`, deployed to OptiPlex (`airline.ashhome.org`), CI green
 unless noted otherwise.
@@ -20,9 +20,12 @@ unless noted otherwise.
 | Executive Team phases 0-2 | (existing flag) | Deployed |
 | DB pool hardening (pool=16, nested-connection fix) | always-on | Deployed |
 | Schema migrations (`SchemaPatchRunner`) | always-on | Deployed |
-| Route Forecast (backend + frontend + e2e) | `solo.routeForecast.enabled` | Deployed; flag **enabled** in `optiplex-deploy.yml` (both SIM + WEB, 2026-06-27) |
-| Airport Cargo Opportunities (full stack) | `solo.cargo.enabled` | Deployed; JS + HTML + e2e all wired (2026-06-27) |
-| `RouteForecastServiceSpec` + cargo-opportunities e2e | — | Both in CI as of 2026-06-27 |
+| Route Forecast (backend + frontend + e2e) | `solo.routeForecast.enabled` | Deployed; now includes open/wait/avoid recommendation, competition summary, confidence explanation, cargo share, and aircraft reasoning |
+| Airport Cargo Opportunities (full stack) | `solo.cargo.enabled` | Deployed; now sorted by blended score with yield/profit/aircraft/reason/risk details |
+| Network Cargo Market Overview | `solo.cargo.enabled` | Office page + `GET /airlines/:id/cargo-market-overview` |
+| Freighter-only cargo multiplier | `solo.cargo.freighterRevenueMultiplier=10.0` | Applies only to cargo flight links; belly cargo remains on base rate |
+| Advisor recommendations | existing consultant/executive levels | Office consultant panel now shows state-based, level-gated Fleet/Routes/Cargo/Airport asset recommendations |
+| `RouteForecastServiceSpec` + cargo-opportunities/advisor e2e | - | Updated; DB-backed and browser E2E coverage runs in CI/dev runtime |
 | Cargo revenue rate raised 50× | `solo.cargo.revenuePerUnitKm=0.01` | Balance fix (2026-06-27); was 0.0002 (economically negligible) |
 
 ## Do Not Build
@@ -34,7 +37,7 @@ unless noted otherwise.
 
 ## Repository / Environment
 
-- Main repo path: `C:\Users\logan\OneDrive\Desktop\Airline\airline`.
+- Main repo path: `C:\Users\logan\Desktop\Airline\airline`.
 - LAN deployment target: OptiPlex at `192.168.1.52`.
 - SSH is configured from the Windows/Codex environment:
   - `ssh airline-dev "hostname && docker ps --format '{{.Names}} {{.Status}}'"`
@@ -63,10 +66,10 @@ $env:Path="$env:JAVA_HOME\bin;C:\Program Files (x86)\sbt\bin;$env:Path"
 Local Scala compile sequence verified:
 
 ```powershell
-cd C:\Users\logan\OneDrive\Desktop\Airline\airline\airline-data
+cd C:\Users\logan\Desktop\Airline\airline\airline-data
 sbt publishLocal
 
-cd C:\Users\logan\OneDrive\Desktop\Airline\airline\airline-web
+cd C:\Users\logan\Desktop\Airline\airline\airline-web
 sbt compile
 ```
 
@@ -436,12 +439,11 @@ deployed to OptiPlex, CI green. Live-verified: `/airports/3599/cargo-demand` →
 
 ## Suggested Next Feature Phase
 
-Everything through cargo-rate balance is shipped. See `docs/next-development-priorities.md`
-for the current ordered work list. Short version of next real work:
+Everything through the 2026-07 decision-clarity and cargo polish pass is shipped. See
+`docs/decision-clarity-and-cargo-polish-2026-07.md` for implementation notes and
+`docs/next-development-priorities.md` for the current ordered work list. Short version of next real work:
 
-1. **Cargo opportunities UX polish** — panel renders but could use better sorting, yield explanation, and a "plan cargo route" deeplink.
-2. **Route forecast quality** — forecast shows numbers; add confidence calibration, competition context, and better aircraft suggestions.
-3. **Consultant/advisor polish** — existing advisor UI works; polish tone, add actionable recommendations.
-4. **Balance telemetry** — after `cargoRevenuePerUnitKm=0.01` deploys, validate cargo as 2-8% of airline revenue; tune `cargoDemandAmplitude` if routes feel thin.
-5. **E2E / CI hardening** — expand Playwright coverage beyond smoke; make cargo-opportunities and route-forecast e2e tests more robust.
-6. **Cargo contracts design** — not ready to implement; needs a design doc first.
+1. **Balance telemetry** — validate cargo as 2-8% of mixed-carrier revenue and check whether the freighter-only multiplier makes short/medium freighter lanes viable without dominating passenger play.
+2. **Runtime E2E verification** — run the expanded Playwright suite in CI or a safe local/dev runtime. Local Windows runs were blocked by missing `localhost:9000` app and missing MySQL.
+3. **Cargo contracts design** — not ready to implement; needs a design doc first.
+4. **Disruption/event recovery implementation** — design exists in `docs/disruption-event-recovery-design.md`; code remains intentionally deferred.

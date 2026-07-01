@@ -33,8 +33,80 @@ object RouteForecastService {
     recommendedAircraftModels: List[String], // backward-compat: names from candidateAircraft
     recommendedFrequency: Option[Int],       // backward-compat: freq of primary candidate
     reasons: List[String],
-    candidateAircraft: List[AircraftCandidate]
+    candidateAircraft: List[AircraftCandidate],
+    competitorCount: Int = 0,
+    competitorTotalFrequency: Int = 0,
+    competitionSummary: String = "No direct competitors.",
+    confidenceExplanation: String = "Low confidence: estimate is based on thin data or unusual route conditions.",
+    recommendation: String = "WAIT",
+    recommendationSeverity: String = "neutral",
+    cargoShareEstimate: Double = 0.0,
+    aircraftRecommendationReason: String = "No aircraft recommendation available."
   )
+
+  def competitionSummary(competitorCount: Int, competitorTotalFrequency: Int): String = {
+    if (competitorCount <= 0 || competitorTotalFrequency <= 0) "No direct competitors."
+    else {
+      val load = if (competitorTotalFrequency < 14) "light"
+        else if (competitorTotalFrequency < 35) "moderate"
+        else "heavy"
+      val plural = if (competitorCount == 1) "competitor" else "competitors"
+      val pressure = if (load == "heavy") "; expect pressure on price and load factor." else "."
+      s"$competitorCount $plural with $load frequency$pressure"
+    }
+  }
+
+  def confidenceExplanation(confidenceLevel: String,
+                            passengerDemandEstimate: Int,
+                            cargoDemandEstimate: Int,
+                            competitionLevel: String): String = {
+    confidenceLevel match {
+      case "HIGH" =>
+        "High confidence: both airports show strong demand signals and the forecast has enough traffic depth."
+      case "MEDIUM" =>
+        val caveat = if (competitionLevel == "MEDIUM") "competition is material"
+          else if (passengerDemandEstimate < 200) "passenger demand is modest"
+          else if (cargoDemandEstimate > passengerDemandEstimate) "cargo is a larger share of the opportunity"
+          else "comparable traffic is limited"
+        s"Medium confidence: demand exists, but $caveat."
+      case _ =>
+        val reason = if (competitionLevel == "HIGH") "competition is dense"
+          else if (passengerDemandEstimate < 100) "passenger demand is thin"
+          else "the economics are sensitive to small demand changes"
+        s"Low confidence: $reason."
+    }
+  }
+
+  def recommendationFor(expectedProfit: Long,
+                        confidenceLevel: String,
+                        competitionLevel: String,
+                        passengerDemandEstimate: Int,
+                        blocked: Boolean): (String, String) = {
+    if (blocked) ("BLOCKED", "blocked")
+    else if (expectedProfit < 0) ("AVOID", "negative")
+    else if (expectedProfit == 0 || passengerDemandEstimate < 50) ("WAIT", "neutral")
+    else if (confidenceLevel == "LOW" || competitionLevel == "HIGH" || passengerDemandEstimate < 150) ("OPEN_CAUTIOUSLY", "warning")
+    else ("OPEN", "positive")
+  }
+
+  def cargoShareEstimate(cargoRevenue: Long, expectedRevenue: Long): Double =
+    if (expectedRevenue <= 0) 0.0 else BigDecimal(cargoRevenue.toDouble / expectedRevenue).setScale(2, BigDecimal.RoundingMode.HALF_UP).toDouble
+
+  def aircraftRecommendationReason(candidate: Option[AircraftCandidate],
+                                   passengerDemandEstimate: Int,
+                                   cargoDemandEstimate: Int): String = {
+    candidate match {
+      case None => "No compatible aircraft could produce a usable schedule."
+      case Some(c) if passengerDemandEstimate < 150 =>
+        s"${c.modelName} keeps capacity conservative on a thin market; start around ${c.frequency}x weekly."
+      case Some(c) if cargoDemandEstimate > 0 && c.weeklyCargoCapacity > 0 && cargoDemandEstimate >= passengerDemandEstimate =>
+        s"${c.modelName} fits the passenger demand while belly cargo is a material part of the opportunity."
+      case Some(c) if cargoDemandEstimate > 200 && c.weeklyCargoCapacity > 0 =>
+        s"${c.modelName} fits the route and has useful belly cargo capacity for the cargo demand."
+      case Some(c) =>
+        s"${c.modelName} is the best current fit for range, runway, capacity, and weekly frequency."
+    }
+  }
 
   def getForecast(airlineId: Int, originAirportId: Int, destinationAirportId: Int): Either[String, RouteForecastResult] = {
     if (!SoloConfig.routeForecastEnabled) {
@@ -73,7 +145,11 @@ object RouteForecastService {
         recommendedAircraftModels = Nil,
         recommendedFrequency = None,
         reasons = List("NO_DEMAND: Distance too short or no demand configuration possible between these airports."),
-        candidateAircraft = Nil
+        candidateAircraft = Nil,
+        confidenceExplanation = confidenceExplanation("LOW", 0, 0, "NONE"),
+        recommendation = "AVOID",
+        recommendationSeverity = "negative",
+        aircraftRecommendationReason = "No aircraft recommendation because the route has no viable demand."
       ))
     }
 
@@ -88,11 +164,12 @@ object RouteForecastService {
         CargoDemandGenerator.computeCargoDemandBetweenAirports(toAirport, fromAirport, affinity, distance)
     } else 0
 
-    val competitorLinks = LinkSource.loadFlightLinksByAirports(fromAirport.id, toAirport.id) ++
-      LinkSource.loadFlightLinksByAirports(toAirport.id, fromAirport.id)
+    val competitorLinks = (LinkSource.loadFlightLinksByAirports(fromAirport.id, toAirport.id) ++
+      LinkSource.loadFlightLinksByAirports(toAirport.id, fromAirport.id)).filterNot(_.airline.id == airlineId)
     val totalCompetitorCapacity = competitorLinks.map(_.capacity.total).sum
     val competitorCount = competitorLinks.map(_.airline.id).distinct.size
     val competitorWeeklyFrequency = competitorLinks.map(_.frequency).sum
+    val competitionSummaryText = competitionSummary(competitorCount, competitorWeeklyFrequency)
     val competitionLevel = if (totalCompetitorCapacity == 0) "NONE"
       else if (totalCompetitorCapacity < paxDemandEst * 0.2) "LOW"
       else if (totalCompetitorCapacity < paxDemandEst * 0.8) "MEDIUM"
@@ -120,7 +197,14 @@ object RouteForecastService {
         recommendedAircraftModels = Nil,
         recommendedFrequency = None,
         reasons = List("UNSUITABLE_AIRCRAFT: Distance exceeds max range or runways too short for all aircraft models in database."),
-        candidateAircraft = Nil
+        candidateAircraft = Nil,
+        competitorCount = competitorCount,
+        competitorTotalFrequency = competitorWeeklyFrequency,
+        competitionSummary = competitionSummaryText,
+        confidenceExplanation = confidenceExplanation("LOW", paxDemandEst, cargoDemand, competitionLevel),
+        recommendation = "BLOCKED",
+        recommendationSeverity = "blocked",
+        aircraftRecommendationReason = "No aircraft in the database fits the range and runway requirements."
       ))
     }
 
@@ -128,7 +212,7 @@ object RouteForecastService {
       distance,
       fromAirport.runwayLength.toInt,
       toAirport.runwayLength.toInt,
-      paxDemandEst * 2,
+      if (paxDemandEst < 250) paxDemandEst else paxDemandEst * 2,
       allModels
     )
 
@@ -146,7 +230,14 @@ object RouteForecastService {
         recommendedAircraftModels = Nil,
         recommendedFrequency = None,
         reasons = List("UNSUITABLE_AIRCRAFT: No suitable aircraft model found that fits range/runway constraints."),
-        candidateAircraft = Nil
+        candidateAircraft = Nil,
+        competitorCount = competitorCount,
+        competitorTotalFrequency = competitorWeeklyFrequency,
+        competitionSummary = competitionSummaryText,
+        confidenceExplanation = confidenceExplanation("LOW", paxDemandEst, cargoDemand, competitionLevel),
+        recommendation = "BLOCKED",
+        recommendationSeverity = "blocked",
+        aircraftRecommendationReason = "No aircraft recommendation is available for this market."
       ))
     }
 
@@ -280,20 +371,39 @@ object RouteForecastService {
         recommendedAircraftModels = List(primaryModel.name),
         recommendedFrequency = None,
         reasons = List("UNSUITABLE_AIRCRAFT: Required flight minutes per frequency exceed available airplane weekly limit."),
-        candidateAircraft = Nil
+        candidateAircraft = Nil,
+        competitorCount = competitorCount,
+        competitorTotalFrequency = competitorWeeklyFrequency,
+        competitionSummary = competitionSummaryText,
+        confidenceExplanation = confidenceExplanation("LOW", paxDemandEst, cargoDemand, competitionLevel),
+        recommendation = "BLOCKED",
+        recommendationSeverity = "blocked",
+        aircraftRecommendationReason = "A compatible aircraft exists, but it cannot sustain one weekly frequency."
       ))
     }
 
     val primaryCandidate = primary.get
+    val expectedCargoRevenue =
+      if (SoloConfig.cargoEnabled && cargoDemand > 0 && primaryCandidate.weeklyCargoCapacity > 0) {
+        val cargoCarried = Math.min(primaryCandidate.weeklyCargoCapacity, (cargoDemand * SoloConfig.cargoCaptureRatio).toInt)
+        Math.round(cargoCarried * distance * SoloConfig.cargoRevenuePerUnitKm)
+      } else 0L
     val expectedRevenue  = primaryCandidate.estimatedRevenue
     val expectedCost     = primaryCandidate.estimatedCost
     val expectedProfit   = primaryCandidate.estimatedProfit
 
     // Confidence: thin markets (100–199 pax/wk) cap at MEDIUM even without competition,
     // since small absolute demand swings heavily affect viability.
+    val strongAirportSignals = (fromAirport.size + toAirport.size) >= 10 &&
+      (fromAirport.population + toAirport.population) >= 1_000_000
+    val demandSignals = paxDemandEst >= 350 || (SoloConfig.cargoEnabled && cargoDemand >= 250)
     val confidenceLevel = if (competitionLevel == "HIGH" || paxDemandEst < 100 || expectedProfit < 0) "LOW"
-      else if (paxDemandEst < 200 || competitionLevel == "MEDIUM" || primaryModel.range * 0.9 <= distance || fromAirport.runwayLength < primaryModel.runwayRequirement + 200) "MEDIUM"
+      else if (paxDemandEst < 200 || competitionLevel == "MEDIUM" || primaryModel.range * 0.9 <= distance || fromAirport.runwayLength < primaryModel.runwayRequirement + 200 || !strongAirportSignals || !demandSignals) "MEDIUM"
       else "HIGH"
+    val confidenceExplanationText = confidenceExplanation(confidenceLevel, paxDemandEst, cargoDemand, competitionLevel)
+    val (recommendationText, recommendationSeverityText) =
+      recommendationFor(expectedProfit, confidenceLevel, competitionLevel, paxDemandEst, blocked = false)
+    val aircraftReason = aircraftRecommendationReason(primary, paxDemandEst, cargoDemand)
 
     val reasons = ListBuffer[String]()
 
@@ -342,7 +452,15 @@ object RouteForecastService {
       recommendedAircraftModels = candidateAircraft.map(_.modelName),
       recommendedFrequency    = Some(primaryCandidate.frequency),
       reasons                 = reasons.toList,
-      candidateAircraft       = candidateAircraft
+      candidateAircraft       = candidateAircraft,
+      competitorCount         = competitorCount,
+      competitorTotalFrequency = competitorWeeklyFrequency,
+      competitionSummary      = competitionSummaryText,
+      confidenceExplanation   = confidenceExplanationText,
+      recommendation          = recommendationText,
+      recommendationSeverity  = recommendationSeverityText,
+      cargoShareEstimate      = cargoShareEstimate(expectedCargoRevenue, expectedRevenue),
+      aircraftRecommendationReason = aircraftReason
     ))
   }
 

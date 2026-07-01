@@ -1,7 +1,7 @@
 package com.patson
 
 import com.patson.data.SoloConfig
-import com.patson.model.{AirportBoostType, LinkConsumptionDetails}
+import com.patson.model.{AirportBoostType, LinkConsumptionDetails, TransportType}
 
 object CargoAllocation {
   case class Result(linkId : Int, carried : Int, revenue : Int)
@@ -51,7 +51,13 @@ object CargoAllocation {
     }
 
     base.map { case (detail, carried) =>
-      Result(detail.link.id, carried, Math.round(carried * detail.link.distance * SoloConfig.cargoRevenuePerUnitKm).toInt)
+      Result(detail.link.id, carried, Math.round(carried * detail.link.distance * cargoRevenueRate(detail)).toInt)
     }
+  }
+
+  private def cargoRevenueRate(detail : LinkConsumptionDetails) : Double = {
+    // Belly cargo on passenger links stays at the base rate; explicit freighter cargo links get the solo freighter lever.
+    val multiplier = if (detail.link.transportType == TransportType.CARGO_FLIGHT) SoloConfig.cargoFreighterRevenueMultiplier else 1.0
+    SoloConfig.cargoRevenuePerUnitKm * multiplier
   }
 }

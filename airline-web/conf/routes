@@ -36,6 +36,7 @@ GET	 	 /airports/:airportId/traffic-analytics	controllers.Application.getAirport
 GET	 	 /airports/:airportId/demand	      controllers.Application.getAirportDemand(airportId : Int)
 GET	 	 /airports/:airportId/cargo-demand	      controllers.Application.getAirportCargoDemand(airportId : Int)
 GET          /airports/:airportId/cargo-opportunities   controllers.Application.getAirportCargoOpportunities(airportId : Int)
+GET          /airlines/:airlineId/cargo-market-overview controllers.Application.getCargoMarketOverview(airlineId : Int)
 GET	 	 /airports/:airportId/champions	      controllers.Application.getAirportChampions(airportId : Int, airlineId: Option[Int])
 GET      /airports/:airportId/generic-transits     controllers.GenericTransitApplication.getGenericTransits(airportId: Int)
 
@@ -136,6 +137,7 @@ GET		 /airlines/:airlineId/news  controllers.NotificationApplication.getNews(air
 POST	 /airlines/:airlineId/news/read  controllers.NotificationApplication.markNewsRead(airlineId : Int)
 GET		 /airlines/:airlineId/consultant-advice  controllers.NotificationApplication.getConsultantAdvice(airlineId : Int)
 GET		 /airlines/:airlineId/consultant-market  controllers.NotificationApplication.getMarketOverview(airlineId : Int)
+GET		 /airlines/:airlineId/advisor/recommendations  controllers.NotificationApplication.getAdvisorRecommendations(airlineId : Int)
 GET		 /airlines/:airlineId/idle-aircraft  controllers.NotificationApplication.getIdleAircraft(airlineId : Int)
 POST	 /airlines/:airlineId/consultant-advice/refresh  controllers.NotificationApplication.refreshConsultantAdvice(airlineId : Int)
 GET		 /airlines/:airlineId/notifications  controllers.NotificationApplication.getNotifications(airlineId : Int)

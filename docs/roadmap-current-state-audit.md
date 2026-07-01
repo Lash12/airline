@@ -1,6 +1,6 @@
 # Roadmap Current-State Audit
 
-_Audit date: 2026-06-27_
+_Audit date: 2026-07-01_
 
 ## Compile status
 
@@ -11,14 +11,19 @@ airline-data  publishLocal  — SUCCESS (27 s, 82 deprecation warnings, non-bloc
 airline-web   compile       — SUCCESS (37 s, 8 deprecation warnings, non-blocking)
 ```
 
-Java 17 / sbt from standard PATH. No manual JAVA_HOME injection needed on this checkout.
+Java 17 / sbt from standard PATH. `airline-data publishLocal` must be run before
+`airline-web compile` when data APIs change.
 
 ## Tests run
 
 | Suite | Result | Notes |
 |-------|--------|-------|
 | `CargoDemandGeneratorSpec` | 11/11 PASS | DB-free, runs locally |
-| `RouteForecastServiceSpec` | SKIPPED (cannot run) | Requires live MySQL; `HikariPool$PoolInitializationException` on local run — expected |
+| `CargoAllocationSpec`, `CargoMarketVisibilityServiceSpec`, `ConsultantAdvisorSpec`, `RouteForecastLogicSpec` | 40/40 PASS | DB-free targeted suite for cargo/advisor/forecast helper logic |
+| `airline-web` Jest | 37/37 PASS | Route forecast, cargo formatting, advisor/cargo overview rendering, and existing JS tests |
+| `RouteForecastServiceSpec` | SKIPPED locally | Requires live MySQL; local `localhost:3306` refused connection |
+| `airline-web sbt test` | BLOCKED locally | Play/SbtWeb asset pipeline could not detect npm and fell back to old WebJars npm |
+| `e2e npm test` | BLOCKED locally | Browser launches with elevation, but no app is listening on `localhost:9000` |
 
 ## Feature inventory
 
@@ -34,8 +39,11 @@ Java 17 / sbt from standard PATH. No manual JAVA_HOME injection needed on this c
 | Traffic Analytics | always-on | Per-route demographics, no flag |
 | Air Cargo C-1..C-4 | `solo.cargo.enabled` | Belly + freighters + Cargo Terminal + ledger |
 | Airport Cargo Demand panel | `solo.cargo.enabled` | `GET /airports/:id/cargo-demand`, rendered in `airport.js` |
-| Airport Cargo Opportunities panel | `solo.cargo.enabled` | `GET /airports/:id/cargo-opportunities`, fully wired JS + HTML + e2e (2026-06-27) |
-| Route Forecast | `solo.routeForecast.enabled` | Backend + frontend + flag enabled in deploy + e2e (2026-06-27) |
+| Airport Cargo Opportunities panel | `solo.cargo.enabled` | `GET /airports/:id/cargo-opportunities`, sorted/scored with yield/profit/aircraft/reason/risk details |
+| Network Cargo Market Overview | `solo.cargo.enabled` | `GET /airlines/:id/cargo-market-overview`, rendered on Office page |
+| Route Forecast | `solo.routeForecast.enabled` | Backend + frontend + flag enabled; includes recommendation, competition summary, confidence explanation, cargo share, aircraft reason |
+| Freighter-only cargo multiplier | `solo.cargo.freighterRevenueMultiplier=10.0` | Applies only to cargo flight links, not passenger belly cargo |
+| Advisor recommendations | existing consultant/executive levels | `GET /airlines/:id/advisor/recommendations`, rendered in Office consultant panel |
 | Cargo revenue rate balance fix | `solo.cargo.revenuePerUnitKm=0.01` | Raised 50× from 0.0002; see `docs/balance-review-2026-06.md` |
 | Executive Team phases 0-2 | (existing flag) | C-suite buffs + leveling |
 | DB pool hardening | always-on | `hikari.maxPoolSize 16`; nested-connection fix in Airline/Alliance/Link/Asset sources |
@@ -54,7 +62,12 @@ Java 17 / sbt from standard PATH. No manual JAVA_HOME injection needed on this c
 - E2E spec: `e2e/tests/route-forecast.spec.ts` ✓
 - `RouteForecastServiceSpec` in CI (`ci.yml`) ✓
 
-Returns structured JSON: `passengerDemandEstimate`, `cargoDemandEstimate`, `expectedRevenue`, `expectedCost`, `expectedProfit`, `confidenceLevel`, `competitionLevel`, `recommendedAircraftModels`, `recommendedFrequency`, `reasons`, plus a `compatible`/`blockingReason` block from the route-rejection check.
+Returns structured JSON: `passengerDemandEstimate`, `cargoDemandEstimate`, `expectedRevenue`,
+`expectedCost`, `expectedProfit`, `confidenceLevel`, `competitionLevel`,
+`recommendedAircraftModels`, `recommendedFrequency`, `reasons`, `competitorCount`,
+`competitorTotalFrequency`, `competitionSummary`, `confidenceExplanation`, `recommendation`,
+`recommendationSeverity`, `cargoShareEstimate`, and `aircraftRecommendationReason`, plus a
+`compatible`/`blockingReason` block from the route-rejection check.
 
 HTTP statuses:
 - `403 FEATURE_DISABLED:…` if flag off
@@ -68,12 +81,31 @@ HTTP statuses:
 
 - Route registered in `conf/routes` ✓
 - `Application.getAirportCargoOpportunities` implemented ✓
-- `CargoMarketVisibilityService.getCargoOpportunities` implemented ✓ (returns model names via `AirplaneModelCache`)
+- `CargoMarketVisibilityService.getCargoOpportunities` implemented ✓ (returns model names, yield/profit bands, best aircraft/freighter candidates, reason/risk text, and score)
 - `ResponseCache.cargoOpportunitiesCache` wired ✓
 - `loadAirportCargoOpportunities` in `airport.js:1671`, called from `populateAirportDetails` at line 996 ✓
-- `renderCargoOpportunities` in `airport.js:1690` (cards with demand/yield/aircraft/notes/"Plan cargo route" button) ✓
+- `renderCargoOpportunities` in `airport.js:1690` (cards with demand/yield/profit/aircraft/reason/risk/"Plan cargo route" button) ✓
 - `#airportCargoOpportunitiesSection` placeholder in `airport_canvas.scala.html:407` ✓
-- E2E spec: `e2e/tests/cargo-opportunities.spec.ts` (4 tests, uses `page.evaluate` to bypass ancestor visibility) ✓
+- E2E spec: `e2e/tests/cargo-opportunities.spec.ts` includes visible field checks and plan-route prefill coverage ✓
+
+### Network Cargo Market Overview — shipped
+
+`GET /airlines/:id/cargo-market-overview`
+
+- Route registered in `conf/routes` ✓
+- `Application.getCargoMarketOverview` implemented ✓
+- `CargoMarketVisibilityService.getCargoMarketOverview` implemented ✓
+- `ResponseCache.cargoMarketOverviewCache` wired ✓
+- Office page renders the top network-wide lanes with demand, yield, profit, aircraft, served status, and reason text ✓
+
+### Advisor Recommendations — shipped
+
+`GET /airlines/:id/advisor/recommendations`
+
+- Reuses existing consultant/executive levels; no progression schema or milestone changes ✓
+- Tier helpers live in `ConsultantAdvisor` and are covered by `ConsultantAdvisorSpec` ✓
+- Backend recommendations are generated from real airline state: idle aircraft, losing routes, cargo opportunities, and airport assets ✓
+- Office consultant panel groups recommendations by Fleet, Routes, Cargo, and Airport assets ✓
 
 ## What is stale / abandoned
 
@@ -90,11 +122,11 @@ HTTP statuses:
 3. ~~**Passenger demand ETag bug**~~ — **FIXED 2026-06-27.** `_demandEtagAirportId` added to `airport.js`.
 4. ~~**Nested-connection spots not yet fixed**~~ — **FIXED 2026-06-27.** Four methods restructured.
 5. **`topCargoDestinations` perf:** Recomputes per-pair on cache miss instead of reusing the per-cycle memo matrix — bounded by `ResponseCache` so low priority.
-6. **`RouteForecastServiceSpec`:** Requires live MySQL; cannot run locally. DB-free extraction is optional polish.
-7. **Cargo revenue rate** — raised from `0.0002` → `0.01` (50×) on 2026-06-27 per `docs/balance-review-2026-06.md`. Freighter viability still needs a separate multiplier (tracked as R2 in that doc, deferred).
+6. **`RouteForecastServiceSpec`:** Requires live MySQL; cannot run locally on this Windows host.
+7. ~~**Freighter viability multiplier**~~ — **DONE 2026-07.** `solo.cargo.freighterRevenueMultiplier` defaults to `10.0` and is cargo-link only.
 
 ## Recommended next work
 
-See `docs/next-development-priorities.md`. Short list: cargo opportunities UX polish, route
-forecast quality improvements, consultant/advisor polish, balance telemetry after the cargo
-rate change, and E2E hardening. Cargo contracts need a design doc before implementation.
+See `docs/next-development-priorities.md`. Short list: balance telemetry after the cargo/freighter
+changes, runtime E2E verification in CI or a safe dev app, cargo contracts design, and future
+disruption/event implementation from `docs/disruption-event-recovery-design.md`.

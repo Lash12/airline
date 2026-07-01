@@ -1687,6 +1687,12 @@ async function loadAirportCargoOpportunities(airportId) {
     }
 }
 
+function formatCargoYieldPerUnitKm(value) {
+    var n = Number(value || 0)
+    var formatted = n.toFixed(4).replace(/0+$/, '').replace(/\.$/, '')
+    return '$' + formatted + ' per cargo unit per km'
+}
+
 function renderCargoOpportunities(opportunities, airportId) {
     const section = document.getElementById('airportCargoOpportunitiesSection')
     const container = document.getElementById('airportCargoOpportunitiesCards')
@@ -1699,8 +1705,11 @@ function renderCargoOpportunities(opportunities, airportId) {
     }
     if (section) section.style.display = ''
 
-    // Sort: unserved demand desc; break ties by capturable revenue (unserved × yield) desc
+    // Sort: server rank first; fallback to unserved demand and capturable revenue for older responses.
     const sorted = opportunities.slice().sort(function(a, b) {
+        if (typeof a.score === 'number' || typeof b.score === 'number') {
+            return (b.score || 0) - (a.score || 0)
+        }
         var byUnserved = b.weeklyCargoUnserved - a.weeklyCargoUnserved
         if (byUnserved !== 0) return byUnserved
         return (b.weeklyCargoUnserved * b.estimatedYield) - (a.weeklyCargoUnserved * a.estimatedYield)
@@ -1716,7 +1725,7 @@ function renderCargoOpportunities(opportunities, airportId) {
     const helper = document.createElement('p')
     helper.textContent = allServed
         ? 'All top cargo lanes from this airport are currently being served.'
-        : 'Top freight lanes — ranked by weekly unserved demand'
+        : 'Top freight lanes ranked by profit, unserved demand, aircraft fit, and distance.'
     helper.className = 'pb-4'
     container.appendChild(helper)
 
@@ -1733,6 +1742,7 @@ function renderCargoOpportunities(opportunities, airportId) {
         const isHighDemand = pctUnserved >= 50
         const hasNoAircraft = (!opp.recommendedAircraftModelNames || opp.recommendedAircraftModelNames.length === 0) && !isFullyServed
         const estRevenue = Math.round(opp.weeklyCargoUnserved * opp.estimatedYield)
+        const estProfit = Math.round(opp.estimatedProfit || estRevenue)
 
         const card = document.createElement('div')
         card.className = 'card'
@@ -1781,14 +1791,33 @@ function renderCargoOpportunities(opportunities, airportId) {
 
         card.appendChild(headerRow)
         card.appendChild(demandRow)
+
+        const yieldRow = document.createElement('div')
+        yieldRow.style.cssText = 'font-size:11px;color:#ccc;margin-bottom:3px;'
+        yieldRow.className = 'opp-yield'
+        yieldRow.textContent = 'Estimated cargo yield: ' + formatCargoYieldPerUnitKm(opp.estimatedYieldPerUnitKm || opp.estimatedYield)
+        card.appendChild(yieldRow)
+
         if (revenueRow.textContent) card.appendChild(revenueRow)
+
+        if (!isFullyServed && estProfit > 0) {
+            const profitRow = document.createElement('div')
+            profitRow.style.cssText = 'font-size:11px;color:#ccc;margin-bottom:3px;'
+            profitRow.className = 'opp-profit'
+            profitRow.textContent = 'Estimated profit: ' + abbreviateMoney(estProfit) + '/week' + (opp.profitBand ? ' (' + opp.profitBand + ')' : '')
+            card.appendChild(profitRow)
+        }
 
         // Aircraft recommendation
         const aircraftRow = document.createElement('div')
         aircraftRow.style.cssText = 'font-size:11px;color:#aaa;margin-bottom:3px;'
         aircraftRow.className = 'opp-aircraft'
-        if (opp.recommendedAircraftModelNames && opp.recommendedAircraftModelNames.length > 0) {
-            aircraftRow.textContent = '✈ ' + opp.recommendedAircraftModelNames.join(', ')
+        if (opp.bestAircraft || (opp.recommendedAircraftModelNames && opp.recommendedAircraftModelNames.length > 0)) {
+            var aircraftText = opp.bestAircraft || opp.recommendedAircraftModelNames.join(', ')
+            if (opp.bestFreighterCandidate && opp.bestFreighterCandidate !== aircraftText) {
+                aircraftText += ' · freighter: ' + opp.bestFreighterCandidate
+            }
+            aircraftRow.textContent = 'Aircraft: ' + aircraftText
             card.appendChild(aircraftRow)
         } else if (!isFullyServed) {
             aircraftRow.style.fontStyle = 'italic'
@@ -1803,6 +1832,22 @@ function renderCargoOpportunities(opportunities, airportId) {
             notesRow.className = 'opp-notes'
             notesRow.textContent = opp.notes
             card.appendChild(notesRow)
+        }
+
+        if (opp.reasonText && !isFullyServed) {
+            const reasonRow = document.createElement('div')
+            reasonRow.style.cssText = 'font-size:11px;color:#bbb;margin-bottom:3px;'
+            reasonRow.className = 'opp-reason'
+            reasonRow.textContent = opp.reasonText
+            card.appendChild(reasonRow)
+        }
+
+        if (opp.riskText && !isFullyServed) {
+            const riskRow = document.createElement('div')
+            riskRow.style.cssText = 'font-size:11px;color:#e0a030;margin-bottom:4px;'
+            riskRow.className = 'opp-risk'
+            riskRow.textContent = opp.riskText
+            card.appendChild(riskRow)
         }
 
         // Action button (only when there is demand to capture)

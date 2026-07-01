@@ -144,6 +144,12 @@ describe('showRouteForecast', () => {
       expectedProfit: 40000,
       confidenceLevel: 'HIGH',
       competitionLevel: 'LOW',
+      competitionSummary: '1 competitor with light frequency.',
+      confidenceExplanation: 'High confidence: both airports show strong demand signals.',
+      recommendation: 'OPEN',
+      recommendationSeverity: 'positive',
+      cargoShareEstimate: 0.12,
+      aircraftRecommendationReason: 'Airbus A320 fits the route and has useful belly cargo capacity.',
       recommendedAircraftModels: ['Boeing 737-800', 'Airbus A320'],
       recommendedFrequency: 14,
       reasons: ['Strong passenger demand on this route.', 'Low competition. Market is mostly open.']
@@ -158,11 +164,17 @@ describe('showRouteForecast', () => {
     // Check competition rendering
     expect(elements['#forecastCompetition'].text).toHaveBeenCalledWith('LOW')
     expect(elements['#forecastCompetition'].css).toHaveBeenCalledWith('color', '#78cd6b')
+    expect(elements['#forecastCompetitionSummary'].text).toHaveBeenCalledWith('1 competitor with light frequency.')
+    expect(elements['#forecastRecommendation'].text).toHaveBeenCalledWith('Recommendation: Open')
+    expect(elements['#forecastRecommendation'].css).toHaveBeenCalledWith('color', '#78cd6b')
+    expect(elements['#forecastConfidenceExplanation'].text).toHaveBeenCalledWith('High confidence: both airports show strong demand signals.')
 
     // Check demand rendering
     expect(elements['#forecastPaxDemand'].text).toHaveBeenCalledWith('750')
     expect(elements['#forecastCargoDemand'].text).toHaveBeenCalledWith('250')
     expect(elements['#forecastCargoDemandRow'].show).toHaveBeenCalled()
+    expect(elements['#forecastCargoShare'].text).toHaveBeenCalledWith('12% of revenue')
+    expect(elements['#forecastCargoShareRow'].show).toHaveBeenCalled()
 
     // Check finances rendering
     expect(elements['#forecastRevenue'].text).toHaveBeenCalledWith('$120,000')
@@ -176,6 +188,7 @@ describe('showRouteForecast', () => {
     expect(aircraftHtml).toContain('Boeing 737-800')
     expect(aircraftHtml).toContain('Airbus A320')
     expect(aircraftHtml).toContain('Rec. Freq: 14/wk')
+    expect(elements['#forecastAircraftReason'].text).toHaveBeenCalledWith('Airbus A320 fits the route and has useful belly cargo capacity.')
 
     // Check reasons rendering
     expect(elements['#forecastReasons'].html).toHaveBeenCalled()
@@ -206,6 +219,7 @@ describe('showRouteForecast', () => {
     ctx.showRouteForecast(mockForecast)
 
     expect(elements['#forecastCargoDemandRow'].hide).toHaveBeenCalled()
+    expect(elements['#forecastCargoShareRow'].hide).toHaveBeenCalled()
   })
 
   test('renders candidateAircraft comparison cards when present', () => {
