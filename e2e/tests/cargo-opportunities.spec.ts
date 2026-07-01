@@ -249,6 +249,16 @@ test("plan cargo route button passes origin, destination, and recommended model"
       (window as any).__cargoPlanArgs = { fromId, toId, modelId };
     };
     (window as any).renderCargoOpportunities([opp], 3599);
+    const tutorialHtml = document.getElementById('tutorialHtml') as HTMLElement | null;
+    if (tutorialHtml) {
+      tutorialHtml.style.display = 'none';
+      tutorialHtml.style.pointerEvents = 'none';
+    }
+    document.querySelectorAll('.tutorial.modal').forEach((el) => {
+      const modal = el as HTMLElement;
+      modal.style.display = 'none';
+      modal.style.pointerEvents = 'none';
+    });
     let node = document.getElementById('airportCargoOpportunitiesSection') as HTMLElement | null;
     while (node && node !== document.body) {
       node.style.display = 'block';
