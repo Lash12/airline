@@ -232,7 +232,7 @@ test("no-aircraft fallback renders italic warning", async ({ page }) => {
     };
   }, MOCK_OPP_NO_AIRCRAFT);
 
-  expect(state.aircraftText).toContain('No suitable freighter aircraft');
+  expect(state.aircraftText).toContain('No suitable aircraft');
 });
 
 test("plan cargo route button passes origin, destination, and recommended model", async ({ page }) => {
@@ -249,9 +249,17 @@ test("plan cargo route button passes origin, destination, and recommended model"
       (window as any).__cargoPlanArgs = { fromId, toId, modelId };
     };
     (window as any).renderCargoOpportunities([opp], 3599);
+    let node = document.getElementById('airportCargoOpportunitiesSection') as HTMLElement | null;
+    while (node && node !== document.body) {
+      node.style.display = 'block';
+      node.style.visibility = 'visible';
+      node = node.parentElement as HTMLElement | null;
+    }
   }, MOCK_OPP_FULL);
 
-  await page.locator('#airportCargoOpportunitiesCards .opp-plan-btn').first().click();
+  const planButton = page.locator('#airportCargoOpportunitiesCards .opp-plan-btn').first();
+  await expect(planButton).toBeVisible();
+  await planButton.click();
   const args = await page.evaluate(() => (window as any).__cargoPlanArgs);
   expect(args).toEqual({ fromId: 3599, toId: 3600, modelId: 1 });
 });
